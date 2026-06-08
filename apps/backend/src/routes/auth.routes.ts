@@ -8,6 +8,8 @@ const router = Router();
 
 router.post("/register", validate(registerSchema), authController.register);
 router.post("/login", validate(loginSchema), authController.login);
+router.post("/login-license", authController.loginWithLicense); // New license-based login
+router.post("/refresh", authMiddleware, authController.refreshToken); // Token refresh
 router.get("/me", authMiddleware, authController.me);
 router.post("/logout", authMiddleware, authController.logout);
 

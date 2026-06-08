@@ -5,6 +5,7 @@ import { env } from "../config/env.js";
 import { omit } from "../utils/crypto.js";
 import type { RegisterInput, LoginInput } from "../validators/auth.validator.js";
 import type { AuthPayload } from "../types/index.js";
+import * as licenseService from "./license.service.js";
 
 export async function registerUser(input: RegisterInput) {
   const hashed = await bcrypt.hash(input.password, env.BCRYPT_ROUNDS);
@@ -44,17 +45,121 @@ export async function loginUser(
     data: { token, deviceName, ipAddress, userId: user.id },
   });
 
-  // Embed sessionId in token metadata (for logout/validation)
+  // Embed sessionId in token metadata
   const finalToken = jwt.sign(
     { userId: user.id, role: user.role, sessionId: session.id },
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
   );
 
-  // Update session with final token
   await prisma.session.update({ where: { id: session.id }, data: { token: finalToken } });
 
   return { token: finalToken, user: omit(user, ["password"]) };
+}
+
+/**
+ * New license-based login:
+ * POST /auth/login
+ * { token: "SXB-XXXX-XXXX", phone: "+237XXXXXXXX", deviceId: "ANDROID_DEVICE_ID" }
+ */
+export async function loginWithLicense(
+  token: string,
+  phone: string,
+  deviceId: string,
+  deviceName?: string,
+  ipAddress?: string,
+) {
+  // Validate the license
+  const license = await licenseService.validateLicense(token, phone, deviceId);
+
+  // Find or create user for this license
+  let user = license.userId
+    ? await prisma.user.findUnique({ where: { id: license.userId } })
+    : null;
+
+  if (!user) {
+    // Create a user automatically from the license
+    user = await prisma.user.create({
+      data: {
+        phone,
+        username: `user_${token.slice(0, 8)}`,
+        role: "USER",
+        status: "ACTIVE",
+        quotaRemainingGB: license.dataLimitGB,
+        deviceLimit: license.deviceLimit,
+        expireAt: license.expireAt,
+      },
+    });
+
+    // Link license to user
+    await prisma.license.update({
+      where: { id: license.id },
+      data: { userId: user.id, phone, deviceId, deviceName },
+    });
+  }
+
+  if (user.status !== "ACTIVE") throw new Error(`ACCOUNT_${user.status}`);
+
+  // Bind device to license
+  await licenseService.bindDevice(token, deviceId, deviceName, phone);
+
+  // Create JWT
+  const session = await prisma.session.create({
+    data: {
+      token: "", // Will update after signing
+      deviceName,
+      ipAddress,
+      userId: user.id,
+    },
+  });
+
+  const finalToken = jwt.sign(
+    { userId: user.id, role: user.role, sessionId: session.id },
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
+  );
+
+  await prisma.session.update({
+    where: { id: session.id },
+    data: { token: finalToken },
+  });
+
+  // Update license last used
+  await prisma.license.update({
+    where: { id: license.id },
+    data: { lastUsedAt: new Date() },
+  });
+
+  return {
+    token: finalToken,
+    user: omit(user, ["password"]),
+    license: {
+      token: license.token,
+      dataLimitGB: license.dataLimitGB,
+      dataUsedGB: license.dataUsedGB,
+      deviceLimit: license.deviceLimit,
+      expireAt: license.expireAt,
+    },
+  };
+}
+
+export async function refreshToken(userId: string, sessionId: string) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  const session = await prisma.session.findUnique({ where: { id: sessionId } });
+  if (!session || !session.isActive) throw new Error("SESSION_EXPIRED");
+
+  const newToken = jwt.sign(
+    { userId: user.id, role: user.role, sessionId: session.id },
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
+  );
+
+  await prisma.session.update({
+    where: { id: session.id },
+    data: { token: newToken, lastUsedAt: new Date() },
+  });
+
+  return { token: newToken };
 }
 
 export async function getMe(userId: string) {

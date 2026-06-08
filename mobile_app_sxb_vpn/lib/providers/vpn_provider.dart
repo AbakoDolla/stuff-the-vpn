@@ -78,20 +78,24 @@ class VpnNotifier extends StateNotifier<VpnState> {
     state = state.copyWith(status: VpnStatus.connecting);
 
     try {
-      // Fetch real config from API
-      final config = await _vpnService.getMyConfig();
+      // Call the real API to connect
+      final success = await _vpnService.connect(serverId: state.currentServer?.id);
 
-      // Simulate connection delay for UI feel
-      await Future.delayed(const Duration(seconds: 2));
+      if (success) {
+        // Fetch real config from API
+        final config = await _vpnService.getMyConfig();
 
-      state = state.copyWith(
-        status: VpnStatus.connected,
-        config: config,
-        connectedDuration: Duration.zero,
-      );
+        state = state.copyWith(
+          status: VpnStatus.connected,
+          config: config,
+          connectedDuration: Duration.zero,
+        );
 
-      _startTimer();
-      _startSpeedSimulation();
+        _startTimer();
+        _startSpeedSimulation();
+      } else {
+        state = state.copyWith(status: VpnStatus.disconnected);
+      }
     } catch (e) {
       state = state.copyWith(status: VpnStatus.disconnected);
     }
@@ -102,8 +106,12 @@ class VpnNotifier extends StateNotifier<VpnState> {
 
     state = state.copyWith(status: VpnStatus.disconnecting);
 
-    // Simulate disconnection delay
-    await Future.delayed(const Duration(milliseconds: 800));
+    try {
+      // Call the real API to disconnect
+      await _vpnService.disconnect();
+    } catch (_) {
+      // Continue with local disconnect even if API fails
+    }
 
     _timer?.cancel();
     _speedTimer?.cancel();

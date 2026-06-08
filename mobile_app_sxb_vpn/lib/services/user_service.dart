@@ -43,6 +43,40 @@ class UserService {
     }
   }
 
+  /// Get current user profile from /user/profile
+  Future<UserModel?> getProfile() async {
+    try {
+      final response = await _api.get(ApiEndpoints.userProfile);
+      final json = response.data as Map<String, dynamic>;
+      final payload = (json["data"] as Map<String, dynamic>?) ?? json;
+      return UserModel.fromJson(payload);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Get current user subscription from /user/subscription
+  Future<Map<String, dynamic>?> getSubscription() async {
+    try {
+      final response = await _api.get(ApiEndpoints.userSubscription);
+      final json = response.data as Map<String, dynamic>;
+      return (json["data"] as Map<String, dynamic>?) ?? json;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Get current user status from /user/status
+  Future<Map<String, dynamic>?> getStatus() async {
+    try {
+      final response = await _api.get(ApiEndpoints.userStatus);
+      final json = response.data as Map<String, dynamic>;
+      return (json["data"] as Map<String, dynamic>?) ?? json;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<UsageData> getUsage(String userId) async {
     try {
       final response = await _api.get(ApiEndpoints.usage(userId));

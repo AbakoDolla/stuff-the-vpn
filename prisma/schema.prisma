@@ -1,17 +1,5 @@
 // schema.prisma
 // Schéma de la base de données — Stuff The VPN
-//
-// Entités prévues (Phase 2):
-// - User         : Comptes utilisateurs (clients et revendeurs)
-// - Reseller     : Profils des revendeurs
-// - Voucher      : Codes d'accès VPN
-// - Device       : Appareils des utilisateurs
-// - Server       : Serveurs VPN (V2Ray, SSH)
-// - Usage        : Suivi de consommation
-// - Log          : Journal d'événements
-// - Subscription : Abonnements et historique
-//
-// TODO (Phase 2): Définir tous les modèles et lancer la migration initiale.
 
 generator client {
   provider = "prisma-client-js"
@@ -22,15 +10,201 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Les modèles seront définis en Phase 2.
-// Exemple de structure à venir :
-//
-// model User {
-//   id        String   @id @default(uuid())
-//   email     String   @unique
-//   role      UserRole @default(CLIENT)
-//   status    Status   @default(ACTIVE)
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-//   deletedAt DateTime?
-// }
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  RESELLER
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  EXPIRED
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  SUSPENDED
+}
+
+model User {
+  id            String      @id @default(uuid())
+  email         String?     @unique
+  phone         String?
+  username      String?
+  password      String?
+  role          UserRole    @default(USER)
+  status        UserStatus  @default(ACTIVE)
+  deviceLimit   Int         @default(3)
+  quotaUsedGB   Float       @default(0)
+  quotaRemainingGB Float    @default(0)
+  expireAt      DateTime?
+  createdBy     String?
+  resellerId    String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+
+  licenses      License[]
+  devices       Device[]
+  sessions      Session[]
+  usageLogs     UsageLog[]
+  vouchers      Voucher[]   @relation("VoucherCreatedBy")
+  reseller      Reseller?   @relation(fields: [resellerId], references: [id])
+}
+
+model License {
+  id            String        @id @default(uuid())
+  token         String        @unique
+  phone         String?
+  deviceId      String?
+  deviceName    String?
+  status        LicenseStatus @default(ACTIVE)
+  dataLimitGB   Float         @default(30)
+  dataUsedGB    Float         @default(0)
+  deviceLimit   Int           @default(1)
+  expireAt      DateTime?
+  lastUsedAt    DateTime?
+  userId        String?
+  user          User?         @relation(fields: [userId], references: [id])
+  createdBy     String?
+  resellerId    String?
+  reseller      Reseller?     @relation(fields: [resellerId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Device {
+  id            String      @id @default(uuid())
+  deviceId      String
+  deviceName    String?
+  platform      String?
+  lastIp        String?
+  isActive      Boolean     @default(true)
+  lastSeenAt    DateTime?
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([userId, deviceId])
+}
+
+model Session {
+  id            String      @id @default(uuid())
+  token         String      @unique
+  deviceName    String?
+  ipAddress     String?
+  isActive      Boolean     @default(true)
+  lastUsedAt    DateTime?
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Server {
+  id            String      @id @default(uuid())
+  name          String
+  host          String
+  port          Int         @default(443)
+  country       String
+  city          String?
+  flag          String      @default("🏳️")
+  type          String      @default("VLESS")
+  ping          Int         @default(0)
+  load          Int         @default(0)
+  isActive      Boolean     @default(true)
+  isRecommended Boolean     @default(false)
+  config        String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Inbound {
+  id            String      @id @default(uuid())
+  protocol      String
+  host          String
+  port          Int
+  path          String?
+  sni           String?
+  remark        String?
+  enabled       Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Plan {
+  id            String      @id @default(uuid())
+  name          String
+  description   String?
+  price         Float
+  dataLimitGB   Float
+  deviceLimit   Int         @default(1)
+  durationDays  Int
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Voucher {
+  id            String      @id @default(uuid())
+  code          String      @unique
+  dataLimitGB   Float       @default(10)
+  deviceLimit   Int         @default(1)
+  durationDays  Int         @default(30)
+  maxUses       Int         @default(1)
+  usedCount     Int         @default(0)
+  isActive      Boolean     @default(true)
+  expireAt      DateTime?
+  createdById   String?
+  createdBy     User?       @relation("VoucherCreatedBy", fields: [createdById], references: [id])
+  resellerId    String?
+  reseller      Reseller?   @relation(fields: [resellerId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Reseller {
+  id            String      @id @default(uuid())
+  name          String
+  email         String?     @unique
+  phone         String?
+  commission    Float       @default(0)
+  balance       Float       @default(0)
+  isActive      Boolean     @default(true)
+  createdById   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  clients       User[]
+  licenses      License[]
+  vouchers      Voucher[]
+}
+
+model UsageLog {
+  id            String      @id @default(uuid())
+  uploadGB      Float       @default(0)
+  downloadGB    Float       @default(0)
+  totalGB       Float       @default(0)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  serverId      String?
+  server        Server?     @relation(fields: [serverId], references: [id])
+  createdAt     DateTime    @default(now())
+}
+
+model AuditLog {
+  id            String      @id @default(uuid())
+  action        String
+  entity        String
+  entityId      String?
+  metadata      Json?
+  userId        String?
+  ipAddress     String?
+  createdAt     DateTime    @default(now())
+}

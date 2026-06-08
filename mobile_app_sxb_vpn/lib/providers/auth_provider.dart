@@ -1,85 +1,76 @@
-
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../core/storage/secure_storage.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
 /// Represents the user's authentication status.
-/// It's immutable.
 class AuthState {
   final UserModel? user;
+  final Map<String, dynamic>? license;
   final bool isAuthenticated;
 
   const AuthState({
     this.user,
+    this.license,
   }) : isAuthenticated = user != null;
 
   AuthState copyWith({
     UserModel? user,
+    Map<String, dynamic>? license,
   }) {
     return AuthState(
-      user: user,
+      user: user ?? this.user,
+      license: license ?? this.license,
     );
   }
 }
 
 /// Notifier for handling authentication logic.
-///
-/// This notifier listens to Supabase's authentication state changes and
-/// updates the app state accordingly. It provides methods for login,
-/// logout, registration, and social sign-in.
 class AuthNotifier extends AsyncNotifier<AuthState> {
-  StreamSubscription<dynamic>? _authStateSubscription;
-
   @override
   Future<AuthState> build() async {
-    // Set up a listener for auth state changes (login, logout, token refresh)
-    _setupAuthListener();
-
-    // Check for an existing session when the app starts.
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session != null) {
+    // Check for existing session when the app starts.
+    final storage = ref.read(secureStorageProvider);
+    final token = await storage.getToken();
+    if (token != null && token.isNotEmpty) {
       final user = await ref.read(authServiceProvider).getMe();
-      return AuthState(user: user);
+      if (user != null) {
+        return AuthState(user: user);
+      }
+      // Token invalid/expired, clear it
+      await storage.clearAll();
     }
-
     return const AuthState();
   }
 
-  void _setupAuthListener() {
-    // Avoid setting up multiple listeners
-    _authStateSubscription?.cancel();
-    _authStateSubscription =
-        Supabase.instance.client.auth.onAuthStateChange.listen(
-      (data) async {
-        final session = data.session;
-        if (session != null) {
-          // User is signed in. Fetch the app-specific user profile.
-          state = const AsyncValue.loading();
-          final user = await ref.read(authServiceProvider).getMe();
-          state = AsyncValue.data(AuthState(user: user));
-        } else {
-          // User is signed out. Clear local storage and update state.
-          await ref.read(secureStorageProvider).clearAll();
-          state = const AsyncValue.data(AuthState());
-        }
-      },
-      onError: (error) {
-        state = AsyncValue.error(error, StackTrace.current);
-      },
-    );
-
-    // Cancel the subscription when the provider is disposed.
-    ref.onDispose(() {
-      _authStateSubscription?.cancel();
-    });
+  /// Login with license token (SXB-XXXX), phone, and device ID
+  Future<void> loginWithLicense({
+    required String token,
+    required String phone,
+    required String deviceId,
+    String? deviceName,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final result = await ref.read(authServiceProvider).loginWithLicense(
+        token: token,
+        phone: phone,
+        deviceId: deviceId,
+        deviceName: deviceName,
+      );
+      if (!result.success) {
+        throw Exception(result.error ?? 'Login failed');
+      }
+      state = AsyncValue.data(AuthState(
+        user: result.user,
+        license: result.license,
+      ));
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
   }
 
-  /// Logs in a user with email and password.
+  /// Legacy login with email and password
   Future<void> login(String email, String password) async {
     state = const AsyncValue.loading();
     try {
@@ -87,79 +78,42 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       if (!result.success) {
         throw Exception(result.error ?? 'Login failed');
       }
-      // On success, the auth listener will update the state.
+      state = AsyncValue.data(AuthState(user: result.user));
     } catch (e, st) {
-      // If login fails, revert to the previous state with an error.
       state = AsyncValue.error(e, st);
     }
   }
 
-  /// Registers a new user.
-  Future<void> register(String email, String password, String? username) async {
-    state = const AsyncValue.loading();
+  /// Refresh token
+  Future<void> refreshToken() async {
     try {
-      final result = await ref.read(authServiceProvider).register(email, password, username);
+      final result = await ref.read(authServiceProvider).refreshToken();
       if (!result.success) {
-        throw Exception(result.error ?? 'Registration failed');
+        await ref.read(secureStorageProvider).clearAll();
+        state = const AsyncValue.data(AuthState());
       }
-      // On success, the auth listener will update the state.
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (_) {
+      // Silently fail, token will be refreshed on next request
     }
   }
 
-  /// Initiates the Google sign-in flow.
-  Future<void> loginWithGoogle() async {
-    state = const AsyncValue.loading();
-    try {
-      await ref.read(authServiceProvider).signInWithOAuth(OAuthProvider.google);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
-
-  /// Initiates the Apple sign-in flow.
-  Future<void> loginWithApple() async {
-    state = const AsyncValue.loading();
-    try {
-      await ref.read(authServiceProvider).signInWithOAuth(OAuthProvider.apple);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
-
-  /// Initiates the Facebook sign-in flow.
-  Future<void> loginWithFacebook() async {
-    state = const AsyncValue.loading();
-    try {
-      await ref.read(authServiceProvider).signInWithOAuth(OAuthProvider.facebook);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
-
-  /// Logs out the current user.
+  /// Logout the current user
   Future<void> logout() async {
     state = const AsyncValue.loading();
     try {
-      // First, call our backend logout if necessary.
       await ref.read(authServiceProvider).logout();
-      // Then, sign out from Supabase.
-      await Supabase.instance.client.auth.signOut();
-      // The auth listener will clear the state.
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (_) {}
+    state = const AsyncValue.data(AuthState());
+  }
+
+  /// Refresh the user profile data
+  Future<void> refresh() async {
+    final authService = ref.read(authServiceProvider);
+    final user = await authService.getMe();
+    if (user != null) {
+      state = AsyncValue.data(AuthState(user: user));
     }
   }
-  
-    /// Refreshes the user profile data.
-    Future<void> refresh() async {
-        final authService = ref.read(authServiceProvider);
-        final user = await authService.getMe();
-        if (user != null) {
-        state = AsyncValue.data(AuthState(user: user));
-        }
-    }
 }
 
 /// The provider for accessing the authentication state and notifier.

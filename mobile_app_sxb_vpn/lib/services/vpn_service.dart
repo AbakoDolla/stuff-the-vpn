@@ -37,4 +37,57 @@ class VpnService {
       return demoServers;
     }
   }
+
+  Future<ServerModel?> getRecommendedServer() async {
+    try {
+      final response = await _api.get(ApiEndpoints.recommendedServer);
+      final json = response.data as Map<String, dynamic>;
+      final payload = (json["data"] as Map<String, dynamic>?) ?? json;
+      return ServerModel.fromJson(payload);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getVpnStatus() async {
+    try {
+      final response = await _api.get(ApiEndpoints.vpnStatus);
+      final json = response.data as Map<String, dynamic>;
+      return (json["data"] as Map<String, dynamic>?) ?? json;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getVpnConfig() async {
+    try {
+      final response = await _api.get(ApiEndpoints.vpnConfig);
+      final json = response.data as Map<String, dynamic>;
+      return (json["data"] as Map<String, dynamic>?) ?? json;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> connect({String? serverId}) async {
+    try {
+      final response = await _api.post(ApiEndpoints.vpnConnect, data: {
+        if (serverId != null) "serverId": serverId,
+      });
+      final json = response.data as Map<String, dynamic>;
+      return json["success"] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> disconnect() async {
+    try {
+      final response = await _api.post(ApiEndpoints.vpnDisconnect);
+      final json = response.data as Map<String, dynamic>;
+      return json["success"] == true;
+    } catch (_) {
+      return false;
+    }
+  }
 }

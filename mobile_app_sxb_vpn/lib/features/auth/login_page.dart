@@ -3,9 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_form.dart';
@@ -24,8 +24,9 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _tokenController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _deviceIdController = TextEditingController();
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -42,22 +43,34 @@ class _LoginPageState extends ConsumerState<LoginPage>
       begin: const Offset(0, 0.1),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOutCubic));
+
+    // Get device ID automatically (would use device_info_plus in production)
+    _deviceIdController.text = _getDeviceId();
+  }
+
+  String _getDeviceId() {
+    // In production, use device_info_plus to get the real device ID
+    // For now, use a unique identifier
+    return "ANDROID_${DateTime.now().millisecondsSinceEpoch}";
   }
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _tokenController.dispose();
+    _phoneController.dispose();
+    _deviceIdController.dispose();
     _fadeCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (_formKey.currentState?.validate() ?? false) {
-      await ref.read(authStateProvider.notifier).login(
-            _emailController.text,
-            _passwordController.text,
-          );
+      await ref.read(authStateProvider.notifier).loginWithLicense(
+        token: _tokenController.text.trim(),
+        phone: _phoneController.text.trim(),
+        deviceId: _deviceIdController.text.trim(),
+        deviceName: "Flutter App",
+      );
     }
   }
 
@@ -71,7 +84,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
         error: (error, stack) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(error.toString()),
+              content: Text(error.toString().replaceFirst("Exception: ", "")),
               backgroundColor: AppColors.disconnected,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -84,7 +97,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
       );
     });
 
-    final authState = ref.watch(authStateProvider).valueOrNull ?? const AuthState();
     final isLoading = ref.watch(authStateProvider).isLoading;
 
     return Scaffold(
@@ -138,7 +150,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       key: _formKey,
                       child: Column(
                         children: [
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 40),
                           // Logo
                           Hero(
                             tag: 'app_logo',
@@ -161,7 +173,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                           const SizedBox(height: 32),
                           // Title
                           Text(
-                            'Bienvenue',
+                            'Connexion VPN',
                             style: Theme.of(context)
                                 .textTheme
                                 .displayLarge
@@ -173,7 +185,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Connectez-vous à votre compte',
+                            'Entrez votre token de licence',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -220,54 +232,60 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   ),
                                   child: Column(
                                     children: [
+                                      // Token field
                                       PremiumTextField(
-                                        hint: 'Email',
-                                        controller: _emailController,
-                                        validator: AppForm.emailValidator,
-                                        keyboardType:
-                                            TextInputType.emailAddress,
+                                        hint: 'Token de licence (SXB-XXXX)',
+                                        controller: _tokenController,
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Token requis';
+                                          }
+                                          if (!value.startsWith('SXB-')) {
+                                            return 'Le token doit commencer par SXB-';
+                                          }
+                                          return null;
+                                        },
                                         textInputAction: TextInputAction.next,
-                                        prefixIcon: Icons.email_outlined,
+                                        prefixIcon: Icons.vpn_key_rounded,
                                       ),
                                       const SizedBox(height: 20),
+                                      // Phone field
                                       PremiumTextField(
-                                        hint: 'Mot de passe',
-                                        isPassword: true,
-                                        controller: _passwordController,
-                                        validator: AppForm.passwordValidator,
+                                        hint: 'Numéro de téléphone',
+                                        controller: _phoneController,
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Numéro de téléphone requis';
+                                          }
+                                          return null;
+                                        },
+                                        keyboardType: TextInputType.phone,
                                         textInputAction: TextInputAction.done,
-                                        prefixIcon: Icons.lock_outline_rounded,
-                                        onChanged: (_) => setState(() {}),
+                                        prefixIcon: Icons.phone_android_rounded,
                                       ),
-                                      // Forgot password
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: TextButton(
-                                          onPressed: () =>
-                                              context.go('/auth/forgot'),
-                                          style: TextButton.styleFrom(
-                                            padding:
-                                                const EdgeInsets.symmetric(
-                                                    vertical: 8, horizontal: 4),
-                                          ),
-                                          child: const Text(
-                                            'Mot de passe oublié?',
-                                            style: TextStyle(
-                                              color: AppColors.accent,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
+                                      const SizedBox(height: 20),
+                                      // Device ID
+                                      PremiumTextField(
+                                        hint: 'ID de l\'appareil',
+                                        controller: _deviceIdController,
+                                        enabled: false,
+                                        prefixIcon: Icons.devices_rounded,
+                                        suffix: IconButton(
+                                          icon: const Icon(Icons.copy_rounded, color: AppColors.textMuted, size: 18),
+                                          onPressed: () {
+                                            Clipboard.setData(ClipboardData(text: _deviceIdController.text));
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('ID copié'), duration: Duration(seconds: 1)),
+                                            );
+                                          },
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 24),
                                       // Login button
                                       GradientButton(
                                         text: 'Se connecter',
                                         isLoading: isLoading,
-                                        onPressed: isLoading
-                                            ? null
-                                            : _submit,
+                                        onPressed: isLoading ? null : _submit,
                                       ),
                                     ],
                                   ),
@@ -275,95 +293,13 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               ),
                             ),
                           ),
-                          const SizedBox(height: 24),
-                          // Divider
-                          Row(
-                            children: [
-                              const Expanded(
-                                child: Divider(
-                                  color: AppColors.cardBorder,
-                                  thickness: 0.5,
-                                ),
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text(
-                                  'ou continuer avec',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: AppColors.textMuted,
-                                        fontSize: 12,
-                                      ),
-                                ),
-                              ),
-                              const Expanded(
-                                child: Divider(
-                                  color: AppColors.cardBorder,
-                                  thickness: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          // Social buttons
-                          GlassSocialButton(
-                            text: 'Google',
-                            icon: SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: SvgPicture.network(
-                                'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                              ),
-                            ),
-                            isLoading: isLoading,
-                            onPressed: isLoading
-                                ? null
-                                : () => ref
-                                    .read(authStateProvider.notifier)
-                                    .loginWithGoogle(),
-                          ),
-                          const SizedBox(height: 12),
-                          GlassSocialButton(
-                            text: 'Apple',
-                            icon: const Icon(
-                              Icons.apple_rounded,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                            isLoading: isLoading,
-                            onPressed: isLoading
-                                ? null
-                                : () => ref
-                                    .read(authStateProvider.notifier)
-                                    .loginWithApple(),
-                          ),
-                          const SizedBox(height: 12),
-                          GlassSocialButton(
-                            text: 'Facebook',
-                            icon: SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: SvgPicture.network(
-                                'https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg',
-                              ),
-                            ),
-                            isLoading: isLoading,
-                            onPressed: isLoading
-                                ? null
-                                : () => ref
-                                    .read(authStateProvider.notifier)
-                                    .loginWithFacebook(),
-                          ),
                           const SizedBox(height: 32),
-                          // Register link
+                          // Info text
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                "Pas encore de compte? ",
+                                "Vous n'avez pas de token? ",
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyMedium
@@ -373,8 +309,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     ),
                               ),
                               GestureDetector(
-                                onTap: () =>
-                                    context.go('/auth/register'),
+                                onTap: () => context.go('/auth/register'),
                                 child: ShaderMask(
                                   shaderCallback: (bounds) =>
                                       const LinearGradient(
@@ -384,7 +319,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     ],
                                   ).createShader(bounds),
                                   child: const Text(
-                                    "S'inscrire",
+                                    "Contacter l'admin",
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 14,

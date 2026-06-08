@@ -7,8 +7,15 @@ import '../../core/demo_data.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/servers_provider.dart';
 import '../../providers/vpn_provider.dart';
+import '../../services/user_service.dart';
 import '../../models/server_model.dart';
 import '../../widgets/glass_card.dart';
+
+/// Provider to fetch subscription data
+final subscriptionProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+  final userService = ref.read(userServiceProvider);
+  return userService.getSubscription();
+});
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -18,7 +25,19 @@ class HomePage extends ConsumerWidget {
     final authState = ref.watch(authStateProvider).valueOrNull;
     final vpnState = ref.watch(vpnProvider);
     final servers = ref.watch(serversProvider);
+    final subscription = ref.watch(subscriptionProvider);
     final user = authState?.user;
+
+    // Get subscription data or use defaults
+    final subData = subscription.valueOrNull;
+    final planName = subData?['plan']?.toString() ?? 'Premium';
+    final dataLimit = _toDouble(subData?['dataLimit']) ?? 30.0;
+    final dataUsed = _toDouble(subData?['dataUsed']) ?? 0.0;
+    final dataRemaining = _toDouble(subData?['dataRemaining']) ?? dataLimit;
+    final usagePercent = dataLimit > 0 ? dataUsed / dataLimit : 0.0;
+    final expiryStr = subData?['expireAt'] != null
+        ? 'Expire le ${_formatDate(subData!['expireAt'].toString())}'
+        : 'Expire le 20/12/2024';
 
     return Scaffold(
       body: Container(
@@ -32,7 +51,14 @@ class HomePage extends ConsumerWidget {
             slivers: [
               SliverToBoxAdapter(
                   child: _buildHeader(context, ref, user?.name ?? 'USER')),
-              SliverToBoxAdapter(child: _buildDataCard(context, user)),
+              SliverToBoxAdapter(child: _buildDataCard(
+                context,
+                planName,
+                expiryStr,
+                dataUsed,
+                dataRemaining,
+                usagePercent,
+              )),
               SliverToBoxAdapter(child: _buildQuickConnect(
                   context, ref, vpnState, servers.valueOrNull)),
               SliverToBoxAdapter(child: _buildServerList(
@@ -94,7 +120,18 @@ class HomePage extends ConsumerWidget {
     ).animate().fadeIn().slideX(begin: -0.1, end: 0);
   }
 
-  Widget _buildDataCard(BuildContext context, user) {
+  Widget _buildDataCard(
+    BuildContext context,
+    String planName,
+    String expiryLabel,
+    double dataUsed,
+    double dataRemaining,
+    double usagePercent,
+  ) {
+    final usedFormatted = _formatData(dataUsed);
+    final remainingFormatted = _formatData(dataRemaining);
+    final percent = usagePercent.clamp(0.0, 1.0);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: GlassCard(
@@ -109,7 +146,7 @@ class HomePage extends ConsumerWidget {
                     children: [
                       Text('Forfait actif', style: Theme.of(context).textTheme.bodySmall),
                       const SizedBox(height: 4),
-                      Text('Premium',
+                      Text(planName,
                           style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                                 background: Paint()
                                   ..shader = const LinearGradient(
@@ -120,7 +157,7 @@ class HomePage extends ConsumerWidget {
                                   ).createShader(
                                       const Rect.fromLTWH(0, 0, 100, 40)),
                               )),
-                      Text('Expire le 20/12/2024', style: Theme.of(context).textTheme.bodySmall),
+                      Text(expiryLabel, style: Theme.of(context).textTheme.bodySmall),
                     ],
                   ),
                 ),
@@ -131,12 +168,14 @@ class HomePage extends ConsumerWidget {
                     alignment: Alignment.center,
                     children: [
                       CircularProgressIndicator(
-                        value: 0.5,
+                        value: percent,
                         strokeWidth: 6,
                         backgroundColor: const Color(0xFF1E2D45),
                         valueColor: const AlwaysStoppedAnimation(Color(0xFF06B6D4)),
                       ),
-                      Text('50%', style: const TextStyle(color: Color(0xFFF1F5F9), fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text('${(percent * 100).toInt()}%',
+                          style: const TextStyle(
+                              color: Color(0xFFF1F5F9), fontSize: 13, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
@@ -151,8 +190,9 @@ class HomePage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Utilisé', style: Theme.of(context).textTheme.bodySmall),
-                    Text('15.3 GB',
-                        style: const TextStyle(color: Color(0xFFF1F5F9), fontWeight: FontWeight.w700, fontSize: 18)),
+                    Text(usedFormatted,
+                        style: const TextStyle(
+                            color: Color(0xFFF1F5F9), fontWeight: FontWeight.w700, fontSize: 18)),
                   ],
                 )),
                 Container(width: 1, height: 30, color: const Color(0xFF1E2D45)),
@@ -160,8 +200,9 @@ class HomePage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text('Restant', style: Theme.of(context).textTheme.bodySmall),
-                    Text('14.7 GB',
-                        style: const TextStyle(color: Color(0xFF06B6D4), fontWeight: FontWeight.w700, fontSize: 18)),
+                    Text(remainingFormatted,
+                        style: const TextStyle(
+                            color: Color(0xFF06B6D4), fontWeight: FontWeight.w700, fontSize: 18)),
                   ],
                 )),
               ],
@@ -306,5 +347,25 @@ class HomePage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  static String _formatData(double gb) {
+    if (gb >= 1024) {
+      return '${(gb / 1024).toStringAsFixed(1)} TB';
+    }
+    return '${gb.toStringAsFixed(1)} GB';
+  }
+
+  static String _formatDate(String dateStr) {
+    final dt = DateTime.tryParse(dateStr);
+    if (dt == null) return dateStr;
+    return DateFormat('dd/MM/yyyy').format(dt);
+  }
+
+  static double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    return double.tryParse(v.toString());
   }
 }

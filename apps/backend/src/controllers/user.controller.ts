@@ -2,6 +2,37 @@ import type { Request, Response, NextFunction } from "express";
 import * as userService from "../services/user.service.js";
 import { sendSuccess } from "../utils/response.js";
 import { HTTP_STATUS } from "../constants/index.js";
+import type { AuthRequest } from "../types/index.js";
+
+export async function getProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const user = await userService.getUserById(userId);
+    sendSuccess(res, user, "Profile fetched successfully");
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getSubscription(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const subscription = await userService.getSubscription(userId);
+    sendSuccess(res, subscription, "Subscription fetched successfully");
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getUserStatus(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const status = await userService.getUserStatus(userId);
+    sendSuccess(res, status, "User status fetched successfully");
+  } catch (err) {
+    next(err);
+  }
+}
 
 export async function listUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
