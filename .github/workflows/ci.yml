@@ -1,0 +1,64 @@
+# CI Pipeline — Stuff The VPN
+# Déclenché sur chaque push et pull request vers main et develop.
+#
+# TODO (Phase 7): Ajouter les étapes de déploiement automatique.
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  backend-lint-typecheck:
+    name: Backend — Lint & TypeCheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+
+  dashboard-lint-typecheck:
+    name: Dashboard — Lint & TypeCheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+
+  # TODO (Phase 5): Ajouter le job Flutter
+  # mobile-test:
+  #   name: Mobile — Flutter Tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: subosito/flutter-action@v2
+  #     - run: flutter test
+
+  docker-build:
+    name: Docker — Build Images
+    runs-on: ubuntu-latest
+    needs: [backend-lint-typecheck, dashboard-lint-typecheck]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -f docker/backend.Dockerfile apps/backend
+      - name: Build dashboard image
+        run: docker build -f docker/dashboard.Dockerfile apps/dashboard

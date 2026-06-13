@@ -1,0 +1,36 @@
+// schema.prisma
+// Schéma de la base de données — Stuff The VPN
+//
+// Entités prévues (Phase 2):
+// - User         : Comptes utilisateurs (clients et revendeurs)
+// - Reseller     : Profils des revendeurs
+// - Voucher      : Codes d'accès VPN
+// - Device       : Appareils des utilisateurs
+// - Server       : Serveurs VPN (V2Ray, SSH)
+// - Usage        : Suivi de consommation
+// - Log          : Journal d'événements
+// - Subscription : Abonnements et historique
+//
+// TODO (Phase 2): Définir tous les modèles et lancer la migration initiale.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Les modèles seront définis en Phase 2.
+// Exemple de structure à venir :
+//
+// model User {
+//   id        String   @id @default(uuid())
+//   email     String   @unique
+//   role      UserRole @default(CLIENT)
+//   status    Status   @default(ACTIVE)
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+//   deletedAt DateTime?
+// }

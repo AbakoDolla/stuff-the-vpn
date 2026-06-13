@@ -1,0 +1,22 @@
+# Release Pipeline — Stuff The VPN
+# Déclenché lors de la création d'un tag de release (ex: v1.0.0).
+#
+# TODO (Phase 7): Implémenter le déploiement automatique en production.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      # TODO (Phase 7): Ajouter les étapes de déploiement
+      - name: Placeholder
+        run: echo "TODO — Déploiement en production (Phase 7)"
