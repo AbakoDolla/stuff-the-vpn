@@ -9,9 +9,17 @@ final userServiceProvider = Provider<UserService>((ref) {
 
 class UsageData {
   final double totalGb;
+  final double uploadGb;
+  final double downloadGb;
   final List<DailyUsage> daily;
   final Map<String, double> byApp;
-  const UsageData({required this.totalGb, required this.daily, required this.byApp});
+  const UsageData({
+    required this.totalGb,
+    this.uploadGb = 0,
+    this.downloadGb = 0,
+    required this.daily,
+    required this.byApp,
+  });
 }
 
 class DailyUsage {
@@ -40,19 +48,36 @@ class UserService {
       final response = await _api.get(ApiEndpoints.usage(userId));
       final json = response.data as Map<String, dynamic>;
       final data = (json["data"] as Map<String, dynamic>?) ?? json;
-      final daily = (data["daily"] as List? ?? [])
-          .map((d) => DailyUsage(
-                date: DateTime.tryParse(d["date"].toString()) ?? DateTime.now(),
-                gb: _toDouble(d["gb"]) ?? 0,
-              ))
-          .toList();
-      final byApp = Map<String, double>.from(
-        (data["byApp"] as Map? ?? {}).map((k, v) => MapEntry(k.toString(), _toDouble(v) ?? 0)),
-      );
+
+      final uploadGb = _toDouble(data["totalUploadGB"]) ?? 0.0;
+      final downloadGb = _toDouble(data["totalDownloadGB"]) ?? 0.0;
+      final totalGb = uploadGb + downloadGb;
+
+      final logs = data["logs"] as List? ?? [];
+      final Map<String, double> dailyMap = {};
+      for (final log in logs) {
+        final raw = log["createdAt"]?.toString() ?? log["date"]?.toString();
+        if (raw == null) continue;
+        final dt = DateTime.tryParse(raw);
+        if (dt == null) continue;
+        final key = "${dt.year}-${dt.month.toString().padLeft(2,"0")}-${dt.day.toString().padLeft(2,"0")}";
+        final gb = (_toDouble(log["uploadGB"]) ?? 0) + (_toDouble(log["downloadGB"]) ?? 0);
+        dailyMap[key] = (dailyMap[key] ?? 0) + gb;
+      }
+
+      final now = DateTime.now();
+      final daily = List.generate(30, (i) {
+        final d = now.subtract(Duration(days: 29 - i));
+        final key = "${d.year}-${d.month.toString().padLeft(2,"0")}-${d.day.toString().padLeft(2,"0")}";
+        return DailyUsage(date: d, gb: dailyMap[key] ?? 0);
+      });
+
       return UsageData(
-        totalGb: _toDouble(data["totalGb"]) ?? 3.25,
+        totalGb: totalGb > 0 ? totalGb : 0,
+        uploadGb: uploadGb,
+        downloadGb: downloadGb,
         daily: daily,
-        byApp: byApp,
+        byApp: {"Upload": uploadGb, "Download": downloadGb},
       );
     } catch (_) {
       return _demoUsage();
@@ -69,17 +94,12 @@ class UserService {
   UsageData _demoUsage() {
     final now = DateTime.now();
     return UsageData(
-      totalGb: 3.25,
+      totalGb: 0,
       daily: List.generate(30, (i) => DailyUsage(
         date: now.subtract(Duration(days: 29 - i)),
-        gb: 0.05 + (i * 0.08) % 0.5,
+        gb: 0,
       )),
-      byApp: {
-        "YouTube": 1.25,
-        "Instagram": 0.82,
-        "Chrome": 0.61,
-        "Autres": 0.55,
-      },
+      byApp: {"Upload": 0, "Download": 0},
     );
   }
 }
