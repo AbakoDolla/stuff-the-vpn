@@ -1,22 +1,45 @@
-# Release Pipeline — Stuff The VPN
-# Déclenché lors de la création d'un tag de release (ex: v1.0.0).
-#
-# TODO (Phase 7): Implémenter le déploiement automatique en production.
-
-name: Release
+name: Build Flutter APK
 
 on:
+  workflow_dispatch:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+    paths:
+      - "mobile_app_sxb_vpn/**"
 
 jobs:
-  release:
-    name: Deploy to Production
+  build-apk:
+    name: Build Android APK
     runs-on: ubuntu-latest
-    environment: production
+
     steps:
-      - uses: actions/checkout@v4
-      # TODO (Phase 7): Ajouter les étapes de déploiement
-      - name: Placeholder
-        run: echo "TODO — Déploiement en production (Phase 7)"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.19.6"
+          channel: stable
+          cache: true
+
+      - name: Get Flutter dependencies
+        working-directory: mobile_app_sxb_vpn
+        run: flutter pub get
+
+      - name: Build APK (release)
+        working-directory: mobile_app_sxb_vpn
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sxb-vpn-release
+          path: mobile_app_sxb_vpn/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
