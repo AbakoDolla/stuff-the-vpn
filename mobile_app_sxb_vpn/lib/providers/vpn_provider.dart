@@ -48,7 +48,12 @@ class VpnNotifier extends Notifier<VpnState> {
   Timer? _timer;
 
   @override
-  VpnState build() => const VpnState();
+  VpnState build() {
+    ref.onDispose(() {
+      _timer?.cancel();
+    });
+    return const VpnState();
+  }
 
   Future<void> toggle() async {
     if (state.isConnected) {
@@ -95,12 +100,6 @@ class VpnNotifier extends Notifier<VpnState> {
         uploadSpeed: 2 + (DateTime.now().millisecond % 5).toDouble(),
       );
     });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
   }
 }
 
