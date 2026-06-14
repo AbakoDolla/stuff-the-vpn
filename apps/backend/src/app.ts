@@ -1,21 +1,62 @@
-/**
- * app.ts
- * Point d'entrée de l'application Express.
- * Configure les middlewares globaux, les routes et la gestion d'erreurs.
- * 
- * TODO (Phase 3):
- * - Configurer CORS, Helmet, rate limiting
- * - Brancher tous les routeurs depuis /routes
- * - Ajouter le middleware de gestion d'erreurs global
- */
+import express, { type Express } from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import pinoHttp from "pino-http";
+import { logger } from "./lib/logger.js";
+import { env } from "./config/env.js";
+import router from "./routes/index.js";
+import { errorHandler } from "./middleware/error.middleware.js";
 
-import express from 'express';
+const app: Express = express();
 
-const app = express();
+// ─── Security ────────────────────────────────────────────────────────────────
+app.use(helmet());
+app.use(
+  cors({
+    origin: env.CORS_ORIGIN,
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Device-Name"],
+  }),
+);
 
-// TODO: app.use(cors())
-// TODO: app.use(helmet())
-// TODO: app.use(express.json())
-// TODO: Monter les routes
+// ─── Logging ─────────────────────────────────────────────────────────────────
+if (env.NODE_ENV === "production") {
+  app.use(
+    pinoHttp({
+      logger,
+      serializers: {
+        req(req) {
+          return { id: req.id, method: req.method, url: req.url?.split("?")[0] };
+        },
+        res(res) {
+          return { statusCode: res.statusCode };
+        },
+      },
+    }),
+  );
+} else {
+  app.use(morgan("dev"));
+}
+
+// ─── Body parsing ─────────────────────────────────────────────────────────────
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true }));
+
+// ─── Routes ──────────────────────────────────────────────────────────────────
+app.use("/api", router);
+
+// ─── 404 ─────────────────────────────────────────────────────────────────────
+app.use((_req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// ─── Error handler ───────────────────────────────────────────────────────────
+app.use(errorHandler);
 
 export default app;

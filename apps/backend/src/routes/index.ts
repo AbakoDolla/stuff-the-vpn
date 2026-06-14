@@ -1,20 +1,22 @@
-/**
- * routes/index.ts
- * Agrégateur de toutes les routes de l'API.
- *
- * Structure des routes prévues :
- * - POST   /api/auth/login
- * - POST   /api/auth/logout
- * - POST   /api/auth/refresh
- * - GET    /api/users
- * - GET    /api/users/:id
- * - POST   /api/vouchers/generate
- * - POST   /api/vouchers/activate
- * - GET    /api/resellers
- * - GET    /api/servers
- * - GET    /api/analytics
- *
- * TODO (Phase 3): Brancher les routeurs de chaque module.
- */
+import { Router, type IRouter } from "express";
+import healthRouter from "./health.js";
+import authRouter from "./auth.routes.js";
+import usersRouter from "./users.routes.js";
+import vouchersRouter from "./vouchers.routes.js";
+import plansRouter from "./plans.routes.js";
+import inboundsRouter from "./inbounds.routes.js";
+import usageRouter from "./usage.routes.js";
+import resellersRouter from "./resellers.routes.js";
 
-export {};
+const router: IRouter = Router();
+
+router.use(healthRouter);
+router.use("/auth", authRouter);
+router.use("/users", usersRouter);
+router.use("/vouchers", vouchersRouter);
+router.use("/plans", plansRouter);
+router.use("/inbounds", inboundsRouter);
+router.use("/usage", usageRouter);
+router.use("/resellers", resellersRouter);
+
+export default router;
