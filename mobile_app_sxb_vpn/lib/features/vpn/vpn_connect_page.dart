@@ -17,6 +17,7 @@ class VpnConnectPage extends ConsumerWidget {
     final authState = ref.watch(authStateProvider).valueOrNull;
     final server = vpnState.currentServer ?? demoServers.first;
     final config = vpnState.config;
+    final remaining = authState?.user?.dataRemaining ?? 0;
 
     return Scaffold(
       body: Container(
@@ -43,7 +44,7 @@ class VpnConnectPage extends ConsumerWidget {
                   const SizedBox(height: 16),
                 ],
                 if (vpnState.isConnected) _buildSpeedRow(context, vpnState),
-                if (!vpnState.isConnected && authState?.user?.quotaRemainingGB == 0)
+                if (!vpnState.isConnected && remaining <= 0 && authState?.user != null)
                   _buildNoQuotaBanner(context),
               ],
             ),
@@ -54,27 +55,42 @@ class VpnConnectPage extends ConsumerWidget {
   }
 
   Widget _buildStatusHeader(BuildContext context, VpnState state) {
-    final label = state.isConnected ? 'Connecté' : state.isConnecting ? 'Connexion...' : 'Déconnecté';
-    final color = state.isConnected ? AppColors.connected : state.isConnecting ? AppColors.warning : AppColors.textMuted;
-    return Column(children: [
-      Text(label,
-          style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: color, fontSize: 28))
-          .animate(key: ValueKey(state.status)).fadeIn().slideY(begin: -0.2, end: 0),
-    ]);
+    final label = state.isConnected
+        ? 'Connecté'
+        : state.isConnecting
+            ? 'Connexion...'
+            : 'Déconnecté';
+    final color = state.isConnected
+        ? AppColors.connected
+        : state.isConnecting
+            ? AppColors.warning
+            : AppColors.textMuted;
+    return Text(
+      label,
+      style: Theme.of(context)
+          .textTheme
+          .headlineLarge
+          ?.copyWith(color: color, fontSize: 28),
+    ).animate(key: ValueKey(state.status)).fadeIn().slideY(begin: -0.2, end: 0);
   }
 
   Widget _buildTimer(BuildContext context, VpnState state) {
     if (!state.isConnected && !state.isConnecting) return const SizedBox.shrink();
     final d = state.connectedDuration;
-    final timer = '${d.inHours.toString().padLeft(2, "'0'"')}:${(d.inMinutes % 60).toString().padLeft(2, "'0'"')}:${(d.inSeconds % 60).toString().padLeft(2, "'0'"')}';
-    return Text(timer,
-        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: AppColors.textMuted,
-              fontFeatures: [const FontFeature.tabularFigures()],
-            )).animate().fadeIn();
+    final hh = d.inHours.toString().padLeft(2, '0');
+    final mm = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final ss = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return Text(
+      '$hh:$mm:$ss',
+      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            color: AppColors.textMuted,
+            fontFeatures: [const FontFeature.tabularFigures()],
+          ),
+    ).animate().fadeIn();
   }
 
-  Widget _buildServerCard(BuildContext context, WidgetRef ref, ServerModel server, VpnConfigModel? config, bool isConnected) {
+  Widget _buildServerCard(BuildContext context, WidgetRef ref, ServerModel server,
+      VpnConfigModel? config, bool isConnected) {
     final host = config?.serverHost ?? server.country;
     final port = config?.serverPort;
     return Container(
@@ -91,11 +107,18 @@ class VpnConnectPage extends ConsumerWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Serveur actuel', style: Theme.of(context).textTheme.bodySmall),
-              Text('${server.country}${server.city.isNotEmpty ? " - ${server.city}" : ""}',
-                  style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
+              Text(
+                '${server.country}${server.city.isNotEmpty ? " - ${server.city}" : ""}',
+                style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15),
+              ),
               if (isConnected && config != null)
-                Text('$host${port != null ? ":$port" : ""}',
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                Text(
+                  '$host${port != null ? ":$port" : ""}',
+                  style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                ),
             ]),
           ),
           GestureDetector(
@@ -106,7 +129,11 @@ class VpnConnectPage extends ConsumerWidget {
                 border: Border.all(color: AppColors.primary),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('Changer', style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
+              child: const Text('Changer',
+                  style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
             ),
           ),
         ],
@@ -126,10 +153,11 @@ class VpnConnectPage extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _infoChip(context, 'Protocole', config.protocol),
-          _verticalDivider(),
+          _vDivider(),
           _infoChip(context, 'Ping', '${config.ping ?? "--"} ms'),
-          _verticalDivider(),
-          _infoChip(context, 'Restant', '${config.quotaRemainingGB?.toStringAsFixed(1) ?? "--"} GB'),
+          _vDivider(),
+          _infoChip(context, 'Restant',
+              '${config.quotaRemainingGB?.toStringAsFixed(1) ?? "--"} GB'),
         ],
       ),
     ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2, end: 0);
@@ -139,27 +167,33 @@ class VpnConnectPage extends ConsumerWidget {
     return Column(mainAxisSize: MainAxisSize.min, children: [
       Text(label, style: Theme.of(context).textTheme.bodySmall),
       const SizedBox(height: 4),
-      Text(value, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+      Text(value,
+          style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: 14)),
     ]);
   }
 
-  Widget _verticalDivider() {
-    return Container(width: 1, height: 32, color: AppColors.cardBorder);
-  }
+  Widget _vDivider() =>
+      Container(width: 1, height: 32, color: AppColors.cardBorder);
 
   Widget _buildSpeedRow(BuildContext context, VpnState state) {
     return Row(
       children: [
-        Expanded(child: _speedCard(context, '${state.downloadSpeed.toStringAsFixed(1)} Mbps',
-            Icons.arrow_downward_rounded, 'Téléchargement', AppColors.accent)),
+        Expanded(
+            child: _speedCard(context, '${state.downloadSpeed.toStringAsFixed(1)} Mbps',
+                Icons.arrow_downward_rounded, 'Téléchargement', AppColors.accent)),
         const SizedBox(width: 14),
-        Expanded(child: _speedCard(context, '${state.uploadSpeed.toStringAsFixed(1)} Mbps',
-            Icons.arrow_upward_rounded, 'Téléversement', AppColors.primary)),
+        Expanded(
+            child: _speedCard(context, '${state.uploadSpeed.toStringAsFixed(1)} Mbps',
+                Icons.arrow_upward_rounded, 'Téléversement', AppColors.primary)),
       ],
     ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2, end: 0);
   }
 
-  Widget _speedCard(BuildContext context, String value, IconData icon, String label, Color color) {
+  Widget _speedCard(
+      BuildContext context, String value, IconData icon, String label, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -172,7 +206,11 @@ class VpnConnectPage extends ConsumerWidget {
         children: [
           Icon(icon, color: color, size: 18),
           const SizedBox(height: 8),
-          Text(value, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 18)),
+          Text(value,
+              style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18)),
           Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
@@ -188,13 +226,22 @@ class VpnConnectPage extends ConsumerWidget {
         border: Border.all(color: AppColors.disconnected.withOpacity(0.3)),
       ),
       child: Row(children: [
-        const Icon(Icons.warning_amber_rounded, color: AppColors.disconnected, size: 18),
+        const Icon(Icons.warning_amber_rounded,
+            color: AppColors.disconnected, size: 18),
         const SizedBox(width: 10),
-        Expanded(child: Text('Quota épuisé. Activez un voucher pour continuer.',
-            style: const TextStyle(color: AppColors.disconnected, fontSize: 12, fontWeight: FontWeight.w500))),
+        const Expanded(
+            child: Text('Quota épuisé. Activez un voucher pour continuer.',
+                style: TextStyle(
+                    color: AppColors.disconnected,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500))),
         GestureDetector(
           onTap: () => context.go('/voucher/redeem'),
-          child: const Text('Activer', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700, fontSize: 12)),
+          child: const Text('Activer',
+              style: TextStyle(
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12)),
         ),
       ]),
     ).animate().fadeIn(delay: 500.ms).shake();
