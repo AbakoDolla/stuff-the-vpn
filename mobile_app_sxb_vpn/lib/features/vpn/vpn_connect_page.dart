@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/vpn_provider.dart';
 import '../../models/vpn_config_model.dart';
 import '../../widgets/vpn_button.dart';
@@ -13,7 +14,9 @@ class VpnConnectPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final vpnState = ref.watch(vpnProvider);
+    final authState = ref.watch(authStateProvider).valueOrNull;
     final server = vpnState.currentServer ?? demoServers.first;
+    final config = vpnState.config;
 
     return Scaffold(
       body: Container(
@@ -33,9 +36,15 @@ class VpnConnectPage extends ConsumerWidget {
                 const SizedBox(height: 48),
                 _buildTimer(context, vpnState),
                 const SizedBox(height: 32),
-                _buildServerCard(context, ref, server, vpnState.isConnected),
-                const SizedBox(height: 24),
+                _buildServerCard(context, ref, server, config, vpnState.isConnected),
+                const SizedBox(height: 16),
+                if (config != null && vpnState.isConnected) ...[
+                  _buildConfigInfo(context, config),
+                  const SizedBox(height: 16),
+                ],
                 if (vpnState.isConnected) _buildSpeedRow(context, vpnState),
+                if (!vpnState.isConnected && authState?.user?.quotaRemainingGB == 0)
+                  _buildNoQuotaBanner(context),
               ],
             ),
           ),
@@ -57,7 +66,7 @@ class VpnConnectPage extends ConsumerWidget {
   Widget _buildTimer(BuildContext context, VpnState state) {
     if (!state.isConnected && !state.isConnecting) return const SizedBox.shrink();
     final d = state.connectedDuration;
-    final timer = '${d.inHours.toString().padLeft(2, '0')}:${(d.inMinutes % 60).toString().padLeft(2, '0')}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
+    final timer = '${d.inHours.toString().padLeft(2, "'0'"')}:${(d.inMinutes % 60).toString().padLeft(2, "'0'"')}:${(d.inSeconds % 60).toString().padLeft(2, "'0'"')}';
     return Text(timer,
         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: AppColors.textMuted,
@@ -65,7 +74,9 @@ class VpnConnectPage extends ConsumerWidget {
             )).animate().fadeIn();
   }
 
-  Widget _buildServerCard(BuildContext context, WidgetRef ref, ServerModel server, bool isConnected) {
+  Widget _buildServerCard(BuildContext context, WidgetRef ref, ServerModel server, VpnConfigModel? config, bool isConnected) {
+    final host = config?.serverHost ?? server.country;
+    final port = config?.serverPort;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -80,10 +91,11 @@ class VpnConnectPage extends ConsumerWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Serveur actuel', style: Theme.of(context).textTheme.bodySmall),
-              Text('${server.country} - ${server.city}',
+              Text('${server.country}${server.city.isNotEmpty ? " - ${server.city}" : ""}',
                   style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
-              if (isConnected)
-                Text('IP: 172.217.20.110', style: Theme.of(context).textTheme.bodySmall),
+              if (isConnected && config != null)
+                Text('$host${port != null ? ":$port" : ""}',
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
             ]),
           ),
           GestureDetector(
@@ -100,6 +112,39 @@ class VpnConnectPage extends ConsumerWidget {
         ],
       ),
     ).animate().fadeIn(delay: 200.ms);
+  }
+
+  Widget _buildConfigInfo(BuildContext context, VpnConfigModel config) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _infoChip(context, 'Protocole', config.protocol),
+          _verticalDivider(),
+          _infoChip(context, 'Ping', '${config.ping ?? "--"} ms'),
+          _verticalDivider(),
+          _infoChip(context, 'Restant', '${config.quotaRemainingGB?.toStringAsFixed(1) ?? "--"} GB'),
+        ],
+      ),
+    ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2, end: 0);
+  }
+
+  Widget _infoChip(BuildContext context, String label, String value) {
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Text(label, style: Theme.of(context).textTheme.bodySmall),
+      const SizedBox(height: 4),
+      Text(value, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+    ]);
+  }
+
+  Widget _verticalDivider() {
+    return Container(width: 1, height: 32, color: AppColors.cardBorder);
   }
 
   Widget _buildSpeedRow(BuildContext context, VpnState state) {
@@ -132,5 +177,26 @@ class VpnConnectPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildNoQuotaBanner(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.disconnected.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.disconnected.withOpacity(0.3)),
+      ),
+      child: Row(children: [
+        const Icon(Icons.warning_amber_rounded, color: AppColors.disconnected, size: 18),
+        const SizedBox(width: 10),
+        Expanded(child: Text('Quota épuisé. Activez un voucher pour continuer.',
+            style: const TextStyle(color: AppColors.disconnected, fontSize: 12, fontWeight: FontWeight.w500))),
+        GestureDetector(
+          onTap: () => context.go('/voucher/redeem'),
+          child: const Text('Activer', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700, fontSize: 12)),
+        ),
+      ]),
+    ).animate().fadeIn(delay: 500.ms).shake();
   }
 }
