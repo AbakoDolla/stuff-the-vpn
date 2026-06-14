@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import * as userService from "../services/user.service.js";
-import { sendSuccess, sendError } from "../utils/response.js";
+import { sendSuccess } from "../utils/response.js";
 import { HTTP_STATUS } from "../constants/index.js";
 
 export async function listUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -16,7 +16,8 @@ export async function listUsers(req: Request, res: Response, next: NextFunction)
 
 export async function getUserById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const user = await userService.getUserById(req.params["id"]!);
+    const id = String(req.params["id"]);
+    const user = await userService.getUserById(id);
     sendSuccess(res, user, "User fetched successfully");
   } catch (err) {
     next(err);
@@ -25,7 +26,8 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
 
 export async function updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const user = await userService.updateUser(req.params["id"]!, req.body);
+    const id = String(req.params["id"]);
+    const user = await userService.updateUser(id, req.body);
     sendSuccess(res, user, "User updated successfully");
   } catch (err) {
     next(err);
@@ -34,8 +36,9 @@ export async function updateUser(req: Request, res: Response, next: NextFunction
 
 export async function setUserStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const user = await userService.setUserStatus(req.params["id"]!, req.body.status);
-    sendSuccess(res, user, `User ${req.body.status.toLowerCase()} successfully`);
+    const id = String(req.params["id"]);
+    const user = await userService.setUserStatus(id, req.body.status);
+    sendSuccess(res, user, `User ${String(req.body.status).toLowerCase()} successfully`);
   } catch (err) {
     next(err);
   }
@@ -43,7 +46,8 @@ export async function setUserStatus(req: Request, res: Response, next: NextFunct
 
 export async function addQuota(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const user = await userService.addQuota(req.params["id"]!, req.body.addGB);
+    const id = String(req.params["id"]);
+    const user = await userService.addQuota(id, req.body.addGB);
     sendSuccess(res, user, "Quota added successfully");
   } catch (err) {
     next(err);
@@ -52,7 +56,8 @@ export async function addQuota(req: Request, res: Response, next: NextFunction):
 
 export async function extendExpiry(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const user = await userService.extendExpiry(req.params["id"]!, req.body.days);
+    const id = String(req.params["id"]);
+    const user = await userService.extendExpiry(id, req.body.days);
     sendSuccess(res, user, "Expiry extended successfully");
   } catch (err) {
     next(err);
@@ -61,7 +66,8 @@ export async function extendExpiry(req: Request, res: Response, next: NextFuncti
 
 export async function deleteUser(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await userService.deleteUser(req.params["id"]!);
+    const id = String(req.params["id"]);
+    await userService.deleteUser(id);
     sendSuccess(res, null, "User deleted successfully");
   } catch (err) {
     next(err);

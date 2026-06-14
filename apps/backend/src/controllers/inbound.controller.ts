@@ -23,7 +23,8 @@ export async function listInbounds(req: Request, res: Response, next: NextFuncti
 
 export async function getInboundById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const inbound = await inboundService.getInboundById(req.params["id"]!);
+    const id = String(req.params["id"]);
+    const inbound = await inboundService.getInboundById(id);
     sendSuccess(res, inbound, "Inbound fetched successfully");
   } catch (err) {
     next(err);
@@ -32,7 +33,8 @@ export async function getInboundById(req: Request, res: Response, next: NextFunc
 
 export async function updateInbound(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const inbound = await inboundService.updateInbound(req.params["id"]!, req.body);
+    const id = String(req.params["id"]);
+    const inbound = await inboundService.updateInbound(id, req.body);
     sendSuccess(res, inbound, "Inbound updated successfully");
   } catch (err) {
     next(err);
@@ -41,7 +43,8 @@ export async function updateInbound(req: Request, res: Response, next: NextFunct
 
 export async function deleteInbound(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await inboundService.deleteInbound(req.params["id"]!);
+    const id = String(req.params["id"]);
+    await inboundService.deleteInbound(id);
     sendSuccess(res, null, "Inbound deleted successfully");
   } catch (err) {
     next(err);

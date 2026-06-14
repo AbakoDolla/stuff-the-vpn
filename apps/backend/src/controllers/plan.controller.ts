@@ -23,7 +23,8 @@ export async function listPlans(req: Request, res: Response, next: NextFunction)
 
 export async function getPlanById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const plan = await planService.getPlanById(req.params["id"]!);
+    const id = String(req.params["id"]);
+    const plan = await planService.getPlanById(id);
     sendSuccess(res, plan, "Plan fetched successfully");
   } catch (err) {
     next(err);
@@ -32,7 +33,8 @@ export async function getPlanById(req: Request, res: Response, next: NextFunctio
 
 export async function updatePlan(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const plan = await planService.updatePlan(req.params["id"]!, req.body);
+    const id = String(req.params["id"]);
+    const plan = await planService.updatePlan(id, req.body);
     sendSuccess(res, plan, "Plan updated successfully");
   } catch (err) {
     next(err);
@@ -41,7 +43,8 @@ export async function updatePlan(req: Request, res: Response, next: NextFunction
 
 export async function deletePlan(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await planService.deletePlan(req.params["id"]!);
+    const id = String(req.params["id"]);
+    await planService.deletePlan(id);
     sendSuccess(res, null, "Plan deleted successfully");
   } catch (err) {
     next(err);

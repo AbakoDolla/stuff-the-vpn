@@ -15,9 +15,10 @@ export async function listUsage(req: Request, res: Response, next: NextFunction)
 
 export async function getUserUsage(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const userId = String(req.params["userId"]);
     const page = Number(req.query["page"] ?? 1);
     const limit = Number(req.query["limit"] ?? 20);
-    const result = await usageService.getUserUsageLogs(req.params["userId"]!, page, limit);
+    const result = await usageService.getUserUsageLogs(userId, page, limit);
     sendSuccess(res, result, "User usage logs fetched successfully");
   } catch (err) {
     next(err);

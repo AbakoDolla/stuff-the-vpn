@@ -25,7 +25,8 @@ export async function listResellers(req: Request, res: Response, next: NextFunct
 
 export async function getResellerById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const reseller = await resellerService.getResellerById(req.params["id"]!);
+    const id = String(req.params["id"]);
+    const reseller = await resellerService.getResellerById(id);
     sendSuccess(res, reseller, "Reseller fetched successfully");
   } catch (err) {
     next(err);
@@ -34,7 +35,8 @@ export async function getResellerById(req: Request, res: Response, next: NextFun
 
 export async function getResellerClients(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const clients = await resellerService.getResellerClients(req.params["id"]!);
+    const id = String(req.params["id"]);
+    const clients = await resellerService.getResellerClients(id);
     sendSuccess(res, clients, "Reseller clients fetched successfully");
   } catch (err) {
     next(err);
@@ -43,7 +45,8 @@ export async function getResellerClients(req: Request, res: Response, next: Next
 
 export async function updateReseller(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const reseller = await resellerService.updateReseller(req.params["id"]!, req.body);
+    const id = String(req.params["id"]);
+    const reseller = await resellerService.updateReseller(id, req.body);
     sendSuccess(res, reseller, "Reseller updated successfully");
   } catch (err) {
     next(err);
@@ -52,7 +55,8 @@ export async function updateReseller(req: Request, res: Response, next: NextFunc
 
 export async function deleteReseller(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await resellerService.deleteReseller(req.params["id"]!);
+    const id = String(req.params["id"]);
+    await resellerService.deleteReseller(id);
     sendSuccess(res, null, "Reseller deleted successfully");
   } catch (err) {
     next(err);
