@@ -25,21 +25,37 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.19.6"
+          flutter-version: "3.22.3"
           channel: stable
           cache: true
 
+      - name: Create base Flutter project
+        run: |
+          flutter create --org com.sxbvpn --project-name sxb_vpn --platforms android /tmp/sxb_app
+          echo "✅ Base project created"
+
+      - name: Inject our lib/ code
+        run: |
+          rm -rf /tmp/sxb_app/lib
+          cp -r mobile_app_sxb_vpn/lib /tmp/sxb_app/lib
+          echo "✅ lib/ injected"
+
+      - name: Inject our pubspec.yaml
+        run: |
+          cp mobile_app_sxb_vpn/pubspec.yaml /tmp/sxb_app/pubspec.yaml
+          echo "✅ pubspec.yaml injected"
+
       - name: Get Flutter dependencies
-        working-directory: mobile_app_sxb_vpn
+        working-directory: /tmp/sxb_app
         run: flutter pub get
 
       - name: Build APK (release)
-        working-directory: mobile_app_sxb_vpn
+        working-directory: /tmp/sxb_app
         run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sxb-vpn-release
-          path: mobile_app_sxb_vpn/build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 7
+          name: sxb-vpn-release-apk
+          path: /tmp/sxb_app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
