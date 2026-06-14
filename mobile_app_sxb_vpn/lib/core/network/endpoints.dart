@@ -5,6 +5,7 @@ class ApiEndpoints {
   static const String login = '/auth/login';
   static const String register = '/auth/register';
   static const String me = '/auth/me';
+  static const String logout = '/auth/logout';
 
   // VPN
   static const String myConfig = '/vpn/my-config';
@@ -13,4 +14,10 @@ class ApiEndpoints {
   // Users
   static String user(String id) => '/users/$id';
   static String usage(String userId) => '/usage/$userId';
+
+  // Plans
+  static const String activePlans = '/plans/active';
+
+  // Vouchers
+  static const String redeemVoucher = '/vouchers/redeem';
 }
