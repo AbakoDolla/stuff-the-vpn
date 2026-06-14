@@ -100,7 +100,6 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       }
       // Sync with backend via email login or auto-create
       final authService = ref.read(authServiceProvider);
-      final authService = ref.read(authServiceProvider);
 
 // juste récupérer user backend si besoin
       final user = await authService.getMe();
