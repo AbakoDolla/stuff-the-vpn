@@ -1,7 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/network/api_client.dart';
-import '../core/network/endpoints.dart';
-import '../models/user_model.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "../core/network/api_client.dart";
+import "../core/network/endpoints.dart";
+import "../models/user_model.dart";
 
 final userServiceProvider = Provider<UserService>((ref) {
   return UserService(ref.watch(apiClientProvider));
@@ -27,11 +27,9 @@ class UserService {
   Future<UserModel?> getUser(String id) async {
     try {
       final response = await _api.get(ApiEndpoints.user(id));
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        return UserModel.fromJson(data['user'] as Map<String, dynamic>? ?? data);
-      }
-      return null;
+      final json = response.data as Map<String, dynamic>;
+      final payload = (json["data"] as Map<String, dynamic>?) ?? json;
+      return UserModel.fromJson(payload);
     } catch (_) {
       return null;
     }
@@ -40,18 +38,19 @@ class UserService {
   Future<UsageData> getUsage(String userId) async {
     try {
       final response = await _api.get(ApiEndpoints.usage(userId));
-      final data = response.data as Map<String, dynamic>;
-      final daily = (data['daily'] as List? ?? [])
+      final json = response.data as Map<String, dynamic>;
+      final data = (json["data"] as Map<String, dynamic>?) ?? json;
+      final daily = (data["daily"] as List? ?? [])
           .map((d) => DailyUsage(
-                date: DateTime.tryParse(d['date'].toString()) ?? DateTime.now(),
-                gb: _toDouble(d['gb']) ?? 0,
+                date: DateTime.tryParse(d["date"].toString()) ?? DateTime.now(),
+                gb: _toDouble(d["gb"]) ?? 0,
               ))
           .toList();
       final byApp = Map<String, double>.from(
-        (data['byApp'] as Map? ?? {}).map((k, v) => MapEntry(k.toString(), _toDouble(v) ?? 0)),
+        (data["byApp"] as Map? ?? {}).map((k, v) => MapEntry(k.toString(), _toDouble(v) ?? 0)),
       );
       return UsageData(
-        totalGb: _toDouble(data['totalGb']) ?? 3.25,
+        totalGb: _toDouble(data["totalGb"]) ?? 3.25,
         daily: daily,
         byApp: byApp,
       );
@@ -76,10 +75,10 @@ class UserService {
         gb: 0.05 + (i * 0.08) % 0.5,
       )),
       byApp: {
-        'YouTube': 1.25,
-        'Instagram': 0.82,
-        'Chrome': 0.61,
-        'Autres': 0.55,
+        "YouTube": 1.25,
+        "Instagram": 0.82,
+        "Chrome": 0.61,
+        "Autres": 0.55,
       },
     );
   }
