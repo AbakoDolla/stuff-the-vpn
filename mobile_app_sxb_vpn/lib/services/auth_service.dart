@@ -51,7 +51,7 @@ class AuthService {
       final response = await _api.post(ApiEndpoints.register, data: {
         "email": email,
         "password": password,
-        if (username != null) "username": username,
+        if (username != null && username.isNotEmpty) "username": username,
       });
       final json = response.data as Map<String, dynamic>;
       final payload = (json["data"] as Map<String, dynamic>?) ?? json;
@@ -83,6 +83,9 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    try {
+      await _api.post(ApiEndpoints.logout);
+    } catch (_) {}
     await _storage.clearAll();
   }
 
@@ -90,6 +93,7 @@ class AuthService {
     final msg = e.toString();
     if (msg.contains("401")) return "Email ou mot de passe incorrect";
     if (msg.contains("409")) return "Email déjà utilisé";
+    if (msg.contains("403")) return "Compte suspendu ou banni";
     if (msg.contains("SocketException")) return "Pas de connexion internet";
     return "Une erreur est survenue";
   }
