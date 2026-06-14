@@ -75,6 +75,17 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     await authService.logout();
     state = const AsyncValue.data(AuthState());
   }
+
+  /// Rafraîchit les données utilisateur depuis le serveur (ex: après rachat d'un voucher)
+  Future<void> refresh() async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final authService = ref.read(authServiceProvider);
+    final user = await authService.getMe();
+    if (user != null) {
+      state = AsyncValue.data(AuthState(isAuthenticated: true, user: user));
+    }
+  }
 }
 
 final authStateProvider = AsyncNotifierProvider<AuthNotifier, AuthState>(() => AuthNotifier());
