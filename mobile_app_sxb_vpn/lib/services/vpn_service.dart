@@ -1,7 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/network/api_client.dart';
-import '../core/network/endpoints.dart';
-import '../models/vpn_config_model.dart';
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "../core/network/api_client.dart";
+import "../core/network/endpoints.dart";
+import "../models/vpn_config_model.dart";
 
 final vpnServiceProvider = Provider<VpnService>((ref) {
   return VpnService(ref.watch(apiClientProvider));
@@ -14,11 +14,9 @@ class VpnService {
   Future<VpnConfigModel?> getMyConfig() async {
     try {
       final response = await _api.get(ApiEndpoints.myConfig);
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        return VpnConfigModel.fromJson(data['config'] as Map<String, dynamic>? ?? data);
-      }
-      return null;
+      final json = response.data as Map<String, dynamic>;
+      final payload = (json["data"] as Map<String, dynamic>?) ?? json;
+      return VpnConfigModel.fromJson(payload);
     } catch (_) {
       return null;
     }
@@ -27,9 +25,10 @@ class VpnService {
   Future<List<ServerModel>> getServers() async {
     try {
       final response = await _api.get(ApiEndpoints.servers);
-      final data = response.data;
-      if (data is List) {
-        return data.map((s) => ServerModel.fromJson(s as Map<String, dynamic>)).toList();
+      final json = response.data as Map<String, dynamic>;
+      final list = json["data"] as List? ?? [];
+      if (list.isNotEmpty) {
+        return list.map((s) => ServerModel.fromJson(s as Map<String, dynamic>)).toList();
       }
       return demoServers;
     } catch (_) {
