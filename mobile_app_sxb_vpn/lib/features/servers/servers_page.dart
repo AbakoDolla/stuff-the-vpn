@@ -14,19 +14,31 @@ class ServersPage extends ConsumerStatefulWidget {
 
 class _ServersPageState extends ConsumerState<ServersPage> with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
-  String _filter = 'Tous';
+  int _tabIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 3, vsync: this);
-    _tabCtrl.addListener(() => setState(() => _filter = ['Tous', 'V2Ray', 'SSH'][_tabCtrl.index]));
+    _tabCtrl.addListener(() {
+      if (!_tabCtrl.indexIsChanging) setState(() => _tabIndex = _tabCtrl.index);
+    });
   }
 
   @override
   void dispose() {
     _tabCtrl.dispose();
     super.dispose();
+  }
+
+  List<ServerModel> _filterServers(List<ServerModel> list) {
+    if (_tabIndex == 0) return list;
+    if (_tabIndex == 1) {
+      // V2Ray = vless, vmess, trojan
+      return list.where((s) => ['vless', 'vmess', 'trojan', 'shadowsocks'].contains(s.type.toLowerCase())).toList();
+    }
+    // SSH
+    return list.where((s) => s.type.toLowerCase() == 'ssh').toList();
   }
 
   @override
@@ -46,7 +58,13 @@ class _ServersPageState extends ConsumerState<ServersPage> with SingleTickerProv
                 child: servers.when(
                   loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
                   error: (_, __) => _buildServerList(context, ref, demoServers, vpnState),
-                  data: (list) => _buildServerList(context, ref, _filterServers(list), vpnState),
+                  data: (list) {
+                    final filtered = _filterServers(list);
+                    final display = filtered.isNotEmpty ? filtered : (list.isEmpty ? demoServers : []);
+                    return display.isEmpty
+                        ? _buildEmptyState(context)
+                        : _buildServerList(context, ref, display, vpnState);
+                  },
                 ),
               ),
             ],
@@ -56,9 +74,14 @@ class _ServersPageState extends ConsumerState<ServersPage> with SingleTickerProv
     );
   }
 
-  List<ServerModel> _filterServers(List<ServerModel> list) {
-    if (_filter == 'Tous') return list;
-    return list.where((s) => s.type.toLowerCase() == _filter.toLowerCase()).toList();
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.dns_outlined, color: AppColors.textMuted, size: 48),
+        const SizedBox(height: 12),
+        Text('Aucun serveur dans cette catégorie', style: Theme.of(context).textTheme.bodyMedium),
+      ]),
+    );
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -67,6 +90,21 @@ class _ServersPageState extends ConsumerState<ServersPage> with SingleTickerProv
       child: Row(
         children: [
           Text('Serveurs', style: Theme.of(context).textTheme.headlineMedium),
+          const Spacer(),
+          Consumer(builder: (_, ref, __) {
+            final servers = ref.watch(serversProvider);
+            final count = servers.valueOrNull?.length ?? 0;
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Text('$count serveur${count > 1 ? "s" : ""}',
+                  style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+            );
+          }),
         ],
       ),
     );
@@ -123,7 +161,18 @@ class _ServersPageState extends ConsumerState<ServersPage> with SingleTickerProv
             const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(s.country, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-              Text(s.city, style: Theme.of(context).textTheme.bodySmall),
+              Row(children: [
+                if (s.city.isNotEmpty) Text('${s.city} · ', style: Theme.of(context).textTheme.bodySmall),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(s.type.toUpperCase(),
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 9, fontWeight: FontWeight.w600)),
+                ),
+              ]),
             ])),
             Text('${s.ping} ms', style: TextStyle(color: pingColor, fontWeight: FontWeight.w700, fontSize: 13)),
             const SizedBox(width: 12),
