@@ -1,5 +1,5 @@
 class ApiEndpoints {
-  static const String baseUrl = 'https://bfda7366-15a6-4135-b94c-fcf014abd343-00-31cmva7e4robv.picard.replit.dev/api';
+  static const String baseUrl = 'https://7c59bcad-53b5-4481-ad9f-04a49c5ad452-00-2z3ymp5ww4daw.kirk.replit.dev/api';
 
   // Auth
   static const String login = '/auth/login';

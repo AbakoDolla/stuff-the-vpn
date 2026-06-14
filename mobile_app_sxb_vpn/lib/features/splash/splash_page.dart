@@ -12,13 +12,15 @@ class SplashPage extends ConsumerStatefulWidget {
   ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStateMixin {
+class _SplashPageState extends ConsumerState<SplashPage>
+    with TickerProviderStateMixin {
   late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))
+    _pulseController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1500))
       ..repeat(reverse: true);
     _navigate();
   }
@@ -52,12 +54,12 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
             children: [
               const Spacer(),
               _buildLogo(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
               Text(
                 'SXB VPN',
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                       letterSpacing: 4,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                     ),
               ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.3, end: 0),
               const SizedBox(height: 8),
@@ -83,27 +85,27 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
       animation: _pulseController,
       builder: (context, child) {
         return Container(
-          width: 120,
-          height: 120,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.accent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.3 + _pulseController.value * 0.3),
-                blurRadius: 30 + _pulseController.value * 20,
-                spreadRadius: 5 + _pulseController.value * 10,
+                color: AppColors.primary
+                    .withOpacity(0.3 + _pulseController.value * 0.3),
+                blurRadius: 40 + _pulseController.value * 30,
+                spreadRadius: 10 + _pulseController.value * 15,
               ),
             ],
           ),
-          child: const Icon(Icons.shield_rounded, size: 60, color: Colors.white),
+          child: child,
         );
       },
-    ).animate().scale(delay: 200.ms, duration: 600.ms, curve: Curves.elasticOut);
+      child: Image.asset(
+        'assets/images/sxb_logo.png',
+        width: 160,
+        height: 160,
+        fit: BoxFit.contain,
+      ),
+    ).animate().scale(delay: 200.ms, duration: 700.ms, curve: Curves.elasticOut);
   }
 
   Widget _buildLoader() {
