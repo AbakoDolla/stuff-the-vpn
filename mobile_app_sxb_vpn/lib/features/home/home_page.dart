@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../app/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/vpn_provider.dart';
 import '../../models/vpn_config_model.dart';
-import '../../widgets/stat_card.dart';
 import '../../widgets/glass_card.dart';
 
 class HomePage extends ConsumerWidget {
@@ -25,7 +25,7 @@ class HomePage extends ConsumerWidget {
         child: SafeArea(
           child: CustomScrollView(
             slivers: [
-              SliverToBoxAdapter(child: _buildHeader(context, user?.username ?? user?.email ?? 'STUFF USER')),
+              SliverToBoxAdapter(child: _buildHeader(context, ref, user?.username ?? user?.email ?? 'USER')),
               SliverToBoxAdapter(child: _buildDataCard(context, user)),
               SliverToBoxAdapter(child: _buildQuickConnect(context, ref, vpnState, servers.valueOrNull)),
               SliverToBoxAdapter(child: _buildServerList(context, ref, servers.valueOrNull ?? [])),
@@ -37,7 +37,7 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, String username) {
+  Widget _buildHeader(BuildContext context, WidgetRef ref, String username) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(
@@ -51,14 +51,23 @@ class HomePage extends ConsumerWidget {
             ],
           ),
           const Spacer(),
-          Container(
-            width: 42, height: 42,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.surfaceLight,
-              border: Border.all(color: AppColors.cardBorder),
+          GestureDetector(
+            onTap: () => context.go('/voucher/redeem'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: AppColors.gradientPrimary,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.confirmation_number_outlined, color: Colors.white, size: 16),
+                  SizedBox(width: 6),
+                  Text('Voucher', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
+                ],
+              ),
             ),
-            child: const Icon(Icons.notifications_none_rounded, color: AppColors.textSecondary, size: 20),
           ),
         ],
       ),
@@ -66,10 +75,15 @@ class HomePage extends ConsumerWidget {
   }
 
   Widget _buildDataCard(BuildContext context, user) {
-    final limit = user?.dataLimit ?? 10.0;
-    final used = user?.dataUsed ?? 3.25;
-    final remaining = limit - used;
-    final percent = (used / limit * 100).clamp(0, 100).toInt();
+    final limit = user?.dataLimit ?? 0.0;
+    final used = user?.dataUsed ?? 0.0;
+    final remaining = user?.dataRemaining ?? 0.0;
+    final percent = limit > 0 ? (used / limit * 100).clamp(0, 100).toInt() : 0;
+    final planName = user?.plan ?? 'Aucun forfait';
+    final expiry = user?.planExpiry;
+    final expiryStr = expiry != null
+        ? 'Expire le ${DateFormat('dd/MM/yyyy').format(expiry)}'
+        : 'Pas d\'\expiration';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -85,13 +99,13 @@ class HomePage extends ConsumerWidget {
                     children: [
                       Text('Forfait actif', style: Theme.of(context).textTheme.bodySmall),
                       const SizedBox(height: 4),
-                      Text('${limit.toInt()} GB',
+                      Text(limit > 0 ? '${limit.toStringAsFixed(0)} GB' : planName,
                           style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                                 background: Paint()..shader = const LinearGradient(
                                   colors: [AppColors.primary, AppColors.accent],
                                 ).createShader(const Rect.fromLTWH(0, 0, 100, 40)),
                               )),
-                      Text('Expire le 15/08/2025', style: Theme.of(context).textTheme.bodySmall),
+                      Text(expiryStr, style: Theme.of(context).textTheme.bodySmall),
                     ],
                   ),
                 ),
@@ -101,7 +115,7 @@ class HomePage extends ConsumerWidget {
                     alignment: Alignment.center,
                     children: [
                       CircularProgressIndicator(
-                        value: used / limit,
+                        value: limit > 0 ? used / limit : 0,
                         strokeWidth: 6,
                         backgroundColor: AppColors.cardBorder,
                         valueColor: const AlwaysStoppedAnimation(AppColors.accent),
@@ -168,7 +182,8 @@ class HomePage extends ConsumerWidget {
                 const SizedBox(width: 10),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Serveur recommandé', style: Theme.of(context).textTheme.bodySmall),
-                  Text('Best Performance', style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                  Text('${best.country}${best.city.isNotEmpty ? " - ${best.city}" : ""}',
+                      style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
                 ]),
                 const Spacer(),
                 GestureDetector(
@@ -179,8 +194,8 @@ class HomePage extends ConsumerWidget {
                       gradient: AppColors.gradientPrimary,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text('Connecter',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                    child: const Text('Connecter',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                   ),
                 ),
               ],
@@ -198,7 +213,14 @@ class HomePage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Autres serveurs', style: Theme.of(context).textTheme.labelLarge),
+          Row(children: [
+            Text('Serveurs disponibles', style: Theme.of(context).textTheme.labelLarge),
+            const Spacer(),
+            GestureDetector(
+              onTap: () => context.go('/servers'),
+              child: Text('Voir tout', style: const TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.w600)),
+            ),
+          ]),
           const SizedBox(height: 12),
           ...list.take(3).map((s) => _serverRow(context, ref, s)),
         ],
@@ -225,7 +247,8 @@ class HomePage extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(s.country, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                Text(s.city, style: Theme.of(context).textTheme.bodySmall),
+                Text(s.city.isNotEmpty ? s.city : s.type.toUpperCase(),
+                    style: Theme.of(context).textTheme.bodySmall),
               ])),
               Text('${s.ping} ms', style: TextStyle(color: pingColor, fontWeight: FontWeight.w600, fontSize: 13)),
             ],
