@@ -1,5 +1,5 @@
 class ApiEndpoints {
-  static const String baseUrl = 'https://YOUR_BACKEND_URL/api';
+  static const String baseUrl = 'https://bfda7366-15a6-4135-b94c-fcf014abd343-00-31cmva7e4robv.picard.replit.dev/api';
 
   // Auth
   static const String login = '/auth/login';
@@ -8,11 +8,9 @@ class ApiEndpoints {
 
   // VPN
   static const String myConfig = '/vpn/my-config';
+  static const String servers = '/vpn/servers';
 
   // Users
   static String user(String id) => '/users/$id';
   static String usage(String userId) => '/usage/$userId';
-
-  // Servers (if available)
-  static const String servers = '/servers';
 }
