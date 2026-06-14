@@ -100,16 +100,22 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       }
       // Sync with backend via email login or auto-create
       final authService = ref.read(authServiceProvider);
-      final result = await authService.loginWithSupabaseToken(
-          session.accessToken, supabaseUser.email ?? '');
-      if (result.success) {
-        state = AsyncValue.data(
-            AuthState(isAuthenticated: true, user: result.user));
-        return true;
-      } else {
-        state = AsyncValue.data(AuthState(error: result.error));
-        return false;
-      }
+      final authService = ref.read(authServiceProvider);
+
+// juste récupérer user backend si besoin
+      final user = await authService.getMe();
+
+    if (user != null) {
+    state = AsyncValue.data(
+    AuthState(isAuthenticated: true, user: user),
+       );
+      return true;
+    }
+
+state = const AsyncValue.data(
+  AuthState(error: 'Sync utilisateur échoué'),
+);
+return false;
     } catch (e) {
       state = AsyncValue.data(
           AuthState(error: 'Erreur Google Sign-In: ${e.toString()}'));
