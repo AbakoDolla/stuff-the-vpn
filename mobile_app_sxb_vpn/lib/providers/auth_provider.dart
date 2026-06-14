@@ -78,49 +78,49 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<bool> loginWithGoogle() async {
-    state = const AsyncValue.loading();
-    try {
-      final supabase = Supabase.instance.client;
-      await supabase.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: 'io.supabase.sxbvpn://login-callback/',
-      );
-      // After OAuth redirect, sync with backend
-      final session = supabase.auth.currentSession;
-      if (session == null) {
-        state = const AsyncValue.data(
-            AuthState(error: 'Google Sign-In annulé'));
-        return false;
-      }
-      final supabaseUser = supabase.auth.currentUser;
-      if (supabaseUser == null) {
-        state = const AsyncValue.data(
-            AuthState(error: 'Utilisateur non trouvé'));
-        return false;
-      }
-      // Sync with backend via email login or auto-create
-      final authService = ref.read(authServiceProvider);
+  state = const AsyncValue.loading();
 
-// juste récupérer user backend si besoin
-      final user = await authService.getMe();
+  try {
+    final supabase = Supabase.instance.client;
+
+    await supabase.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: 'io.supabase.sxbvpn://login-callback/',
+    );
+
+    final session = supabase.auth.currentSession;
+
+    if (session == null) {
+      state = const AsyncValue.data(
+        AuthState(error: 'Google Sign-In annulé'),
+      );
+      return false;
+    }
+
+    final authService = ref.read(authServiceProvider);
+
+    // 🔥 IMPORTANT : sync backend via token (ou fallback getMe)
+    final user = await authService.getMe();
 
     if (user != null) {
-    state = AsyncValue.data(
-    AuthState(isAuthenticated: true, user: user),
-       );
+      state = AsyncValue.data(
+        AuthState(isAuthenticated: true, user: user),
+      );
       return true;
     }
 
-state = const AsyncValue.data(
-  AuthState(error: 'Sync utilisateur échoué'),
-);
-return false;
-    } catch (e) {
-      state = AsyncValue.data(
-          AuthState(error: 'Erreur Google Sign-In: ${e.toString()}'));
-      return false;
-    }
+    state = const AsyncValue.data(
+      AuthState(error: 'Sync utilisateur échoué'),
+    );
+    return false;
+
+  } catch (e) {
+    state = AsyncValue.data(
+      AuthState(error: 'Erreur Google Sign-In: $e'),
+    );
+    return false;
   }
+}
 
   Future<void> logout() async {
     final authService = ref.read(authServiceProvider);
