@@ -9,6 +9,7 @@ import '../features/profile/profile_page.dart';
 import '../features/servers/servers_page.dart';
 import '../features/usage/usage_page.dart';
 import '../features/splash/splash_page.dart';
+import '../features/voucher/redeem_page.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/main_scaffold.dart';
 
@@ -37,6 +38,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/auth/register',
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: '/voucher/redeem',
+        builder: (context, state) => const RedeemPage(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => MainScaffold(shell: shell),
