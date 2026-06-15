@@ -21,6 +21,9 @@ class UserModel {
     this.deviceLimit,
   });
 
+  String get name =>
+      (username != null && username!.isNotEmpty) ? username! : email.split('@').first;
+
   double get dataRemaining => (dataLimit ?? 0) - (dataUsed ?? 0);
   double get usagePercent => dataLimit != null && dataLimit! > 0
       ? ((dataUsed ?? 0) / dataLimit!) * 100

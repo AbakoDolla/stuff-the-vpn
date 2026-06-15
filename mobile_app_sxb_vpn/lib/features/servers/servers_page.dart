@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/demo_data.dart';
 import '../../models/server_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/servers_provider.dart';
 import '../../providers/vpn_provider.dart';
 
@@ -154,6 +155,20 @@ class _ServersPageState extends ConsumerState<ServersPage>
     );
   }
 
+  void _connect(BuildContext context, WidgetRef ref, ServerModel s) {
+    final user = ref.read(authStateProvider).valueOrNull?.user;
+    if (user != null && user.dataRemaining <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Quota épuisé. Activez un voucher pour vous connecter.'),
+        ),
+      );
+      return;
+    }
+    ref.read(vpnProvider.notifier).connect(server: s);
+  }
+
   Widget _buildServerList(BuildContext context, WidgetRef ref,
       List<ServerModel> servers, VpnState vpnState) {
     return ListView.builder(
@@ -173,7 +188,7 @@ class _ServersPageState extends ConsumerState<ServersPage>
             ? const Color(0xFFF59E0B)
             : const Color(0xFFEF4444);
     return GestureDetector(
-      onTap: () => ref.read(vpnProvider.notifier).connect(server: s),
+      onTap: () => _connect(context, ref, s),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(16),

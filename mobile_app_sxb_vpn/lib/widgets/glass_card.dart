@@ -4,30 +4,12 @@ import '../core/app_colors.dart';
 
 class GlassCard extends StatelessWidget {
   final Widget child;
-  final EdgeInsetsGeometry? padding;
-  final EdgeInsetsGeometry? margin;
-  final double blur;
-  final double borderRadius;
-  final Color? borderColor;
-  final bool hasGlow;
-  final VoidCallback? onTap;
 
-  const GlassCard({
-    super.key,
-    required this.child,
-    this.padding,
-    this.margin,
-    this.blur = 20,
-    this.borderRadius = 20,
-    this.borderColor,
-    this.hasGlow = false,
-    this.onTap,
-  });
+  const GlassCard({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: margin,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: hasGlow
