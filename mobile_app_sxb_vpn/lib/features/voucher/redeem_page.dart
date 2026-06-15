@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../app/theme.dart';
+import '../../core/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/voucher_service.dart';
 import '../../widgets/gradient_button.dart';
@@ -196,8 +196,7 @@ class _RedeemPageState extends ConsumerState<RedeemPage> {
                       ],
                       const SizedBox(height: 24),
                       GradientButton(
-                        label: 'Activer le voucher',
-                        isLoading: _loading,
+                        text: 'Activer le voucher',
                         onPressed: _redeem,
                       ),
                       if (_success != null) ...[
