@@ -49,12 +49,18 @@ class VpnState {
 class VpnNotifier extends StateNotifier<VpnState> {
   VpnNotifier() : super(const VpnState());
 
+  // Incremented on every connect/disconnect so that an in-flight connection
+  // attempt can detect when it has been superseded and abort its transition.
+  int _generation = 0;
+
   Future<void> connect({required ServerModel server}) async {
+    final generation = ++_generation;
     state = state.copyWith(
       status: VpnStatus.connecting,
       currentServer: server,
     );
     await Future<void>.delayed(const Duration(milliseconds: 600));
+    if (generation != _generation) return;
     state = state.copyWith(
       status: VpnStatus.connected,
       currentServer: server,
@@ -62,6 +68,7 @@ class VpnNotifier extends StateNotifier<VpnState> {
   }
 
   Future<void> disconnect() async {
+    _generation++;
     state = const VpnState(status: VpnStatus.disconnected);
   }
 
