@@ -8,6 +8,7 @@ const router = Router();
 
 // Public: list plans
 router.get("/", planController.listPlans);
+router.get("/active", planController.listActivePlans);
 router.get("/:id", planController.getPlanById);
 
 // Admin only

@@ -21,6 +21,15 @@ export async function listPlans(req: Request, res: Response, next: NextFunction)
   }
 }
 
+export async function listActivePlans(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const plans = await planService.listActivePlans();
+    sendSuccess(res, plans, "Active plans fetched successfully");
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getPlanById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const id = String(req.params["id"]);

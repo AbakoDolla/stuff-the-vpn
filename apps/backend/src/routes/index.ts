@@ -7,6 +7,7 @@ import plansRouter from "./plans.routes.js";
 import inboundsRouter from "./inbounds.routes.js";
 import usageRouter from "./usage.routes.js";
 import resellersRouter from "./resellers.routes.js";
+import vpnRouter from "./vpn.routes.js";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use("/plans", plansRouter);
 router.use("/inbounds", inboundsRouter);
 router.use("/usage", usageRouter);
 router.use("/resellers", resellersRouter);
+router.use("/vpn", vpnRouter);
 
 export default router;

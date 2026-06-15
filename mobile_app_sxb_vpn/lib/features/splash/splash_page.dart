@@ -56,12 +56,12 @@ class _SplashPageState extends ConsumerState<SplashPage>
               _buildLogo(),
               const SizedBox(height: 32),
               Text(
-                'SXB VPN',
+                'SST',
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                       letterSpacing: 4,
                       fontWeight: FontWeight.w800,
                     ),
-              ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.3, end: 0),
+              ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.3, end: 0).then().shake(hz: 4, duration: 1000.ms),
               const SizedBox(height: 8),
               Text(
                 'Fast  •  Secure  •  Unlimited',
@@ -69,7 +69,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                       letterSpacing: 2,
                       color: AppColors.textMuted,
                     ),
-              ).animate().fadeIn(delay: 600.ms),
+              ).animate().fadeIn(delay: 600.ms).then().shimmer(duration: 1500.ms),
               const Spacer(),
               _buildLoader(),
               const SizedBox(height: 48),
@@ -100,12 +100,12 @@ class _SplashPageState extends ConsumerState<SplashPage>
         );
       },
       child: Image.asset(
-        'assets/images/sxb_logo.png',
+        'assets/images/logo.png',
         width: 160,
         height: 160,
         fit: BoxFit.contain,
       ),
-    ).animate().scale(delay: 200.ms, duration: 700.ms, curve: Curves.elasticOut);
+    ).animate().scale(delay: 200.ms, duration: 700.ms, curve: Curves.elasticOut).then().rotate(begin: -0.1, end: 0.1, duration: 1000.ms, curve: Curves.easeInOutCubic).then().rotate(begin: 0.1, end: -0.1, duration: 1000.ms, curve: Curves.easeInOutCubic);
   }
 
   Widget _buildLoader() {

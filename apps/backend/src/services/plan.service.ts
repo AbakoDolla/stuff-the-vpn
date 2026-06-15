@@ -15,6 +15,10 @@ export async function listPlans() {
   return prisma.plan.findMany({ orderBy: { createdAt: "desc" } });
 }
 
+export async function listActivePlans() {
+  return prisma.plan.findMany({ where: { active: true }, orderBy: { createdAt: "desc" } });
+}
+
 export async function getPlanById(id: string) {
   return prisma.plan.findUniqueOrThrow({ where: { id } });
 }
