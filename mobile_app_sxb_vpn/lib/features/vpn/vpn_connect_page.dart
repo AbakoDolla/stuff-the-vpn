@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../app/theme.dart';
+import '../../core/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/vpn_provider.dart';
 import '../../models/vpn_config_model.dart';

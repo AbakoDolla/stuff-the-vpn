@@ -1,7 +1,9 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/app_colors.dart';
 import '../../providers/auth_provider.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -13,15 +15,56 @@ class SplashPage extends ConsumerStatefulWidget {
 
 class _SplashPageState extends ConsumerState<SplashPage>
     with TickerProviderStateMixin {
-  late AnimationController _pulseController;
+  late AnimationController _pulseCtrl;
+  late AnimationController _particleCtrl;
+  late AnimationController _logoEnterCtrl;
+  late Animation<double> _pulseAnim;
+  late Animation<double> _logoScale;
+  late Animation<double> _logoOpacity;
+  final List<_Particle> _particles = [];
+  final Random _random = Random();
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500))
-      ..repeat(reverse: true);
+
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
+
+    _particleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
+    _logoEnterCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..forward();
+    _logoScale = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _logoEnterCtrl, curve: Curves.elasticOut),
+    );
+    _logoOpacity = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _logoEnterCtrl, curve: Curves.easeOut),
+    );
+
+    _initParticles();
     _navigate();
+  }
+
+  void _initParticles() {
+    for (int i = 0; i < 20; i++) {
+      _particles.add(_Particle(
+        x: _random.nextDouble(),
+        y: _random.nextDouble(),
+        size: 1.5 + _random.nextDouble() * 3,
+        speed: 0.2 + _random.nextDouble() * 0.4,
+        opacity: 0.2 + _random.nextDouble() * 0.5,
+      ));
+    }
   }
 
   Future<void> _navigate() async {
@@ -38,7 +81,9 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
   @override
   void dispose() {
-    _pulseController.dispose();
+    _pulseCtrl.dispose();
+    _particleCtrl.dispose();
+    _logoEnterCtrl.dispose();
     super.dispose();
   }
 
@@ -46,94 +91,210 @@ class _SplashPageState extends ConsumerState<SplashPage>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-            gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF0B0F1A), Color(0xFF0D1525)])),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(),
-              _buildLogo(),
-              const SizedBox(height: 32),
-              Text(
-                'SXB VPN',
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      letterSpacing: 4,
-                      fontWeight: FontWeight.w800,
+        decoration: const BoxDecoration(gradient: AppColors.gradientDark),
+        child: Stack(
+          children: [
+            // Floating particles
+            AnimatedBuilder(
+              animation: _particleCtrl,
+              builder: (context, _) {
+                return CustomPaint(
+                  size: Size.infinite,
+                  painter: _ParticlePainter(
+                    particles: _particles,
+                    progress: _particleCtrl.value,
+                  ),
+                );
+              },
+            ),
+            // Blue glow spots
+            Positioned(
+              top: -100,
+              right: -80,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.primary.withOpacity(0.12),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -60,
+              left: -40,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.accent.withOpacity(0.08),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Center content
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Spacer(flex: 2),
+                  // Animated logo with glow
+                  AnimatedBuilder(
+                    animation: _logoEnterCtrl,
+                    builder: (context, _) {
+                      return Opacity(
+                        opacity: _logoOpacity.value,
+                        child: Transform.scale(
+                          scale: _logoScale.value,
+                          child: AnimatedBuilder(
+                            animation: _pulseAnim,
+                            builder: (context, child) {
+                              return Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary
+                                          .withOpacity(0.15 * _pulseAnim.value),
+                                      blurRadius: 60 * _pulseAnim.value,
+                                      spreadRadius: 20 * _pulseAnim.value,
+                                    ),
+                                    BoxShadow(
+                                      color: AppColors.accent
+                                          .withOpacity(0.08 * _pulseAnim.value),
+                                      blurRadius: 100 * _pulseAnim.value,
+                                      spreadRadius: 30 * _pulseAnim.value,
+                                    ),
+                                  ],
+                                ),
+                                child: child,
+                              );
+                            },
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              width: 140,
+                              height: 140,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 28),
+                  // Brand name
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [AppColors.primary, AppColors.accent],
+                    ).createShader(bounds),
+                    child: Text(
+                      'SXB VPN',
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                        color: Colors.white,
+                        letterSpacing: 6,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 36,
+                      ),
                     ),
-              )
-                  .animate()
-                  .fadeIn(delay: 400.ms)
-                  .slideY(begin: 0.3, end: 0)
-                  .then()
-                  .shake(hz: 4, duration: 1000.ms),
-              const SizedBox(height: 8),
-              Text(
-                'Fast  •  Secure  •  Unlimited',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      letterSpacing: 2,
-                      color: const Color(0xFF64748B),
+                  )
+                      .animate()
+                      .fadeIn(delay: 400.ms, duration: 600.ms)
+                      .then()
+                      .shimmer(
+                        duration: 1500.ms,
+                        color: AppColors.accent.withOpacity(0.3),
+                      ),
+                  const SizedBox(height: 10),
+                  // Tagline
+                  Text(
+                    'Fast  •  Secure  •  Unlimited',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      letterSpacing: 3,
+                      color: AppColors.textMuted,
+                      fontSize: 13,
                     ),
-              )
-                  .animate()
-                  .fadeIn(delay: 600.ms)
-                  .then()
-                  .shimmer(duration: 1500.ms),
-              const Spacer(),
-              _buildLoader(),
-              const SizedBox(height: 48),
-            ],
-          ),
+                  )
+                      .animate()
+                      .fadeIn(delay: 700.ms, duration: 500.ms)
+                      .then()
+                      .shimmer(
+                        duration: 1500.ms,
+                        color: AppColors.primary.withOpacity(0.3),
+                      ),
+                  const Spacer(flex: 2),
+                  // Loading indicator
+                  SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(
+                        AppColors.accent.withOpacity(0.6),
+                      ),
+                    ),
+                  )
+                      .animate()
+                      .fadeIn(delay: 1000.ms, duration: 400.ms),
+                  const SizedBox(height: 48),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildLogo() {
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF2563EB)
-                    .withOpacity(0.3 + _pulseController.value * 0.3),
-                blurRadius: 40 + _pulseController.value * 30,
-                spreadRadius: 10 + _pulseController.value * 15,
-              ),
-            ],
-          ),
-          child: child,
-        );
-      },
-      child: Image.asset(
-        'assets/images/logo.png',
-        width: 160,
-        height: 160,
-        fit: BoxFit.contain,
-      ),
-    )
-        .animate()
-        .scale(delay: 200.ms, duration: 700.ms, curve: Curves.elasticOut)
-        .then()
-        .rotate(begin: -0.1, end: 0.1, duration: 1000.ms, curve: Curves.easeInOutCubic)
-        .then()
-        .rotate(begin: 0.1, end: -0.1, duration: 1000.ms, curve: Curves.easeInOutCubic);
+class _Particle {
+  final double x;
+  final double y;
+  final double size;
+  final double speed;
+  final double opacity;
+
+  const _Particle({
+    required this.x,
+    required this.y,
+    required this.size,
+    required this.speed,
+    required this.opacity,
+  });
+}
+
+class _ParticlePainter extends CustomPainter {
+  final List<_Particle> particles;
+  final double progress;
+
+  _ParticlePainter({required this.particles, required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final p in particles) {
+      final y = (p.y + progress * p.speed) % 1.0;
+      final x = p.x;
+      final opacity = p.opacity * (1 - (y - 0.5).abs() * 1.5).clamp(0, 1);
+      canvas.drawCircle(
+        Offset(x * size.width, y * size.height),
+        p.size,
+        Paint()
+          ..color = AppColors.accent.withOpacity(opacity * 0.3)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+      );
+    }
   }
 
-  Widget _buildLoader() {
-    return SizedBox(
-      width: 40,
-      height: 40,
-      child: CircularProgressIndicator(
-        strokeWidth: 2,
-        color: const Color(0xFF06B6D4).withOpacity(0.6),
-      ),
-    ).animate().fadeIn(delay: 800.ms);
-  }
+  @override
+  bool shouldRepaint(covariant _ParticlePainter old) => old.progress != progress;
 }

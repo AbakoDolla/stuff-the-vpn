@@ -114,7 +114,11 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'io.supabase.sxbvpn://login-callback/',
+        redirectTo: 'io.supabase.sxbvpn://login-callback',
+        queryParams: {
+          'access_type': 'offline',
+          'prompt': 'consent',
+        },
       );
       // The auth listener will handle the result of the OAuth flow.
     } catch (e, st) {
