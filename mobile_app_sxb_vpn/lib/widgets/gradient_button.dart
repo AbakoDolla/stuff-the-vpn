@@ -1,49 +1,30 @@
 import 'package:flutter/material.dart';
-import '../app/theme.dart';
 
 class GradientButton extends StatelessWidget {
-  final String label;
+  final String text;
   final VoidCallback? onPressed;
-  final bool isLoading;
-  final double height;
 
-  const GradientButton({
-    super.key,
-    required this.label,
-    this.onPressed,
-    this.isLoading = false,
-    this.height = 54,
-  });
+  const GradientButton({super.key, required this.text, this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: height,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: AppColors.gradientPrimary,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2563EB), Color(0xFFB57AFF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: ElevatedButton(
-          onPressed: isLoading ? null : onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          ),
-          child: isLoading
-              ? const SizedBox(width: 22, height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 16),
         ),
+        child: Text(text, style: const TextStyle(fontSize: 16, color: Colors.white)),
       ),
     );
   }

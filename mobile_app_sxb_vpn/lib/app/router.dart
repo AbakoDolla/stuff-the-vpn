@@ -15,6 +15,8 @@ import '../widgets/main_scaffold.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
+  final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
+
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
@@ -43,26 +45,48 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/voucher/redeem',
         builder: (context, state) => const RedeemPage(),
       ),
-      StatefulShellRoute.indexedStack(
-        builder: (context, state, shell) => MainScaffold(shell: shell),
-        branches: [
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/home', builder: (context, state) => const HomePage()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/servers', builder: (context, state) => const ServersPage()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/vpn', builder: (context, state) => const VpnConnectPage()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/usage', builder: (context, state) => const UsagePage()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/profile', builder: (context, state) => const ProfilePage()),
-          ]),
+      ShellRoute(
+        navigatorKey: _shellNavigatorKey,
+        builder: (context, state, child) {
+          return MainScaffold(
+            body: child,
+            selectedIndex: _calculateSelectedIndex(context),
+            onDestinationSelected: (index) {
+              final router = GoRouter.of(context);
+              switch (index) {
+                case 0:
+                  router.go('/home');
+                  break;
+                case 1:
+                  router.go('/servers');
+                  break;
+                case 2:
+                  router.go('/profile');
+                  break;
+                case 3:
+                  router.go('/usage');
+                  break;
+              }
+            },
+          );
+        },
+        routes: [
+          GoRoute(path: '/home', builder: (context, state) => const HomePage()),
+          GoRoute(path: '/servers', builder: (context, state) => const ServersPage()),
+          GoRoute(path: '/profile', builder: (context, state) => const ProfilePage()),
+          GoRoute(path: '/usage', builder: (context, state) => const UsagePage()),
+          GoRoute(path: '/vpn', builder: (context, state) => const VpnConnectPage()),
         ],
       ),
     ],
   );
 });
+
+int _calculateSelectedIndex(BuildContext context) {
+  final location = GoRouter.of(context).routerDelegate.currentConfiguration.fullPath;
+  if (location.startsWith('/home')) return 0;
+  if (location.startsWith('/servers')) return 1;
+  if (location.startsWith('/profile')) return 2;
+  if (location.startsWith('/usage')) return 3;
+  return 0;
+}

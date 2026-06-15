@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/app_colors.dart';
-
 class AppTextField extends StatelessWidget {
   final String hint;
   final bool isPassword;
@@ -27,20 +25,20 @@ class AppTextField extends StatelessWidget {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.cardBody),
+        hintStyle: const TextStyle(color: Color(0xFF64748B)),
         filled: true,
-        fillColor: AppColors.card,
+        fillColor: const Color(0xFF141C2E),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.cardBorder),
+          borderSide: const BorderSide(color: Color(0xFF1E2D45)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.cardBorder),
+          borderSide: const BorderSide(color: Color(0xFF1E2D45)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.primary),
+          borderSide: const BorderSide(color: Color(0xFF2563EB)),
         ),
       ),
     );

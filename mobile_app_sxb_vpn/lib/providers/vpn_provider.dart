@@ -1,111 +1,37 @@
-import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/vpn_config_model.dart';
-import '../services/vpn_service.dart';
-
-enum VpnStatus { disconnected, connecting, connected }
+import '../models/server_model.dart';
 
 class VpnState {
-  final VpnStatus status;
-  final ServerModel? currentServer;
-  final Duration connectedDuration;
-  final double downloadSpeed;
-  final double uploadSpeed;
-  final VpnConfigModel? config;
+  final bool isConnected;
+  final ServerModel? server;
 
-  const VpnState({
-    this.status = VpnStatus.disconnected,
-    this.currentServer,
-    this.connectedDuration = Duration.zero,
-    this.downloadSpeed = 0,
-    this.uploadSpeed = 0,
-    this.config,
-  });
+  VpnState({this.isConnected = false, this.server});
 
-  bool get isConnected => status == VpnStatus.connected;
-  bool get isConnecting => status == VpnStatus.connecting;
-
-  VpnState copyWith({
-    VpnStatus? status,
-    ServerModel? currentServer,
-    Duration? connectedDuration,
-    double? downloadSpeed,
-    double? uploadSpeed,
-    VpnConfigModel? config,
+VpnState copyWith({
+    bool? isConnected,
+    ServerModel? server,
   }) {
     return VpnState(
-      status: status ?? this.status,
-      currentServer: currentServer ?? this.currentServer,
-      connectedDuration: connectedDuration ?? this.connectedDuration,
-      downloadSpeed: downloadSpeed ?? this.downloadSpeed,
-      uploadSpeed: uploadSpeed ?? this.uploadSpeed,
-      config: config ?? this.config,
+      isConnected: isConnected ?? this.isConnected,
+      server: server ?? this.server,
     );
   }
 }
 
-class VpnNotifier extends Notifier<VpnState> {
-  Timer? _timer;
+class VpnNotifier extends StateNotifier<VpnState> {
+  VpnNotifier() : super(VpnState());
 
-  @override
-  VpnState build() {
-    ref.onDispose(() {
-      _timer?.cancel();
-    });
-    return const VpnState();
-  }
-
-  Future<void> toggle() async {
-    if (state.isConnected) {
-      await disconnect();
-    } else {
-      await connect();
-    }
-  }
-
-  Future<void> connect({ServerModel? server}) async {
-    state = state.copyWith(status: VpnStatus.connecting, currentServer: server ?? demoServers.first);
-    await Future.delayed(const Duration(seconds: 2));
-    final vpnService = ref.read(vpnServiceProvider);
-    final config = await vpnService.getMyConfig();
-    state = state.copyWith(
-      status: VpnStatus.connected,
-      config: config,
-      downloadSpeed: 12.4,
-      uploadSpeed: 4.6,
-    );
-    _startTimer();
-    _simulateStats();
+  Future<void> connect({required ServerModel server}) async {
+    // TODO: Implement VPN connection
+    state = state.copyWith(isConnected: true, server: server);
   }
 
   Future<void> disconnect() async {
-    _timer?.cancel();
-    state = const VpnState();
-  }
-
-  void _startTimer() {
-    _timer?.cancel();
-    var seconds = 0;
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      seconds++;
-      state = state.copyWith(connectedDuration: Duration(seconds: seconds));
-    });
-  }
-
-  void _simulateStats() {
-    Timer.periodic(const Duration(seconds: 3), (t) {
-      if (!state.isConnected) { t.cancel(); return; }
-      state = state.copyWith(
-        downloadSpeed: 8 + (DateTime.now().millisecond % 10).toDouble(),
-        uploadSpeed: 2 + (DateTime.now().millisecond % 5).toDouble(),
-      );
-    });
+    // TODO: Implement VPN disconnection
+    state = state.copyWith(isConnected: false, server: null);
   }
 }
 
-final vpnProvider = NotifierProvider<VpnNotifier, VpnState>(() => VpnNotifier());
-
-final serversProvider = FutureProvider<List<ServerModel>>((ref) async {
-  final vpnService = ref.watch(vpnServiceProvider);
-  return vpnService.getServers();
+final vpnProvider = StateNotifierProvider<VpnNotifier, VpnState>((ref) {
+  return VpnNotifier();
 });

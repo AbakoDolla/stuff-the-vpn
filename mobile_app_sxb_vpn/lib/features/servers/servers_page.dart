@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../app/theme.dart';
+import '../../core/demo_data.dart';
+import '../../models/server_model.dart';
+import '../../providers/servers_provider.dart';
 import '../../providers/vpn_provider.dart';
-import '../../models/vpn_config_model.dart';
 
 class ServersPage extends ConsumerStatefulWidget {
   const ServersPage({super.key});
@@ -36,8 +37,8 @@ class _ServersPageState extends ConsumerState<ServersPage>
     if (_tabIndex == 0) return list;
     if (_tabIndex == 1) {
       return list
-          .where((s) => ['vless', 'vmess', 'trojan', 'shadowsocks']
-              .contains(s.type.toLowerCase()))
+          .where((s) =>
+              ['vless', 'vmess', 'trojan', 'shadowsocks'].contains(s.type.toLowerCase()))
           .toList();
     }
     return list.where((s) => s.type.toLowerCase() == 'ssh').toList();
@@ -50,7 +51,11 @@ class _ServersPageState extends ConsumerState<ServersPage>
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.gradientDark),
+        decoration: const BoxDecoration(
+            gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF0B0F1A), Color(0xFF0D1525)])),
         child: SafeArea(
           child: Column(
             children: [
@@ -59,13 +64,17 @@ class _ServersPageState extends ConsumerState<ServersPage>
               Expanded(
                 child: servers.when(
                   loading: () => const Center(
-                      child: CircularProgressIndicator(color: AppColors.accent)),
+                      child: CircularProgressIndicator(
+                          color: Color(0xFF06B6D4))),
                   error: (_, __) =>
                       _buildServerList(context, ref, demoServers, vpnState),
                   data: (list) {
                     final filtered = _filterServers(list);
-                    final display =
-                        filtered.isNotEmpty ? filtered : list.isEmpty ? demoServers : <ServerModel>[];
+                    final display = filtered.isNotEmpty
+                        ? filtered
+                        : list.isEmpty
+                            ? demoServers
+                            : <ServerModel>[];
                     return display.isEmpty
                         ? _buildEmptyState(context)
                         : _buildServerList(context, ref, display, vpnState);
@@ -82,7 +91,7 @@ class _ServersPageState extends ConsumerState<ServersPage>
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.dns_outlined, color: AppColors.textMuted, size: 48),
+        const Icon(Icons.dns_outlined, color: Color(0xFF64748B), size: 48),
         const SizedBox(height: 12),
         Text('Aucun serveur dans cette catégorie',
             style: Theme.of(context).textTheme.bodyMedium),
@@ -104,13 +113,13 @@ class _ServersPageState extends ConsumerState<ServersPage>
               padding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.surfaceLight,
+                color: const Color(0xFF0F1629),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.cardBorder),
+                border: Border.all(color: const Color(0xFF1E2D45)),
               ),
               child: Text('$count serveur${count > 1 ? "s" : ""}',
                   style: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 12)),
+                      color: Color(0xFF64748B), fontSize: 12)),
             );
           }),
         ],
@@ -122,19 +131,22 @@ class _ServersPageState extends ConsumerState<ServersPage>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF121A2C),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: const Color(0xFF1E2D45)),
       ),
       child: TabBar(
         controller: _tabCtrl,
         indicator: BoxDecoration(
-          gradient: AppColors.gradientPrimary,
+          gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF2563EB), Color(0xFF06B6D4)]),
           borderRadius: BorderRadius.circular(10),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         labelColor: Colors.white,
-        unselectedLabelColor: AppColors.textMuted,
+        unselectedLabelColor: const Color(0xFF64748B),
         labelStyle:
             const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
         tabs: const [Tab(text: 'Tous'), Tab(text: 'V2Ray'), Tab(text: 'SSH')],
@@ -154,24 +166,28 @@ class _ServersPageState extends ConsumerState<ServersPage>
 
   Widget _serverTile(BuildContext context, WidgetRef ref, ServerModel s,
       VpnState vpnState, int index) {
-    final isActive =
-        vpnState.currentServer?.id == s.id && vpnState.isConnected;
+    final isActive = vpnState.server?.id == s.id && vpnState.isConnected;
     final pingColor = s.ping < 60
-        ? AppColors.connected
+        ? const Color(0xFF10B981)
         : s.ping < 100
-            ? AppColors.warning
-            : AppColors.disconnected;
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFFEF4444);
     return GestureDetector(
       onTap: () => ref.read(vpnProvider.notifier).connect(server: s),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: isActive ? AppColors.gradientCard : null,
-          color: isActive ? null : AppColors.card,
+          gradient: isActive
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF141C2E), Color(0xFF0F1629)])
+              : null,
+          color: isActive ? null : const Color(0xFF141C2E),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-              color: isActive ? AppColors.primary : AppColors.cardBorder,
+              color: isActive ? const Color(0xFF2563EB) : const Color(0xFF1E2D45),
               width: isActive ? 1.5 : 1),
         ),
         child: Row(
@@ -184,7 +200,7 @@ class _ServersPageState extends ConsumerState<ServersPage>
                     children: [
                   Text(s.country,
                       style: const TextStyle(
-                          color: AppColors.textPrimary,
+                          color: Color(0xFFF1F5F9),
                           fontWeight: FontWeight.w600,
                           fontSize: 14)),
                   Row(children: [
@@ -195,12 +211,12 @@ class _ServersPageState extends ConsumerState<ServersPage>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 1),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceLight,
+                        color: const Color(0xFF0F1629),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(s.type.toUpperCase(),
                           style: const TextStyle(
-                              color: AppColors.textMuted,
+                              color: Color(0xFF64748B),
                               fontSize: 9,
                               fontWeight: FontWeight.w600)),
                     ),
@@ -216,13 +232,13 @@ class _ServersPageState extends ConsumerState<ServersPage>
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(
-                    color: AppColors.connected, shape: BoxShape.circle),
+                    color: Color(0xFF10B981), shape: BoxShape.circle),
                 child: const Icon(Icons.check_rounded,
                     size: 14, color: Colors.white),
               )
             else
               const Icon(Icons.chevron_right_rounded,
-                  color: AppColors.textMuted, size: 20),
+                  color: Color(0xFF64748B), size: 20),
           ],
         ),
       )

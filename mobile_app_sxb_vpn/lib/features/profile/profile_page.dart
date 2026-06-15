@@ -4,7 +4,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../app/theme.dart';
 import '../../providers/auth_provider.dart';
 
 class ProfilePage extends ConsumerWidget {
@@ -15,31 +14,31 @@ class ProfilePage extends ConsumerWidget {
     final authState = ref.watch(authStateProvider).valueOrNull;
     final user = authState?.user;
 
-    final planLabel = user?.plan ?? 'Aucun forfait';
-    final limitLabel = user?.dataLimit != null && user!.dataLimit! > 0
-        ? '${user.dataLimit!.toStringAsFixed(0)} GB'
-        : '—';
-    final expiryLabel = user?.planExpiry != null
-        ? 'Expire ${DateFormat('dd/MM/yyyy').format(user!.planExpiry!)}'
-        : '—';
-    final usedLabel = user?.dataUsed != null
-        ? '${user!.dataUsed!.toStringAsFixed(2)} GB utilisés'
-        : '0 GB';
-    final deviceLabel = user?.deviceLimit != null
-        ? 'Limite : ${user!.deviceLimit} appareils'
-        : '—';
+    final planLabel = 'Premium';
+    final limitLabel = '30 GB';
+    final expiryLabel = 'Expire le 20/12/2024';
+    final usedLabel = '15.3 GB utilisés';
+    final deviceLabel = 'Limite : 5 appareils';
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.gradientDark),
+        decoration: const BoxDecoration(
+            gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF0B0F1A), Color(0xFF0D1525)])),
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 80),
             child: Column(
               children: [
-                _buildAvatar(context, user?.username ?? 'USER', user?.email ?? '').animate().fadeIn().scale(),
+                _buildAvatar(context, user?.name ?? 'USER', user?.email ?? 'user@example.com')
+                    .animate()
+                    .fadeIn()
+                    .scale(),
                 const SizedBox(height: 28),
-                _buildMenuSection(context, ref, planLabel, limitLabel, expiryLabel, usedLabel, deviceLabel),
+                _buildMenuSection(context, ref, planLabel, limitLabel,
+                    expiryLabel, usedLabel, deviceLabel),
                 const SizedBox(height: 20),
                 _buildLogoutButton(context, ref),
               ],
@@ -54,14 +53,25 @@ class ProfilePage extends ConsumerWidget {
     final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'U';
     return Column(children: [
       Container(
-        width: 80, height: 80,
+        width: 80,
+        height: 80,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: AppColors.gradientPrimary,
-          boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 20, spreadRadius: 5)],
+          gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF2563EB), Color(0xFF06B6D4)]),
+          boxShadow: [
+            BoxShadow(
+                color: const Color(0xFF2563EB).withOpacity(0.4),
+                blurRadius: 20,
+                spreadRadius: 5)
+          ],
         ),
         child: Center(
-          child: Text(initial, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700)),
+          child: Text(initial,
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700)),
         ),
       ),
       const SizedBox(height: 14),
@@ -71,7 +81,8 @@ class ProfilePage extends ConsumerWidget {
         onTap: () {
           Clipboard.setData(ClipboardData(text: email));
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Email copié'), duration: Duration(seconds: 2)),
+            const SnackBar(
+                content: Text('Email copié'), duration: Duration(seconds: 2)),
           );
         },
         child: Text(email, style: Theme.of(context).textTheme.bodySmall),
@@ -79,8 +90,14 @@ class ProfilePage extends ConsumerWidget {
     ]);
   }
 
-  Widget _buildMenuSection(BuildContext context, WidgetRef ref,
-      String planLabel, String limitLabel, String expiryLabel, String usedLabel, String deviceLabel) {
+  Widget _buildMenuSection(
+      BuildContext context,
+      WidgetRef ref,
+      String planLabel,
+      String limitLabel,
+      String expiryLabel,
+      String usedLabel,
+      String deviceLabel) {
     final items = [
       _MenuItem(
         icon: Icons.card_membership_rounded,
@@ -109,46 +126,66 @@ class ProfilePage extends ConsumerWidget {
       ),
       _MenuItem(icon: Icons.security_rounded, title: 'Sécurité', onTap: null),
       _MenuItem(icon: Icons.settings_rounded, title: 'Paramètres', onTap: null),
-      _MenuItem(icon: Icons.help_outline_rounded, title: 'Aide & Support', onTap: null),
+      _MenuItem(
+          icon: Icons.help_outline_rounded, title: 'Aide & Support', onTap: null),
     ];
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: const Color(0xFF141C2E),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: const Color(0xFF1E2D45)),
       ),
       child: Column(
-        children: items.asMap().entries.map((e) {
-          final item = e.value;
-          final isLast = e.key == items.length - 1;
-          return Column(
-            children: [
-              ListTile(
-                leading: Container(
-                  width: 38, height: 38,
-                  decoration: BoxDecoration(
-                    color: item.highlight == true ? AppColors.primary.withOpacity(0.2) : AppColors.surfaceLight,
-                    borderRadius: BorderRadius.circular(10),
+        children: items
+            .asMap()
+            .entries
+            .map((e) {
+              final item = e.value;
+              final isLast = e.key == items.length - 1;
+              return Column(
+                children: [
+                  ListTile(
+                    leading: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: item.highlight == true
+                            ? const Color(0xFF2563EB).withOpacity(0.2)
+                            : const Color(0xFF0F1629),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(item.icon,
+                          color: item.highlight == true
+                              ? const Color(0xFF2563EB)
+                              : const Color(0xFF06B6D4),
+                          size: 20),
+                    ),
+                    title: Text(item.title,
+                        style: TextStyle(
+                          color: item.highlight == true
+                              ? const Color(0xFF2563EB)
+                              : const Color(0xFFF1F5F9),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        )),
+                    subtitle: item.subtitle != null
+                        ? Text(item.subtitle!,
+                            style: const TextStyle(
+                                color: Color(0xFF64748B), fontSize: 12))
+                        : null,
+                    trailing: const Icon(Icons.chevron_right_rounded,
+                        color: Color(0xFF64748B), size: 20),
+                    onTap: item.onTap != null ? () => item.onTap!(context) : null,
                   ),
-                  child: Icon(item.icon, color: item.highlight == true ? AppColors.primary : AppColors.accent, size: 20),
-                ),
-                title: Text(item.title,
-                    style: TextStyle(
-                      color: item.highlight == true ? AppColors.primary : AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    )),
-                subtitle: item.subtitle != null
-                    ? Text(item.subtitle!, style: const TextStyle(color: AppColors.textMuted, fontSize: 12))
-                    : null,
-                trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted, size: 20),
-                onTap: item.onTap != null ? () => item.onTap!(context) : null,
-              ),
-              if (!isLast) const Divider(height: 1, indent: 70),
-            ],
-          );
-        }).toList().animate(interval: 60.ms).fadeIn().slideX(begin: 0.05, end: 0),
+                  if (!isLast) const Divider(height: 1, indent: 70),
+                ],
+              );
+            })
+            .toList()
+            .animate(interval: 60.ms)
+            .fadeIn()
+            .slideX(begin: 0.05, end: 0),
       ),
     );
   }
@@ -157,10 +194,11 @@ class ProfilePage extends ConsumerWidget {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        icon: const Icon(Icons.logout_rounded, color: AppColors.disconnected),
-        label: const Text('Se déconnecter', style: TextStyle(color: AppColors.disconnected, fontWeight: FontWeight.w600)),
+        icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
+        label: const Text('Se déconnecter',
+            style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600)),
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: AppColors.disconnected),
+          side: const BorderSide(color: Color(0xFFEF4444)),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
@@ -179,5 +217,10 @@ class _MenuItem {
   final String? subtitle;
   final bool? highlight;
   final void Function(BuildContext)? onTap;
-  const _MenuItem({required this.icon, required this.title, this.subtitle, this.highlight, this.onTap});
+  const _MenuItem(
+      {required this.icon,
+      required this.title,
+      this.subtitle,
+      this.highlight,
+      this.onTap});
 }
