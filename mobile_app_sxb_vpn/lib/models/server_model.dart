@@ -16,4 +16,16 @@ class ServerModel {
     required this.ping,
     required this.file,
   });
+
+  factory ServerModel.fromJson(Map<String, dynamic> json) {
+    return ServerModel(
+      id: json['id']?.toString() ?? '',
+      country: json['country']?.toString() ?? json['name']?.toString() ?? '',
+      city: json['city']?.toString() ?? '',
+      flag: json['flag']?.toString() ?? '🏳️',
+      type: json['type']?.toString() ?? 'Free',
+      ping: int.tryParse(json['ping']?.toString() ?? '') ?? 0,
+      file: json['file']?.toString() ?? json['config']?.toString() ?? '',
+    );
+  }
 }
