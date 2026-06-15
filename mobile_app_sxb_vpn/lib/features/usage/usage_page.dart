@@ -2,7 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../app/theme.dart';
+import '../../core/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/user_service.dart';
 
