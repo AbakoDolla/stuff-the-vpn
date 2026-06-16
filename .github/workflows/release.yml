@@ -1,26 +1,3 @@
--name: Get Flutter dependencies
-        working-directory: /tmp/sxb_app
-        run: flutter pub get
-
--name: Show SHA1 and SHA256
-        run: |
-          keytool -genkeypair \
-            -alias androiddebugkey \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -keystore ~/.android/debug.keystore \
-            -storepass android \
-            -keypass android \
-            -dname "CN=Android Debug,O=Android,C=US"
-
-          keytool -list -v \
-            -keystore ~/.android/debug.keystore \
-            -alias androiddebugkey \
-            -storepass android \
-            -keypass android
-
-
 name: Build Flutter APK
 
 on:
@@ -71,6 +48,24 @@ jobs:
       - name: Get Flutter dependencies
         working-directory: /tmp/sxb_app
         run: flutter pub get
+
+      - name: Show SHA1 and SHA256
+        run: |
+          keytool -genkeypair \
+            -alias androiddebugkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -keystore ~/.android/debug.keystore \
+            -storepass android \
+            -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+          keytool -list -v \
+            -keystore ~/.android/debug.keystore \
+            -alias androiddebugkey \
+            -storepass android \
+            -keypass android
 
       - name: Build APK (release)
         working-directory: /tmp/sxb_app
