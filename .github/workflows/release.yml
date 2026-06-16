@@ -49,23 +49,25 @@ jobs:
         working-directory: /tmp/sxb_app
         run: flutter pub get
 
-      # 🔥 SHA-1 FIX (IMPORTANT)
+      # 🔥 FIX COMPLET SHA1 ERROR (TON PROBLÈME)
       - name: Generate debug keystore + print SHA1
         run: |
-          mkdir -p ~/.android
+          mkdir -p $HOME/.android
 
           keytool -genkeypair \
             -alias androiddebugkey \
             -keyalg RSA \
             -keysize 2048 \
             -validity 10000 \
-            -keystore ~/.android/debug.keystore \
+            -keystore $HOME/.android/debug.keystore \
             -storepass android \
             -keypass android \
             -dname "CN=Android Debug,O=Android,C=US"
 
+          echo "================ SHA1 & SHA256 ================="
+
           keytool -list -v \
-            -keystore ~/.android/debug.keystore \
+            -keystore $HOME/.android/debug.keystore \
             -alias androiddebugkey \
             -storepass android \
             -keypass android
