@@ -1,4 +1,5 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:supabase_flutter/supabase_flutter.dart";
 import "../core/network/api_client.dart";
 import "../core/network/endpoints.dart";
 import "../core/storage/secure_storage.dart";
@@ -69,6 +70,13 @@ class AuthService {
     } catch (e) {
       return AuthResult(success: false, error: _parseError(e));
     }
+  }
+
+  Future<void> signInWithOAuth(OAuthProvider provider) async {
+    await Supabase.instance.client.auth.signInWithOAuth(
+      provider,
+      redirectTo: 'io.supabase.sxbvpn://login-callback',
+    );
   }
 
   Future<UserModel?> getMe() async {

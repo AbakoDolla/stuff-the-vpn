@@ -31,7 +31,7 @@ class AuthState {
 ///
 /// This notifier listens to Supabase's authentication state changes and
 /// updates the app state accordingly. It provides methods for login,
-/// logout, registration, and Google sign-in.
+/// logout, registration, and social sign-in.
 class AuthNotifier extends AsyncNotifier<AuthState> {
   StreamSubscription<dynamic>? _authStateSubscription;
 
@@ -112,15 +112,27 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<void> loginWithGoogle() async {
     state = const AsyncValue.loading();
     try {
-      await Supabase.instance.client.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: 'io.supabase.sxbvpn://login-callback',
-        queryParams: {
-          'access_type': 'offline',
-          'prompt': 'consent',
-        },
-      );
-      // The auth listener will handle the result of the OAuth flow.
+      await ref.read(authServiceProvider).signInWithOAuth(OAuthProvider.google);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// Initiates the Apple sign-in flow.
+  Future<void> loginWithApple() async {
+    state = const AsyncValue.loading();
+    try {
+      await ref.read(authServiceProvider).signInWithOAuth(OAuthProvider.apple);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// Initiates the Facebook sign-in flow.
+  Future<void> loginWithFacebook() async {
+    state = const AsyncValue.loading();
+    try {
+      await ref.read(authServiceProvider).signInWithOAuth(OAuthProvider.facebook);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }

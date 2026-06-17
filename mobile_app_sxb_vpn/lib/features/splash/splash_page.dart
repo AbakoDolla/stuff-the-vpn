@@ -2,9 +2,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/gradient_button.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -23,6 +25,8 @@ class _SplashPageState extends ConsumerState<SplashPage>
   late Animation<double> _logoOpacity;
   final List<_Particle> _particles = [];
   final Random _random = Random();
+  bool _showLanding = false;
+  bool _isCheckingAuth = true;
 
   @override
   void initState() {
@@ -52,7 +56,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
     );
 
     _initParticles();
-    _navigate();
+    _checkAuth();
   }
 
   void _initParticles() {
@@ -67,15 +71,20 @@ class _SplashPageState extends ConsumerState<SplashPage>
     }
   }
 
-  Future<void> _navigate() async {
-    await Future.delayed(const Duration(seconds: 3));
+  Future<void> _checkAuth() async {
+    await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
+
     final authState = await ref.read(authStateProvider.future);
     if (!mounted) return;
+
     if (authState.isAuthenticated) {
       context.go('/home');
     } else {
-      context.go('/auth/login');
+      setState(() {
+        _isCheckingAuth = false;
+        _showLanding = true;
+      });
     }
   }
 
@@ -143,11 +152,11 @@ class _SplashPageState extends ConsumerState<SplashPage>
               ),
             ),
             // Center content
-            Center(
+            SafeArea(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Spacer(flex: 2),
+                  const Spacer(flex: 3),
                   // Animated logo with glow
                   AnimatedBuilder(
                     animation: _logoEnterCtrl,
@@ -232,26 +241,102 @@ class _SplashPageState extends ConsumerState<SplashPage>
                         duration: 1500.ms,
                         color: AppColors.primary.withOpacity(0.3),
                       ),
+
                   const Spacer(flex: 2),
-                  // Loading indicator
-                  SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(
-                        AppColors.accent.withOpacity(0.6),
+
+                  if (_isCheckingAuth)
+                    SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(
+                          AppColors.accent.withOpacity(0.6),
+                        ),
                       ),
-                    ),
-                  )
-                      .animate()
-                      .fadeIn(delay: 1000.ms, duration: 400.ms),
-                  const SizedBox(height: 48),
+                    ).animate().fadeIn(duration: 400.ms),
+
+                  if (_showLanding) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: GradientButton(
+                        text: 'Get Started',
+                        onPressed: () => context.go('/auth/login'),
+                      ),
+                    ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Already have an account? ',
+                          style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                        ),
+                        GestureDetector(
+                          onTap: () => context.go('/auth/login'),
+                          child: const Text(
+                            'Sign In',
+                            style: TextStyle(
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ).animate().fadeIn(delay: 200.ms),
+                    const SizedBox(height: 48),
+                    // Social icons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _socialIcon(
+                          'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+                          onTap: () {},
+                        ),
+                        const SizedBox(width: 24),
+                        _socialIcon(
+                          '',
+                          icon: Icons.apple_rounded,
+                          onTap: () {},
+                        ),
+                        const SizedBox(width: 24),
+                        _socialIcon(
+                          'https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg',
+                          onTap: () {},
+                        ),
+                      ],
+                    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.5, end: 0),
+                    const SizedBox(height: 24),
+                  ],
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _socialIcon(String url, {IconData? icon, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.surfaceLight.withOpacity(0.5),
+          border: Border.all(color: AppColors.cardBorder.withOpacity(0.5)),
+        ),
+        child: icon != null
+            ? Icon(icon, color: Colors.white, size: 24)
+            : SvgPicture.network(
+                url,
+                placeholderBuilder: (BuildContext context) => const CircularProgressIndicator(strokeWidth: 2),
+              ),
       ),
     );
   }
