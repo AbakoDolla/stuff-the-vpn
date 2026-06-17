@@ -27,6 +27,7 @@ class VpnState {
   bool get isConnected => status == VpnStatus.connected;
   bool get isConnecting => status == VpnStatus.connecting;
   bool get isDisconnected => status == VpnStatus.disconnected;
+  ServerModel? get server => currentServer;
 
   VpnState copyWith({
     VpnStatus? status,
@@ -67,8 +68,12 @@ class VpnNotifier extends StateNotifier<VpnState> {
     }
   }
 
-  Future<void> connect() async {
+  Future<void> connect({ServerModel? server}) async {
     if (state.status != VpnStatus.disconnected) return;
+
+    if (server != null) {
+      state = state.copyWith(currentServer: server);
+    }
 
     state = state.copyWith(status: VpnStatus.connecting);
 
