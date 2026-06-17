@@ -22,8 +22,8 @@ android {
         applicationId = "com.example.sst_vpn"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode()
-        versionName = flutter.versionName()
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
     buildTypes {
