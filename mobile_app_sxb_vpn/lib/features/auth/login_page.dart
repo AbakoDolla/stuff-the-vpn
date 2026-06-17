@@ -1,6 +1,9 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
@@ -81,7 +84,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
       );
     });
 
-    final authState = ref.watch(authStateProvider);
+    final authState = ref.watch(authStateProvider).valueOrNull ?? const AuthState();
+    final isLoading = ref.watch(authStateProvider).isLoading;
 
     return Scaffold(
       body: Container(
@@ -260,8 +264,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                       // Login button
                                       GradientButton(
                                         text: 'Se connecter',
-                                        isLoading: authState.isLoading,
-                                        onPressed: authState.isLoading
+                                        isLoading: isLoading,
+                                        onPressed: isLoading
                                             ? null
                                             : _submit,
                                       ),
@@ -304,26 +308,24 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             ],
                           ),
                           const SizedBox(height: 20),
-                          // Google button
+                          // Social buttons
                           GlassSocialButton(
                             text: 'Google',
                             icon: SizedBox(
                               width: 22,
                               height: 22,
-                              child: Image.network(
+                              child: SvgPicture.network(
                                 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                                color: Colors.white,
                               ),
                             ),
-                            isLoading: authState.isLoading,
-                            onPressed: authState.isLoading
+                            isLoading: isLoading,
+                            onPressed: isLoading
                                 ? null
                                 : () => ref
                                     .read(authStateProvider.notifier)
                                     .loginWithGoogle(),
                           ),
                           const SizedBox(height: 12),
-                          // Apple button
                           GlassSocialButton(
                             text: 'Apple',
                             icon: const Icon(
@@ -331,7 +333,29 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               color: Colors.white,
                               size: 22,
                             ),
-                            onPressed: authState.isLoading ? null : () {},
+                            isLoading: isLoading,
+                            onPressed: isLoading
+                                ? null
+                                : () => ref
+                                    .read(authStateProvider.notifier)
+                                    .loginWithApple(),
+                          ),
+                          const SizedBox(height: 12),
+                          GlassSocialButton(
+                            text: 'Facebook',
+                            icon: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: SvgPicture.network(
+                                'https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg',
+                              ),
+                            ),
+                            isLoading: isLoading,
+                            onPressed: isLoading
+                                ? null
+                                : () => ref
+                                    .read(authStateProvider.notifier)
+                                    .loginWithFacebook(),
                           ),
                           const SizedBox(height: 32),
                           // Register link
