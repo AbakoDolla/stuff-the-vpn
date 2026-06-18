@@ -1,22 +1,17 @@
-/**
- * layout.tsx
- * Layout racine de l'application Next.js.
- * Configure les providers globaux (auth, theme, notifications).
- * 
- * TODO (Phase 4): Ajouter Sidebar, Topbar, AuthProvider, ThemeProvider.
- */
-
 import type { Metadata } from 'next';
+  import './globals.css';
 
-export const metadata: Metadata = {
-  title: 'Stuff The VPN — Administration',
-  description: 'Tableau de bord administrateur — Plateforme SaaS VPN',
-};
+  export const metadata: Metadata = {
+    title: 'SxBVPN — Dashboard Admin',
+    description: 'Tableau de bord administration SxBVPN',
+  };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="fr">
-      <body>{children}</body>
-    </html>
-  );
-}
+  export default function RootLayout({ children }: { children: React.ReactNode }) {
+    return (
+      <html lang="fr" suppressHydrationWarning>
+        <body className="min-h-screen bg-[#020817] text-[#F1F5F9]">
+          {children}
+        </body>
+      </html>
+    );
+  }
