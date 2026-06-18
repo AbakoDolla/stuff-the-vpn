@@ -1,29 +1,29 @@
-# ─── Dashboard Dockerfile ─────────────────────────────────────────────────────
-# Build Next.js en mode standalone pour une image légère.
-#
-# TODO (Phase 7): Configurer les variables d'environnement de production.
+# Dashboard Dockerfile — Next.js standalone build
+  FROM node:20-alpine AS base
+  RUN corepack enable && corepack prepare pnpm@9 --activate
 
-# Stage 1: Build
-FROM node:20-alpine AS builder
-WORKDIR /app
+  FROM base AS deps
+  WORKDIR /app
+  COPY package.json pnpm-lock.yaml ./
+  RUN pnpm install --frozen-lockfile
 
-COPY package*.json ./
-RUN npm ci
+  FROM deps AS builder
+  WORKDIR /app
+  COPY . .
+  ENV NEXT_TELEMETRY_DISABLED=1
+  RUN pnpm run build
 
-COPY . .
-RUN npm run build
+  FROM node:20-alpine AS production
+  WORKDIR /app
+  ENV NODE_ENV=production
+  ENV NEXT_TELEMETRY_DISABLED=1
 
-# Stage 2: Production
-FROM node:20-alpine AS production
-WORKDIR /app
+  RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+  COPY --from=builder /app/public ./public
+  COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+  COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-
-EXPOSE 3000
-
-CMD ["node", "server.js"]
+  USER nextjs
+  EXPOSE 3000
+  CMD ["node", "server.js"]
+  
