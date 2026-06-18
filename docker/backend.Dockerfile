@@ -1,28 +1,32 @@
-# ─── Backend Dockerfile ───────────────────────────────────────────────────────
-# Multi-stage build pour minimiser la taille de l'image de production.
-#
-# TODO (Phase 7): Affiner les optimisations de sécurité (utilisateur non-root, etc.)
+# Backend Dockerfile — monorepo-aware build
+  # Builds from workspace root to resolve @workspace/* packages
 
-# Stage 1: Build
-FROM node:20-alpine AS builder
-WORKDIR /app
+  FROM node:20-alpine AS base
+  RUN corepack enable && corepack prepare pnpm@9 --activate
 
-COPY package*.json ./
-RUN npm ci
+  FROM base AS deps
+  WORKDIR /app
+  COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+  COPY tsconfig.base.json tsconfig.json ./
+  COPY lib/ ./lib/
+  COPY apps/backend/package.json ./apps/backend/
+  COPY packages/ ./packages/
+  RUN pnpm install --frozen-lockfile
 
-COPY . .
-RUN npm run build
+  FROM deps AS builder
+  COPY apps/backend/ ./apps/backend/
+  RUN pnpm run typecheck:libs
+  RUN pnpm --filter @workspace/api-server exec npx prisma generate
+  RUN pnpm --filter @workspace/api-server run build
 
-# Stage 2: Production
-FROM node:20-alpine AS production
-WORKDIR /app
-
-ENV NODE_ENV=production
-
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-
-EXPOSE 3001
-
-CMD ["node", "dist/index.js"]
+  FROM node:20-alpine AS production
+  WORKDIR /app
+  ENV NODE_ENV=production
+  RUN corepack enable && corepack prepare pnpm@9 --activate
+  COPY --from=builder /app/apps/backend/dist ./dist
+  COPY --from=builder /app/apps/backend/node_modules ./node_modules
+  COPY --from=builder /app/apps/backend/package.json ./package.json
+  COPY --from=builder /app/apps/backend/prisma ./prisma
+  EXPOSE 5000
+  CMD ["node", "--enable-source-maps", "./dist/index.mjs"]
+  
