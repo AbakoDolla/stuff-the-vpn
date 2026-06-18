@@ -1,227 +1,196 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import DashboardLayout from '@/components/DashboardLayout';
+import { motion } from 'framer-motion';
 import {
-  Users, Server, Ticket, CreditCard, TrendingUp,
-  Activity, Shield, Wifi, RefreshCw
+  Users,
+  UserCheck,
+  DollarSign,
+  Activity,
+  Server,
+  Key,
+  TrendingUp,
+  ArrowUpRight,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { StatsCard } from '@/components/StatsCard';
+import { ServerStatus } from '@/components/ServerStatus';
+import { DataTable } from '@/components/DataTable';
+import { VoucherGenerator } from '@/components/VoucherGenerator';
+import dynamic from 'next/dynamic';
 
-function StatCard({
-  label, value, sub, icon: Icon, color, trend
-}: {
-  label: string; value: string | number; sub?: string;
-  icon: React.ElementType; color: string; trend?: string;
-}) {
-  return (
-    <div className="stat-card">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs text-[#64748B] font-medium uppercase tracking-wider">{label}</p>
-          <p className="text-2xl font-bold mt-1" style={{ color }}>{value}</p>
-          {sub && <p className="text-xs text-[#64748B] mt-0.5">{sub}</p>}
-        </div>
-        <div className="p-2.5 rounded-xl" style={{ background: `${color}20`, border: `1px solid ${color}30` }}>
-          <Icon className="w-5 h-5" style={{ color }} />
-        </div>
-      </div>
-      {trend && (
-        <div className="flex items-center gap-1 mt-2">
-          <TrendingUp className="w-3 h-3 text-emerald-400" />
-          <span className="text-xs text-emerald-400">{trend}</span>
-        </div>
-      )}
-    </div>
-  );
-}
+const DynamicLineChart = dynamic(
+  () => import('@/components/charts/UserGrowthChart'),
+  { ssr: false }
+);
+
+const DynamicRevenueChart = dynamic(
+  () => import('@/components/charts/RevenueChart'),
+  { ssr: false }
+);
+
+// Données mockées pour la table
+const recentUsers = [
+  { id: '1', phone: '+237 691 234 567', device: '3E9A-7C91-F2B8', status: 'Actif', server: 'EU-Frankfurt-01', traffic: '2.4 GB', expires: '15/07/2026' },
+  { id: '2', phone: '+237 677 890 123', device: '8F2B-1A3C-9D7E', status: 'Actif', server: 'US-NewYork-01', traffic: '5.1 GB', expires: '20/07/2026' },
+  { id: '3', phone: '+237 655 432 109', device: '4C5D-6E7F-8A9B', status: 'Suspendu', server: 'AS-Singapore-01', traffic: '0 GB', expires: '01/06/2026' },
+  { id: '4', phone: '+237 698 765 432', device: '7D8E-9F0A-1B2C', status: 'Actif', server: 'EU-Paris-01', traffic: '1.2 GB', expires: '28/07/2026' },
+  { id: '5', phone: '+237 612 345 678', device: '2A3B-4C5D-6E7F', status: 'Actif', server: 'EU-Frankfurt-01', traffic: '8.7 GB', expires: '10/08/2026' },
+];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 },
+};
 
 export default function DashboardPage() {
-  const { data: usersData, isLoading: loadingUsers } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => api.get('/users?limit=1').then(r => r.data),
-    refetchInterval: 30_000,
-  });
-
-  const { data: serversData, isLoading: loadingServers } = useQuery({
-    queryKey: ['servers'],
-    queryFn: () => api.get('/servers').then(r => r.data),
-    refetchInterval: 15_000,
-  });
-
-  const { data: vouchersData } = useQuery({
-    queryKey: ['vouchers-stats'],
-    queryFn: () => api.get('/vouchers?limit=1000').then(r => r.data),
-    refetchInterval: 60_000,
-  });
-
-  const { data: auditData } = useQuery({
-    queryKey: ['audit-recent'],
-    queryFn: () => api.get('/audit?limit=8').then(r => r.data),
-    refetchInterval: 30_000,
-  });
-
-  const servers  = (serversData?.data ?? []) as Array<{ id:string; name?:string; remark?:string; status?:string; protocol?:string; ip?:string; host?:string; country?:string; flag?:string; activeConns?:number }>;
-  const vouchers = (vouchersData?.data ?? []) as Array<{ status:string }>;
-
-  const onlineServers  = servers.filter(s => s.status === 'ONLINE').length;
-  const activeVouchers = vouchers.filter(v => v.status === 'ACTIVE').length;
-  const usedVouchers   = vouchers.filter(v => v.status === 'USED').length;
-  const isLoading = loadingUsers || loadingServers;
-
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold">Vue d&apos;ensemble</h1>
-            <p className="text-sm text-[#64748B] mt-0.5">Tableau de bord SxBVPN</p>
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="btn-ghost flex items-center gap-2 text-xs"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Actualiser
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6"
+    >
+      {/* Header */}
+      <motion.div variants={itemVariants} className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Vue d'ensemble de votre plateforme VPN
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-2 text-xs text-gray-500">
+            <span className="status-dot online" />
+            Système opérationnel
+          </span>
+          <button className="btn-primary text-sm flex items-center gap-2">
+            <ArrowUpRight size={16} />
+            Exporter
           </button>
         </div>
+      </motion.div>
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Utilisateurs"
-            value={isLoading ? '…' : usersData?.meta?.total ?? '—'}
-            sub={`${usersData?.meta?.totalActive ?? 0} actifs`}
-            icon={Users}
-            color="#6366F1"
-            trend="+12% ce mois"
-          />
-          <StatCard
-            label="Serveurs"
-            value={servers.length}
-            sub={`${onlineServers} en ligne`}
-            icon={Server}
-            color={onlineServers === servers.length && servers.length > 0 ? '#10B981' : '#F59E0B'}
-          />
-          <StatCard
-            label="Vouchers actifs"
-            value={activeVouchers}
-            sub={`${usedVouchers} utilisés`}
-            icon={Ticket}
-            color="#8B5CF6"
-          />
-          <StatCard
-            label="Connexions live"
-            value="—"
-            sub="Via Socket.IO"
-            icon={Activity}
-            color="#06B6D4"
-          />
+      {/* Stats Cards */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatsCard
+          title="Utilisateurs Total"
+          value="2,847"
+          change={12.5}
+          changeLabel="ce mois"
+          icon={Users}
+          color="primary"
+        />
+        <StatsCard
+          title="Utilisateurs Actifs"
+          value="1,923"
+          change={8.2}
+          changeLabel="cette semaine"
+          icon={UserCheck}
+          color="green"
+        />
+        <StatsCard
+          title="Revenus Mensuels"
+          value="12,450 €"
+          change={15.3}
+          changeLabel="vs mois dernier"
+          icon={DollarSign}
+          color="accent"
+        />
+        <StatsCard
+          title="Traffic Total"
+          value="2.4"
+          suffix="TB"
+          change={-3.1}
+          changeLabel="cette semaine"
+          icon={Activity}
+          color="yellow"
+        />
+      </motion.div>
+
+      {/* Secondary Stats */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatsCard
+          title="Serveurs en ligne"
+          value="4/6"
+          icon={Server}
+          color="green"
+        />
+        <StatsCard
+          title="Licences Actives"
+          value="1,847"
+          change={22.1}
+          changeLabel="ce mois"
+          icon={Key}
+          color="primary"
+        />
+        <StatsCard
+          title="Taux de Croissance"
+          value="+18.4%"
+          icon={TrendingUp}
+          color="accent"
+        />
+      </motion.div>
+
+      {/* Charts */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <DynamicLineChart />
+        <DynamicRevenueChart />
+      </motion.div>
+
+      {/* Server Status + Voucher Generator */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <ServerStatus />
         </div>
-
-        {/* Main grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Servers */}
-          <div className="lg:col-span-2 card">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold flex items-center gap-2">
-                <Server className="w-4 h-4 text-[#6366F1]" />
-                Serveurs ({servers.length})
-              </h2>
-            </div>
-            {loadingServers ? (
-              <div className="space-y-3">
-                {[1,2,3].map(i => <div key={i} className="h-14 rounded-xl bg-white/5 animate-pulse" />)}
-              </div>
-            ) : servers.length === 0 ? (
-              <div className="flex flex-col items-center py-8 text-[#64748B]">
-                <Server className="w-8 h-8 mb-2 opacity-40" />
-                <p className="text-sm">Aucun serveur configuré</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {servers.slice(0, 6).map(s => (
-                  <div key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${s.status === 'ONLINE' ? 'bg-emerald-400' : s.status === 'OFFLINE' ? 'bg-red-400' : 'bg-yellow-400'}`} />
-                      <div>
-                        <p className="text-sm font-medium">{s.name ?? s.remark ?? 'Serveur'}</p>
-                        <p className="text-xs text-[#64748B]">{s.protocol} · {s.ip ?? s.host}</p>
-                      </div>
-                    </div>
-                    <span className={`badge ${s.status === 'ONLINE' ? 'badge-green' : s.status === 'OFFLINE' ? 'badge-red' : 'badge-yellow'}`}>
-                      {s.status ?? 'UNKNOWN'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Activity */}
-          <div className="card">
-            <h2 className="font-semibold flex items-center gap-2 mb-4">
-              <Activity className="w-4 h-4 text-[#6366F1]" />
-              Activité récente
-            </h2>
-            {!(auditData?.data?.length) ? (
-              <div className="flex flex-col items-center py-8 text-[#64748B]">
-                <Activity className="w-8 h-8 mb-2 opacity-40" />
-                <p className="text-sm">Aucune activité</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {(auditData.data as Array<{id:string;action:string;createdAt:string;user?:{username:string}}> ).map(log => (
-                  <div key={log.id} className="flex items-start gap-2.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-1.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium truncate">{log.action.replace(/_/g, ' ')}</p>
-                      <p className="text-xs text-[#64748B]">
-                        {log.user?.username ?? 'Système'} ·{' '}
-                        {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true, locale: fr })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        <div>
+          <VoucherGenerator />
         </div>
+      </motion.div>
 
-        {/* Status row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="card flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500/10">
-              <Shield className="w-5 h-5 text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-xs text-[#64748B]">Chiffrement</p>
-              <p className="text-sm font-medium">AES-256-GCM ✓</p>
-            </div>
-          </div>
-          <div className="card flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <Wifi className="w-5 h-5 text-blue-400" />
-            </div>
-            <div>
-              <p className="text-xs text-[#64748B]">Protocoles</p>
-              <p className="text-sm font-medium">VLESS · SSH · WireGuard</p>
-            </div>
-          </div>
-          <div className="card flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-purple-500/10">
-              <CreditCard className="w-5 h-5 text-purple-400" />
-            </div>
-            <div>
-              <p className="text-xs text-[#64748B]">Vouchers dispo</p>
-              <p className="text-sm font-medium">{activeVouchers} actifs</p>
-            </div>
-          </div>
+      {/* Recent Users Table */}
+      <motion.div variants={itemVariants}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-200">Derniers utilisateurs</h2>
+          <button className="text-xs text-primary hover:text-primary/80 transition-colors">
+            Voir tout →
+          </button>
         </div>
-      </div>
-    </DashboardLayout>
+        <DataTable
+          columns={[
+            { key: 'phone', label: 'Téléphone', sortable: true },
+            { key: 'device', label: 'Appareil', sortable: true },
+            {
+              key: 'status',
+              label: 'Statut',
+              sortable: true,
+              render: (item) => (
+                <span
+                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                    item.status === 'Actif'
+                      ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                      : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                  }`}
+                >
+                  {item.status}
+                </span>
+              ),
+            },
+            { key: 'server', label: 'Serveur', sortable: true },
+            { key: 'traffic', label: 'Traffic', sortable: true },
+            { key: 'expires', label: 'Expire le', sortable: true },
+          ]}
+          data={recentUsers}
+          searchPlaceholder="Rechercher un utilisateur..."
+          onRowClick={(user) => console.log('User clicked:', user)}
+        />
+      </motion.div>
+    </motion.div>
   );
 }

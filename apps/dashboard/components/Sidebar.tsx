@@ -1,79 +1,162 @@
 'use client';
-import Image from 'next/image';
-import Link from 'next/link';
-import {
-  LayoutDashboard, Users, Ticket, Server, BarChart3, ShoppingBag, Settings,
-  ChevronRight, X, Key, DollarSign, MessageSquare, Shield, Bell, Wifi,
-  Network
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
 
-const NAV = [
-  { label: 'Tableau de bord', href: '/dashboard',                  icon: LayoutDashboard },
-  { label: 'Utilisateurs',    href: '/dashboard/users',            icon: Users },
-  { label: 'Serveurs VPN',    href: '/dashboard/servers',          icon: Server },
-  { label: 'Profils VPN',     href: '/dashboard/vpn',              icon: Network },
-  { label: 'Vouchers',        href: '/dashboard/vouchers',         icon: Ticket },
-  { label: 'Licenses',        href: '/dashboard/licenses',         icon: Key },
-  { label: 'Paiements',       href: '/dashboard/payments',         icon: DollarSign },
-  { label: 'Support',         href: '/dashboard/tickets',          icon: MessageSquare },
-  { label: 'Revendeurs',      href: '/dashboard/resellers',        icon: ShoppingBag },
-  { label: 'Analytiques',     href: '/dashboard/analytics',        icon: BarChart3 },
-  { label: 'Clés API',        href: '/dashboard/api-keys',         icon: Key },
-  { label: 'Audit Logs',      href: '/dashboard/audit',            icon: Shield },
-  { label: 'Notifications',   href: '/dashboard/notifications',    icon: Bell },
-  { label: 'Paramètres',      href: '/dashboard/settings',         icon: Settings },
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  LayoutDashboard,
+  Users,
+  UserPlus,
+  Key,
+  Smartphone,
+  Server,
+  Activity,
+  FileText,
+  DollarSign,
+  HelpCircle,
+  Settings,
+  ChevronLeft,
+  LogOut,
+  Shield,
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+interface NavItem {
+  label: string;
+  icon: React.ReactNode;
+  href: string;
+  badge?: string;
+  badgeColor?: string;
+}
+
+const navItems: NavItem[] = [
+  { label: 'Dashboard', icon: <LayoutDashboard size={20} />, href: '/dashboard' },
+  { label: 'Utilisateurs', icon: <Users size={20} />, href: '/users' },
+  { label: 'Revendeurs', icon: <UserPlus size={20} />, href: '/resellers' },
+  { label: 'Licences', icon: <Key size={20} />, href: '/licenses', badge: '24', badgeColor: 'bg-accent' },
+  { label: 'Appareils', icon: <Smartphone size={20} />, href: '/devices' },
+  { label: 'Serveurs', icon: <Server size={20} />, href: '/servers', badge: '12', badgeColor: 'bg-primary' },
+  { label: 'Traffic', icon: <Activity size={20} />, href: '/traffic' },
+  { label: 'Logs', icon: <FileText size={20} />, href: '/logs' },
+  { label: 'Revenus', icon: <DollarSign size={20} />, href: '/revenue' },
+  { label: 'Support', icon: <HelpCircle size={20} />, href: '/support' },
+  { label: 'Paramètres', icon: <Settings size={20} />, href: '/settings' },
 ];
 
-interface SidebarProps { isOpen: boolean; currentPath: string; onClose: () => void; }
+export function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
 
-export default function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
   return (
-    <>
-      {isOpen && <div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={onClose} />}
+    <motion.aside
+      layout
+      className={`fixed left-0 top-0 h-screen bg-dark-200/80 backdrop-blur-xl border-r border-surface-light z-50 flex flex-col transition-all duration-300 ${
+        collapsed ? 'w-[72px]' : 'w-64'
+      }`}
+    >
+      {/* Logo */}
+      <div className="flex items-center justify-between p-4 border-b border-surface-light">
+        <AnimatePresence mode="wait">
+          {!collapsed ? (
+            <motion.div
+              key="logo-expanded"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center gap-3"
+            >
+              <div className="w-9 h-9 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                <Shield size={20} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-sm font-bold gradient-text">Stuff VPN</h1>
+                <p className="text-[10px] text-gray-500">Administration</p>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="logo-collapsed"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="w-full flex justify-center"
+            >
+              <div className="w-9 h-9 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center">
+                <Shield size={20} className="text-white" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      <aside className={cn(
-        'fixed lg:static inset-y-0 left-0 z-30 flex flex-col w-64 bg-[#0A0F1E] border-r border-[#1E2D45] transition-transform duration-300',
-        isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden'
-      )}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#1E2D45]">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="SxB VPN Logo" width={32} height={32} className="rounded-lg shadow-md shadow-[#0099FF]/30" />
-            <div>
-              <div className="text-sm font-bold text-[#F1F5F9]">SxBVPN</div>
-              <div className="text-[10px] text-[#64748B]">Admin Panel</div>
-            </div>
-          </div>
-          <button onClick={onClose} className="lg:hidden text-[#64748B] hover:text-[#F1F5F9]">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors text-gray-400 hover:text-white"
+        >
+          <ChevronLeft
+            size={18}
+            className={`transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {NAV.map(({ label, href, icon: Icon }) => {
-            const active = currentPath === href || (href !== '/dashboard' && currentPath.startsWith(href + '/'));
-            return (
-              <Link key={href} href={href} className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 group',
-                active
-                  ? 'bg-[#0099FF]/10 text-[#0099FF] border border-[#0099FF]/20'
-                  : 'text-[#94A3B8] hover:bg-[#141C2E] hover:text-[#F1F5F9]'
-              )}>
-                <Icon className={cn('w-4 h-4 flex-shrink-0', active ? 'text-[#0099FF]' : 'text-[#64748B] group-hover:text-[#94A3B8]')} />
-                <span className="flex-1">{label}</span>
-                {active && <ChevronRight className="w-3 h-3" />}
-              </Link>
-            );
-          })}
-        </nav>
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link key={item.href} href={item.href}>
+              <motion.div
+                whileHover={{ x: 4 }}
+                whileTap={{ scale: 0.98 }}
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 cursor-pointer group ${
+                  isActive
+                    ? 'bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-surface-hover'
+                }`}
+              >
+                <div className={`${isActive ? 'text-primary' : ''}`}>{item.icon}</div>
+                
+                {!collapsed && (
+                  <>
+                    <span className="text-sm font-medium">{item.label}</span>
+                    {item.badge && (
+                      <span
+                        className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full text-white ${item.badgeColor}`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </>
+                )}
 
-        <div className="px-3 py-3 border-t border-[#1E2D45]">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#141C2E]">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs text-[#64748B]">API connectée</span>
-          </div>
-        </div>
-      </aside>
-    </>
+                {/* Tooltip when collapsed */}
+                {collapsed && item.badge && (
+                  <span
+                    className={`absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center text-[8px] font-bold rounded-full text-white ${item.badgeColor}`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+
+                {isActive && (
+                  <motion.div
+                    layoutId="active-indicator"
+                    className="absolute left-0 w-1 h-6 bg-gradient-to-b from-primary to-accent rounded-r-full"
+                  />
+                )}
+              </motion.div>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Footer */}
+      <div className="p-3 border-t border-surface-light">
+        <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200">
+          <LogOut size={20} />
+          {!collapsed && <span className="text-sm font-medium">Déconnexion</span>}
+        </button>
+      </div>
+    </motion.aside>
   );
 }

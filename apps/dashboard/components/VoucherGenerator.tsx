@@ -1,87 +1,139 @@
 'use client';
+
 import { useState } from 'react';
-import { api } from '@/lib/api';
-import { Ticket, Copy, Check, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Copy, Check, RefreshCw, Key, Clock, Database, Smartphone } from 'lucide-react';
 
-  interface GeneratedVoucher { id: string; code: string; quotaGB: number; durationDay: number; }
+export function VoucherGenerator() {
+  const [voucher, setVoucher] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [duration, setDuration] = useState('30');
+  const [quota, setQuota] = useState('50');
+  const [maxDevices, setMaxDevices] = useState('1');
 
-  export default function VoucherGenerator({ onGenerated }: { onGenerated?: () => void }) {
-    const [count, setCount] = useState(1);
-    const [quota, setQuota] = useState(10);
-    const [days, setDays] = useState(30);
-    const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState<GeneratedVoucher[]>([]);
-    const [copied, setCopied] = useState<string | null>(null);
-
-    async function generate() {
-      setLoading(true);
-      try {
-        let vouchers: GeneratedVoucher[] = [];
-        if (count === 1) {
-          const r = await api.post('/vouchers', { quotaGB: quota, durationDay: days });
-          vouchers = [r.data.data];
-        } else {
-          const r = await api.post('/admin/bulk-generate', { count, quotaGB: quota, durationDay: days });
-          vouchers = r.data.data || [];
-        }
-        setResult(vouchers);
-        onGenerated?.();
-      } catch (err: unknown) {
-        alert((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur');
-      } finally { setLoading(false); }
-    }
-
-    function copy(code: string) {
-      navigator.clipboard.writeText(code);
-      setCopied(code);
-      setTimeout(() => setCopied(null), 2000);
-    }
-
-    function copyAll() {
-      navigator.clipboard.writeText(result.map(v => v.code).join('\n'));
-      setCopied('all');
-      setTimeout(() => setCopied(null), 2000);
-    }
-
-    return (
-      <div className="card space-y-4">
-        <h2 className="text-sm font-semibold text-[#F1F5F9] flex items-center gap-2">
-          <Ticket className="w-4 h-4 text-[#0099FF]" /> Générateur de vouchers rapide
-        </h2>
-        <div className="grid grid-cols-3 gap-3">
-          <div><label className="text-xs text-[#94A3B8] mb-1 block">Nombre</label>
-            <input type="number" className="input" value={count} onChange={e => setCount(+e.target.value)} min={1} max={50} /></div>
-          <div><label className="text-xs text-[#94A3B8] mb-1 block">Quota GB</label>
-            <input type="number" className="input" value={quota} onChange={e => setQuota(+e.target.value)} min={1} /></div>
-          <div><label className="text-xs text-[#94A3B8] mb-1 block">Durée (j)</label>
-            <input type="number" className="input" value={days} onChange={e => setDays(+e.target.value)} min={1} /></div>
-        </div>
-        <button onClick={generate} disabled={loading} className="btn-primary flex items-center gap-2">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ticket className="w-4 h-4" />}
-          {loading ? 'Génération...' : `Générer ${count} voucher${count > 1 ? 's' : ''}`}
-        </button>
-        {result.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-emerald-400 font-medium">{result.length} voucher(s) généré(s)</span>
-              {result.length > 1 && (
-                <button onClick={copyAll} className="text-xs text-[#0099FF] hover:text-[#00D4FF] flex items-center gap-1">
-                  {copied === 'all' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} Tout copier
-                </button>
-              )}
-            </div>
-            <div className="bg-[#0F1629] rounded-lg p-3 space-y-1 max-h-40 overflow-y-auto">
-              {result.map(v => (
-                <div key={v.id} className="flex items-center justify-between group">
-                  <code className="font-mono text-xs text-[#F1F5F9]">{v.code}</code>
-                  <button onClick={() => copy(v.code)} className="text-[#64748B] hover:text-[#0099FF] opacity-0 group-hover:opacity-100 transition-opacity">
-                    {copied === v.code ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+  const generateVoucher = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const segments = Array.from({ length: 4 }, () =>
+      Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
     );
-  }
+    setVoucher(`SXB-${segments.join('-')}`);
+    setCopied(false);
+  };
+
+  const copyToClipboard = async () => {
+    if (!voucher) return;
+    await navigator.clipboard.writeText(voucher);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="glass-card p-6">
+      <div className="flex items-center gap-2 mb-6">
+        <Key size={18} className="text-primary" />
+        <h3 className="text-sm font-semibold text-gray-200">Générateur de licences</h3>
+      </div>
+
+      {/* Options */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div>
+          <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
+            <Clock size={12} className="inline mr-1" />
+            Durée (jours)
+          </label>
+          <select
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            className="input-field text-sm py-2"
+          >
+            <option value="7">7 jours</option>
+            <option value="15">15 jours</option>
+            <option value="30">30 jours</option>
+            <option value="60">60 jours</option>
+            <option value="90">90 jours</option>
+            <option value="365">1 an</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
+            <Database size={12} className="inline mr-1" />
+            Quota (GB)
+          </label>
+          <select
+            value={quota}
+            onChange={(e) => setQuota(e.target.value)}
+            className="input-field text-sm py-2"
+          >
+            <option value="10">10 GB</option>
+            <option value="25">25 GB</option>
+            <option value="50">50 GB</option>
+            <option value="100">100 GB</option>
+            <option value="250">250 GB</option>
+            <option value="0">Illimité</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
+            <Smartphone size={12} className="inline mr-1" />
+            Appareils max
+          </label>
+          <select
+            value={maxDevices}
+            onChange={(e) => setMaxDevices(e.target.value)}
+            className="input-field text-sm py-2"
+          >
+            <option value="1">1 appareil</option>
+            <option value="2">2 appareils</option>
+            <option value="3">3 appareils</option>
+            <option value="5">5 appareils</option>
+            <option value="10">10 appareils</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Generate button */}
+      <button onClick={generateVoucher} className="btn-primary w-full mb-4 flex items-center justify-center gap-2">
+        <RefreshCw size={16} className={voucher ? '' : 'animate-spin'} />
+        {voucher ? 'Régénérer une licence' : 'Générer une licence'}
+      </button>
+
+      {/* Result */}
+      <AnimatePresence>
+        {voucher && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: -10, height: 0 }}
+            className="glass-card p-4 overflow-hidden"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-medium text-gray-500 uppercase">Licence générée</span>
+              <div className="flex items-center gap-1 text-[10px] text-gray-500">
+                <span>{duration}j</span>
+                <span>•</span>
+                <span>{quota === '0' ? '∞' : quota}GB</span>
+                <span>•</span>
+                <span>{maxDevices} app.</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 px-3 py-2 bg-dark-100 border border-surface-light rounded-lg text-sm font-mono text-primary text-center tracking-wider">
+                {voucher}
+              </code>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={copyToClipboard}
+                className="p-2 rounded-lg bg-surface hover:bg-surface-hover text-gray-400 hover:text-white transition-all"
+              >
+                {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
