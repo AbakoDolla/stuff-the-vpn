@@ -1,19 +1,20 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "incremental": true,
-    "tsBuildInfoFile": ".tsbuildinfo",
-    "outDir": "dist",
-    "rootDir": "src",
-    "types": ["node"]
-  },
-  "include": ["src"],
-  "references": [
-    {
-      "path": "../../lib/db"
+    "compilerOptions": {
+      "target": "ES2022",
+      "module": "NodeNext",
+      "moduleResolution": "NodeNext",
+      "lib": ["ES2022"],
+      "outDir": "dist",
+      "rootDir": "src",
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "incremental": true,
+      "tsBuildInfoFile": ".tsbuildinfo",
+      "types": ["node"],
+      "resolveJsonModule": true,
+      "declaration": false
     },
-    {
-      "path": "../../lib/api-zod"
-    }
-  ]
-}
+    "include": ["src"],
+    "exclude": ["node_modules", "dist"]
+  }

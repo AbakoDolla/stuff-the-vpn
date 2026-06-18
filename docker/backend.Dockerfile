@@ -1,32 +1,29 @@
-# Backend Dockerfile — monorepo-aware build
-  # Builds from workspace root to resolve @workspace/* packages
-
+# Backend Dockerfile — standalone npm build (no monorepo context needed)
   FROM node:20-alpine AS base
-  RUN corepack enable && corepack prepare pnpm@9 --activate
 
   FROM base AS deps
   WORKDIR /app
-  COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-  COPY tsconfig.base.json tsconfig.json ./
-  COPY lib/ ./lib/
-  COPY apps/backend/package.json ./apps/backend/
-  COPY packages/ ./packages/
-  RUN pnpm install --frozen-lockfile
+  COPY package.json package-lock.json* ./
+  RUN npm ci
 
   FROM deps AS builder
-  COPY apps/backend/ ./apps/backend/
-  RUN pnpm run typecheck:libs
-  RUN pnpm --filter @workspace/api-server exec npx prisma generate
-  RUN pnpm --filter @workspace/api-server run build
+  WORKDIR /app
+  COPY . .
+  RUN npx prisma generate
+  RUN node ./build.mjs
 
   FROM node:20-alpine AS production
   WORKDIR /app
   ENV NODE_ENV=production
-  RUN corepack enable && corepack prepare pnpm@9 --activate
-  COPY --from=builder /app/apps/backend/dist ./dist
-  COPY --from=builder /app/apps/backend/node_modules ./node_modules
-  COPY --from=builder /app/apps/backend/package.json ./package.json
-  COPY --from=builder /app/apps/backend/prisma ./prisma
+
+  COPY --from=builder /app/dist ./dist
+  COPY --from=builder /app/node_modules ./node_modules
+  COPY --from=builder /app/package.json ./package.json
+  COPY --from=builder /app/prisma ./prisma
+
+  RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nodeuser
+  USER nodeuser
+
   EXPOSE 5000
   CMD ["node", "--enable-source-maps", "./dist/index.mjs"]
   
