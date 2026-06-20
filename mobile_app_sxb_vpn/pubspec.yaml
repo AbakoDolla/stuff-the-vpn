@@ -1,49 +1,51 @@
 name: sst_vpn
-description: "SST VPN"
-publish_to: 'none'
-version: 1.0.0+1
+  description: "SxB VPN - Plateforme VPN commerciale"
+  publish_to: 'none'
+  version: 1.0.0+1
 
-environment:
-  sdk: '>=3.2.3 <4.0.0'
+  environment:
+    sdk: '>=3.2.3 <4.0.0'
 
-dependencies:
-  adaptive_theme: ^3.6.0
-  collection: ^1.18.0
-  connectivity_plus: ^5.0.2
-  dio: ^5.4.0
+  dependencies:
+    adaptive_theme: ^3.6.0
+    collection: ^1.18.0
+    connectivity_plus: ^5.0.2
+    dio: ^5.4.0
+    flutter:
+      sdk: flutter
+    flutter_animate: ^4.5.0
+    flutter_hooks: ^0.20.5
+    flutter_svg: ^2.0.10+1
+    gap: ^3.0.1
+    google_fonts: ^6.1.0
+    hooks_riverpod: ^2.5.1
+    riverpod: ^2.5.1
+    flutter_riverpod: ^2.5.1
+    intl: ^0.18.1
+    path_provider: ^2.1.2
+    pretty_dio_logger: ^1.3.1
+    shared_preferences: ^2.2.2
+    url_launcher: ^6.2.5
+    go_router: ^14.2.0
+    fl_chart: ^0.68.0
+    supabase_flutter: ^2.5.5
+    flutter_secure_storage: ^9.2.2
+
+  dev_dependencies:
+    flutter_launcher_icons: ^0.13.1
+    flutter_test:
+      sdk: flutter
+    build_runner: ^2.4.8
+    flutter_lints: ^3.0.1
+
   flutter:
-    sdk: flutter
-  flutter_animate: ^4.5.0
-  flutter_hooks: ^0.20.5
-  flutter_svg: ^2.0.10+1
-  gap: ^3.0.1
-  google_fonts: ^6.1.0
-  hooks_riverpod: ^2.5.1
-  riverpod: ^2.5.1
-  flutter_riverpod: ^2.5.1
-  intl: ^0.18.1
-  path_provider: ^2.1.2
-  pretty_dio_logger: ^1.3.1
-  shared_preferences: ^2.2.2
-  url_launcher: ^6.2.5
-  go_router: ^14.2.0
-  fl_chart: ^0.68.0
-  flutter_secure_storage: ^9.2.2
+    uses-material-design: true
+    assets:
+      - assets/images/
 
-dev_dependencies:
-  flutter_launcher_icons: ^0.13.1
-  flutter_test:
-    sdk: flutter
-  build_runner: ^2.4.8
-  flutter_lints: ^3.0.1
-
-flutter:
-  uses-material-design: true
-  assets:
-    - assets/images/
-
-flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: true
-  image_path: "assets/images/logo.png"
-  min_sdk_android: 21
+  flutter_launcher_icons:
+    android: "launcher_icon"
+    ios: true
+    image_path: "assets/images/logo.png"
+    min_sdk_android: 21
+  
