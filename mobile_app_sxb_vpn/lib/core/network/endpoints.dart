@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 
   class ApiEndpoints {
-    // Set BACKEND_URL via dart-define during build:
+    // Configure at build time:
     // flutter build apk --dart-define=BACKEND_URL=https://api.sxbvpn.com/api
-    static const String _baseUrlDev = 'http://10.0.2.2:5000/api'; // Android emulator → localhost
+    static const String _baseUrlDev = 'http://10.0.2.2:5000/api';
     static const String _baseUrlProd = 'https://api.sxbvpn.com/api';
 
     static String get baseUrl {
@@ -48,3 +48,4 @@ import 'package:flutter/foundation.dart';
     static const String resetDevice = '/licenses/reset-device';
     static String licenseStatus(String token) => '/licenses/$token/status';
   }
+  
