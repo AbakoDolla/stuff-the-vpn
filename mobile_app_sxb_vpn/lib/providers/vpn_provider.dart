@@ -1,11 +1,9 @@
-import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/demo_data.dart';
 import '../models/server_model.dart';
 import '../models/vpn_config_model.dart';
-import '../services/vpn_service.dart';
 
-enum VpnStatus { disconnected, connecting, connected, disconnecting }
+enum VpnStatus { disconnected, connecting, connected }
 
 class VpnState {
   final VpnStatus status;
@@ -15,18 +13,18 @@ class VpnState {
   final double downloadSpeed;
   final double uploadSpeed;
 
-  VpnState({
+  const VpnState({
     this.status = VpnStatus.disconnected,
     this.currentServer,
     this.config,
     this.connectedDuration = Duration.zero,
-    this.downloadSpeed = 0.0,
-    this.uploadSpeed = 0.0,
+    this.downloadSpeed = 0,
+    this.uploadSpeed = 0,
   });
 
   bool get isConnected => status == VpnStatus.connected;
   bool get isConnecting => status == VpnStatus.connecting;
-  bool get isDisconnected => status == VpnStatus.disconnected;
+
   ServerModel? get server => currentServer;
 
   VpnState copyWith({
@@ -49,120 +47,40 @@ class VpnState {
 }
 
 class VpnNotifier extends StateNotifier<VpnState> {
-  final VpnService _vpnService;
-  Timer? _timer;
-  Timer? _speedTimer;
+  VpnNotifier() : super(const VpnState());
 
-  VpnNotifier(this._vpnService) : super(VpnState()) {
-    // Set a default server if none selected
-    if (state.currentServer == null && demoServers.isNotEmpty) {
-      state = state.copyWith(currentServer: demoServers.first);
-    }
-  }
+  // Incremented on every connect/disconnect so that an in-flight connection
+  // attempt can detect when it has been superseded and abort its transition.
+  int _generation = 0;
 
-  Future<void> toggle() async {
-    if (state.isConnected) {
-      await disconnect();
-    } else {
-      await connect();
-    }
-  }
-
-  Future<void> connect({ServerModel? server}) async {
-    if (state.status != VpnStatus.disconnected) return;
-
-    if (server != null) {
-      state = state.copyWith(currentServer: server);
-    }
-
-    state = state.copyWith(status: VpnStatus.connecting);
-
-    try {
-      // Call the real API to connect
-      final success = await _vpnService.connect(serverId: state.currentServer?.id);
-
-      if (success) {
-        // Fetch real config from API
-        final config = await _vpnService.getMyConfig();
-
-        state = state.copyWith(
-          status: VpnStatus.connected,
-          config: config,
-          connectedDuration: Duration.zero,
-        );
-
-        _startTimer();
-        _startSpeedSimulation();
-      } else {
-        state = state.copyWith(status: VpnStatus.disconnected);
-      }
-    } catch (e) {
-      state = state.copyWith(status: VpnStatus.disconnected);
-    }
-  }
-
-  Future<void> disconnect() async {
-    if (state.status != VpnStatus.connected) return;
-
-    state = state.copyWith(status: VpnStatus.disconnecting);
-
-    try {
-      // Call the real API to disconnect
-      await _vpnService.disconnect();
-    } catch (_) {
-      // Continue with local disconnect even if API fails
-    }
-
-    _timer?.cancel();
-    _speedTimer?.cancel();
-
+  Future<void> connect({required ServerModel server}) async {
+    final generation = ++_generation;
     state = state.copyWith(
-      status: VpnStatus.disconnected,
-      connectedDuration: Duration.zero,
-      downloadSpeed: 0,
-      uploadSpeed: 0,
+      status: VpnStatus.connecting,
+      currentServer: server,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    if (generation != _generation) return;
+    state = state.copyWith(
+      status: VpnStatus.connected,
+      currentServer: server,
     );
   }
 
-  void selectServer(ServerModel server) {
-    if (state.status == VpnStatus.disconnected) {
-      state = state.copyWith(currentServer: server);
+  Future<void> disconnect() async {
+    _generation++;
+    state = const VpnState(status: VpnStatus.disconnected);
+  }
+
+  Future<void> toggle() async {
+    if (state.isConnected || state.isConnecting) {
+      await disconnect();
+    } else {
+      await connect(server: state.currentServer ?? demoServers.first);
     }
-  }
-
-  void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      state = state.copyWith(
-        connectedDuration: state.connectedDuration + const Duration(seconds: 1),
-      );
-    });
-  }
-
-  void _startSpeedSimulation() {
-    _speedTimer?.cancel();
-    _speedTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (!state.isConnected) {
-        timer.cancel();
-        return;
-      }
-      // In a real app, this would come from the VPN tunnel stats
-      final random = DateTime.now().millisecond;
-      state = state.copyWith(
-        downloadSpeed: 10 + (random % 50).toDouble(),
-        uploadSpeed: 2 + (random % 10).toDouble(),
-      );
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _speedTimer?.cancel();
-    super.dispose();
   }
 }
 
 final vpnProvider = StateNotifierProvider<VpnNotifier, VpnState>((ref) {
-  return VpnNotifier(ref.watch(vpnServiceProvider));
+  return VpnNotifier();
 });
