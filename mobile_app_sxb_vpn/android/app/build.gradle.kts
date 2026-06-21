@@ -29,6 +29,7 @@ plugins {
       buildTypes {
           release {
               signingConfig = signingConfigs.getByName("debug")
+              isMinifyEnabled = false
           }
       }
   }

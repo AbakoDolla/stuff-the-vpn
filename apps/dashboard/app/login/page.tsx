@@ -35,9 +35,7 @@
         <div className="w-full max-w-md px-6">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0099FF] to-[#00D4FF] flex items-center justify-center mb-4 shadow-lg shadow-[#0099FF]/30">
-              <Shield className="w-8 h-8 text-white" />
-            </div>
+            <img src="/logo.png" alt="SxB VPN Logo" className="w-16 h-16 rounded-2xl mb-4 shadow-lg shadow-[#0099FF]/30" />
             <h1 className="text-2xl font-bold text-[#F1F5F9]">SxBVPN</h1>
             <p className="text-[#64748B] text-sm mt-1">Panneau d'administration</p>
           </div>

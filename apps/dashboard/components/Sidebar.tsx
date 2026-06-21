@@ -30,9 +30,7 @@
           {/* Logo */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#1E2D45]">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0099FF] to-[#00D4FF] flex items-center justify-center shadow-md shadow-[#0099FF]/30">
-                <Shield className="w-4 h-4 text-white" />
-              </div>
+              <img src="/logo.png" alt="SxB VPN Logo" className="w-8 h-8 rounded-lg shadow-md shadow-[#0099FF]/30" />
               <div>
                 <div className="text-sm font-bold text-[#F1F5F9]">SxBVPN</div>
                 <div className="text-[10px] text-[#64748B]">Admin Panel</div>
