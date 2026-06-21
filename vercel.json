@@ -1,9 +1,5 @@
 {
-  "version": 2,
-  "buildCommand": "npm run build --workspaces",
+  "buildCommand": "cd apps/dashboard && npm run build",
   "installCommand": "npm install --legacy-peer-deps",
-  "env": {
-    "TURBO_TEAM": "@stuff-the-vpn",
-    "TURBO_REMOTE_ONLY": "true"
-  }
+  "outputDirectory": "apps/dashboard/.next"
 }

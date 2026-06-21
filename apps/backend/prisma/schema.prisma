@@ -27,6 +27,13 @@ enum VoucherStatus {
   EXPIRED
 }
 
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  SUSPENDED
+}
+
 enum InboundProtocol {
   SSH
   VLESS
@@ -40,14 +47,16 @@ enum InboundProtocol {
 model User {
   id                 String      @id @default(cuid())
   username           String      @unique
-  email              String      @unique
-  password           String
+  email              String?     @unique
+  phone              String?     @unique
+  password           String?
   role               UserRole    @default(USER)
   status             UserStatus  @default(ACTIVE)
   deviceLimit        Int         @default(1)
   quotaUsedGB        Float       @default(0)
   quotaRemainingGB   Float       @default(0)
   expireAt           DateTime?
+  deletedAt          DateTime?
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 
@@ -56,6 +65,8 @@ model User {
   usageLogs          UsageLog[]
   reseller           Reseller?
   sessions           Session[]
+  licenses           License[]
+  devices            Device[]
 
   @@map("users")
 }
@@ -134,14 +145,55 @@ model Reseller {
 }
 
 model Session {
-  id         String   @id @default(cuid())
-  token      String   @unique
+  id         String    @id @default(cuid())
+  token      String    @unique
   deviceName String?
   ipAddress  String?
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model License {
+  id          String        @id @default(cuid())
+  token       String        @unique
+  status      LicenseStatus @default(ACTIVE)
+  phone       String?
+  deviceId    String?
+  deviceName  String?
+  deviceLimit Int           @default(1)
+  dataLimitGB Float         @default(30)
+  dataUsedGB  Float         @default(0)
+  expireAt    DateTime?
+  lastUsedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  userId      String?
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  resellerId  String?
+  createdBy   String?
+
+  @@map("licenses")
+}
+
+model Device {
+  id         String   @id @default(cuid())
+  deviceId   String
+  deviceName String?
+  isActive   Boolean  @default(true)
+  lastSeenAt DateTime @default(now())
   createdAt  DateTime @default(now())
 
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("sessions")
+  @@unique([userId, deviceId])
+  @@map("devices")
 }
