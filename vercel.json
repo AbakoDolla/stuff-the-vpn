@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build --workspaces",
+  "installCommand": "npm install --legacy-peer-deps",
+  "env": {
+    "TURBO_TEAM": "@stuff-the-vpn",
+    "TURBO_REMOTE_ONLY": "true"
+  }
+}
