@@ -70,6 +70,20 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
+  /// Register a new account with email, password, and username
+  Future<void> register(String email, String password, String username) async {
+    state = const AsyncValue.loading();
+    try {
+      final result = await ref.read(authServiceProvider).register(email, password, username);
+      if (!result.success) {
+        throw Exception(result.error ?? 'Registration failed');
+      }
+      state = AsyncValue.data(AuthState(user: result.user));
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
   /// Legacy login with email and password
   Future<void> login(String email, String password) async {
     state = const AsyncValue.loading();
