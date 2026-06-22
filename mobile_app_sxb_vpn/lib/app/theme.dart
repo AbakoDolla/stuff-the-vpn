@@ -105,12 +105,12 @@ class AppTheme {
           elevation: 0,
         ),
       ),
-      cardTheme: CardThemeData(
+      cardTheme: const CardTheme(
         color: AppColors.card,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.cardBorder, width: 1),
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+          side: BorderSide(color: AppColors.cardBorder, width: 1),
         ),
       ),
       dividerTheme: const DividerThemeData(color: AppColors.cardBorder, thickness: 1),
