@@ -7,6 +7,9 @@ const router = Router();
 // Public: validate license
 router.post("/validate", licenseController.validateLicense);
 
+// Public: check license status by token
+router.get("/:token/status", licenseController.getLicenseStatus);
+
 // Authenticated
 router.use(authMiddleware);
 
@@ -19,3 +22,4 @@ router.post("/generate", requireRole("ADMIN", "SUPER_ADMIN", "RESELLER"), licens
 router.get("/", requireRole("ADMIN", "SUPER_ADMIN"), licenseController.listLicenses);
 
 export default router;
+
