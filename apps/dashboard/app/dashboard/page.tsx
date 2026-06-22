@@ -1,5 +1,5 @@
 'use client';
-  import { Users, Ticket, Server, Clock, Database } from 'lucide-react';
+  import { Users, Ticket, Server, AlertTriangle, Clock, Database } from 'lucide-react';
   import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend
