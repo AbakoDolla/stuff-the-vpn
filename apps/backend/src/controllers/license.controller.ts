@@ -23,6 +23,33 @@ export async function validateLicense(req: Request, res: Response, next: NextFun
   }
 }
 
+export async function getLicenseStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { token } = req.params;
+    if (!token) {
+      sendError(res, "Token is required", HTTP_STATUS.BAD_REQUEST);
+      return;
+    }
+    const license = await licenseService.validateLicense(token);
+    sendSuccess(res, {
+      status: license.status,
+      expireAt: license.expireAt,
+      dataLimitGB: license.dataLimitGB,
+      dataUsedGB: license.dataUsedGB,
+      deviceLimit: license.deviceLimit,
+      deviceId: license.deviceId,
+      deviceName: license.deviceName,
+    }, "License status fetched");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    if (msg.startsWith("LICENSE_")) {
+      sendError(res, msg, HTTP_STATUS.BAD_REQUEST);
+      return;
+    }
+    next(err);
+  }
+}
+
 export async function bindDevice(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const { token, deviceId, deviceName, phone } = req.body;
@@ -97,3 +124,4 @@ export async function listLicenses(req: AuthRequest, res: Response, next: NextFu
     next(err);
   }
 }
+
