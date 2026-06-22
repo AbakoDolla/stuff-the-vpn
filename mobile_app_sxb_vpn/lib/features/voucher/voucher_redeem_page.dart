@@ -37,9 +37,10 @@ class _VoucherRedeemPageState extends ConsumerState<VoucherRedeemPage> {
         child: Column(
           children: [
             const Gap(32),
-            AppTextField(
+            PremiumTextField(
               hint: 'Voucher Code',
               controller: _codeController,
+              prefixIcon: Icons.confirmation_number_outlined,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter a voucher code';
