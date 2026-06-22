@@ -1,7 +1,8 @@
 'use client';
+  import Image from 'next/image';
   import Link from 'next/link';
   import {
-    LayoutDashboard, Users, Ticket, Server, BarChart3, ShoppingBag, Settings, Shield, ChevronRight, X
+    LayoutDashboard, Users, Ticket, Server, BarChart3, ShoppingBag, Settings, ChevronRight, X
   } from 'lucide-react';
   import { cn } from '@/lib/utils';
 
@@ -22,7 +23,7 @@
       <>
         {/* Overlay mobile */}
         {isOpen && <div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={onClose} />}
-        
+
         <aside className={cn(
           'fixed lg:static inset-y-0 left-0 z-30 flex flex-col w-64 bg-[#0A0F1E] border-r border-[#1E2D45] transition-transform duration-300',
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden'
@@ -30,7 +31,13 @@
           {/* Logo */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#1E2D45]">
             <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="SxB VPN Logo" className="w-8 h-8 rounded-lg shadow-md shadow-[#0099FF]/30" />
+              <Image
+                src="/logo.png"
+                alt="SxB VPN Logo"
+                width={32}
+                height={32}
+                className="rounded-lg shadow-md shadow-[#0099FF]/30"
+              />
               <div>
                 <div className="text-sm font-bold text-[#F1F5F9]">SxBVPN</div>
                 <div className="text-[10px] text-[#64748B]">Admin Panel</div>
@@ -71,3 +78,4 @@
       </>
     );
   }
+  
