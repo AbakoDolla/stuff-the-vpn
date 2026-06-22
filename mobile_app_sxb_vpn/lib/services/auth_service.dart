@@ -66,6 +66,36 @@ class AuthService {
     }
   }
 
+  /// Register a new account with email, password, and username
+  Future<AuthResult> register(String email, String password, String username) async {
+    try {
+      final response = await _api.post(ApiEndpoints.register, data: {
+        "email": email,
+        "password": password,
+        "username": username,
+      });
+      final json = response.data as Map<String, dynamic>;
+      final payload = (json["data"] as Map<String, dynamic>?) ?? json;
+
+      final token = payload["token"]?.toString();
+      if (token == null) return const AuthResult(success: false, error: "No token received");
+
+      await _storage.saveToken(token);
+
+      UserModel? user;
+      final userJson = payload["user"] as Map<String, dynamic>?;
+      if (userJson != null) {
+        user = UserModel.fromJson(userJson);
+        await _storage.saveUserId(user.id);
+        await _storage.saveUserEmail(user.email);
+      }
+
+      return AuthResult(success: true, token: token, user: user);
+    } catch (e) {
+      return AuthResult(success: false, error: _parseError(e));
+    }
+  }
+
   /// Refresh the JWT token
   Future<AuthResult> refreshToken() async {
     try {
@@ -136,7 +166,7 @@ class AuthService {
     if (msg.contains("LICENSE_DEVICE_MISMATCH")) return "Appareil non autorisé pour cette licence";
     if (msg.contains("DEVICE_LIMIT_REACHED")) return "Limite d'appareils atteinte";
     if (msg.contains("401")) return "Token ou identifiants incorrects";
-    if (msg.contains("409")) return "Conflit - données déjà existantes";
+    if (msg.contains("409")) return "Email ou nom d'utilisateur déjà utilisé";
     if (msg.contains("403")) return "Compte suspendu ou banni";
     if (msg.contains("SocketException")) return "Pas de connexion internet";
     return "Une erreur est survenue";
