@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
     WidgetsFlutterBinding.ensureInitialized();
     runApp(
       const ProviderScope(
-        child: SxBVpnApp(),
+        child: SxbVpnApp(),
       ),
     );
   }
