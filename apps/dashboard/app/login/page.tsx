@@ -1,6 +1,7 @@
 'use client';
   import { useState, FormEvent } from 'react';
   import { useRouter } from 'next/navigation';
+  import Image from 'next/image';
   import { api } from '@/lib/api';
   import { saveAuth } from '@/lib/auth';
   import { Shield, Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -35,9 +36,15 @@
         <div className="w-full max-w-md px-6">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <img src="/logo.png" alt="SxB VPN Logo" className="w-16 h-16 rounded-2xl mb-4 shadow-lg shadow-[#0099FF]/30" />
+            <Image
+              src="/logo.png"
+              alt="SxB VPN Logo"
+              width={64}
+              height={64}
+              className="rounded-2xl mb-4 shadow-lg shadow-[#0099FF]/30"
+            />
             <h1 className="text-2xl font-bold text-[#F1F5F9]">SxBVPN</h1>
-            <p className="text-[#64748B] text-sm mt-1">Panneau d'administration</p>
+            <p className="text-[#64748B] text-sm mt-1">Panneau d&apos;administration</p>
           </div>
 
           {/* Card */}
@@ -76,3 +83,4 @@
       </div>
     );
   }
+  
