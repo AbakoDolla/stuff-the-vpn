@@ -4,8 +4,6 @@
   "buildCommand": "npm run build -w apps/dashboard",
   "framework": "nextjs",
   "rootDirectory": "apps/dashboard",
-  "env": {
-    "NEXT_PUBLIC_API_URL": "https://api.sxbvpn.com"
-  }
+  
 }
 
