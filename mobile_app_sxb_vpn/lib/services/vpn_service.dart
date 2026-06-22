@@ -39,5 +39,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
         return demoServers;
       }
     }
+
+    Future<ServerModel?> getRecommendedServer() async {
+      try {
+        final response = await _api.get(ApiEndpoints.recommendedServer);
+        final json = response.data as Map<String, dynamic>;
+        final payload = (json['data'] as Map<String, dynamic>?) ?? json;
+        return ServerModel.fromJson(payload);
+      } catch (_) {
+        return demoServers.isNotEmpty ? demoServers.first : null;
+      }
+    }
+
+    Future<Map<String, dynamic>?> getVpnStatus() async {
+      try {
+        final response = await _api.get(ApiEndpoints.vpnStatus);
+        final json = response.data as Map<String, dynamic>;
+        return (json['data'] as Map<String, dynamic>?) ?? json;
+      } catch (_) {
+        return null;
+      }
+    }
   }
   
