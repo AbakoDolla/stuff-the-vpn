@@ -1,7 +1,7 @@
 {
   "version": 2,
   "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "npm run build --workspace=apps/dashboard",
+  "buildCommand": "npm run build --workspace=@stuff-the-vpn/dashboard",
   "outputDirectory": "apps/dashboard/.next",
   "framework": "nextjs",
   "env": {
