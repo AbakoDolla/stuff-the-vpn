@@ -1,147 +1,157 @@
 generator client {
-  provider = "prisma-client-js"
-}
+    provider = "prisma-client-js"
+  }
 
-datasource db {
-  provider = "postgresql"
-}
+  datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+  }
 
-// ─── Enums ────────────────────────────────────────────────────────────────────
+  enum UserRole { USER RESELLER ADMIN SUPER_ADMIN }
+  enum UserStatus { ACTIVE SUSPENDED BANNED }
+  enum VoucherStatus { ACTIVE USED EXPIRED }
+  enum InboundProtocol { SSH VLESS VMESS TROJAN SHADOWSOCKS }
+  enum LicenseStatus { ACTIVE EXPIRED REVOKED SUSPENDED }
 
-enum UserRole {
-  USER
-  RESELLER
-  ADMIN
-  SUPER_ADMIN
-}
+  model User {
+    id               String     @id @default(cuid())
+    username         String     @unique
+    email            String     @unique
+    password         String
+    role             UserRole   @default(USER)
+    status           UserStatus @default(ACTIVE)
+    deviceLimit      Int        @default(1)
+    quotaUsedGB      Float      @default(0)
+    quotaRemainingGB Float      @default(0)
+    expireAt         DateTime?
+    deletedAt        DateTime?
+    createdAt        DateTime   @default(now())
+    updatedAt        DateTime   @updatedAt
 
-enum UserStatus {
-  ACTIVE
-  SUSPENDED
-  BANNED
-}
+    vouchers         Voucher[]  @relation("VoucherUser")
+    createdVouchers  Voucher[]  @relation("VoucherCreator")
+    usageLogs        UsageLog[]
+    reseller         Reseller?
+    sessions         Session[]
+    licenses         License[]
+    devices          Device[]
 
-enum VoucherStatus {
-  ACTIVE
-  USED
-  EXPIRED
-}
+    @@map("users")
+  }
 
-enum InboundProtocol {
-  SSH
-  VLESS
-  VMESS
-  TROJAN
-  SHADOWSOCKS
-}
+  model Voucher {
+    id          String        @id @default(cuid())
+    code        String        @unique
+    quotaGB     Float
+    durationDay Int
+    status      VoucherStatus @default(ACTIVE)
+    createdAt   DateTime      @default(now())
+    usedAt      DateTime?
 
-// ─── Models ───────────────────────────────────────────────────────────────────
+    userId    String?
+    user      User?   @relation("VoucherUser",   fields: [userId],    references: [id], onDelete: SetNull)
+    createdBy String?
+    creator   User?   @relation("VoucherCreator", fields: [createdBy], references: [id], onDelete: SetNull)
 
-model User {
-  id                 String      @id @default(cuid())
-  username           String      @unique
-  email              String      @unique
-  password           String
-  role               UserRole    @default(USER)
-  status             UserStatus  @default(ACTIVE)
-  deviceLimit        Int         @default(1)
-  quotaUsedGB        Float       @default(0)
-  quotaRemainingGB   Float       @default(0)
-  expireAt           DateTime?
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+    @@map("vouchers")
+  }
 
-  vouchers           Voucher[]   @relation("VoucherUser")
-  createdVouchers    Voucher[]   @relation("VoucherCreator")
-  usageLogs          UsageLog[]
-  reseller           Reseller?
-  sessions           Session[]
+  model Plan {
+    id          String   @id @default(cuid())
+    name        String
+    price       Float
+    quotaGB     Float
+    durationDay Int
+    description String?
+    active      Boolean  @default(true)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    @@map("plans")
+  }
 
-  @@map("users")
-}
+  model Inbound {
+    id        String          @id @default(cuid())
+    protocol  InboundProtocol
+    host      String
+    port      Int
+    path      String?
+    sni       String?
+    remark    String
+    enabled   Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    @@map("inbounds")
+  }
 
-model Voucher {
-  id          String        @id @default(cuid())
-  code        String        @unique
-  quotaGB     Float
-  durationDay Int
-  status      VoucherStatus @default(ACTIVE)
-  createdAt   DateTime      @default(now())
-  usedAt      DateTime?
+  model UsageLog {
+    id         String   @id @default(cuid())
+    uploadMB   Float    @default(0)
+    downloadMB Float    @default(0)
+    timestamp  DateTime @default(now())
 
-  userId      String?
-  user        User?         @relation("VoucherUser", fields: [userId], references: [id], onDelete: SetNull)
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    @@map("usage_logs")
+  }
 
-  createdBy   String?
-  creator     User?         @relation("VoucherCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  model Reseller {
+    id         String   @id @default(cuid())
+    name       String
+    balance    Float    @default(0)
+    commission Float    @default(0)
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
 
-  @@map("vouchers")
-}
+    userId String @unique
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    @@map("resellers")
+  }
 
-model Plan {
-  id          String   @id @default(cuid())
-  name        String
-  price       Float
-  quotaGB     Float
-  durationDay Int
-  description String?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  model Session {
+    id         String   @id @default(cuid())
+    token      String   @unique
+    deviceName String?
+    ipAddress  String?
+    isActive   Boolean  @default(true)
+    lastUsedAt DateTime @default(now())
+    createdAt  DateTime @default(now())
 
-  @@map("plans")
-}
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    @@map("sessions")
+  }
 
-model Inbound {
-  id        String          @id @default(cuid())
-  protocol  InboundProtocol
-  host      String
-  port      Int
-  path      String?
-  sni       String?
-  remark    String
-  enabled   Boolean         @default(true)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  model License {
+    id          String        @id @default(cuid())
+    token       String        @unique
+    status      LicenseStatus @default(ACTIVE)
+    dataLimitGB Float         @default(0)
+    dataUsedGB  Float         @default(0)
+    deviceLimit Int           @default(1)
+    phone       String?
+    deviceId    String?
+    deviceName  String?
+    expireAt    DateTime?
+    createdAt   DateTime      @default(now())
+    updatedAt   DateTime      @updatedAt
 
-  @@map("inbounds")
-}
+    userId String?
+    user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+    @@map("licenses")
+  }
 
-model UsageLog {
-  id         String   @id @default(cuid())
-  uploadMB   Float    @default(0)
-  downloadMB Float    @default(0)
-  timestamp  DateTime @default(now())
+  model Device {
+    id         String   @id @default(cuid())
+    deviceId   String
+    deviceName String?
+    isActive   Boolean  @default(true)
+    lastSeenAt DateTime @default(now())
+    createdAt  DateTime @default(now())
 
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("usage_logs")
-}
-
-model Reseller {
-  id         String   @id @default(cuid())
-  name       String
-  balance    Float    @default(0)
-  commission Float    @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  userId     String   @unique
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("resellers")
-}
-
-model Session {
-  id         String   @id @default(cuid())
-  token      String   @unique
-  deviceName String?
-  ipAddress  String?
-  createdAt  DateTime @default(now())
-
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
+    @@unique([userId, deviceId])
+    @@map("devices")
+  }
+  
