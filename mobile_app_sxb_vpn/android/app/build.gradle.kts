@@ -1,40 +1,40 @@
 plugins {
-    id("com.android.application")
-    id("kotlin-android")
-    id("dev.flutter.flutter-gradle-plugin")
-}
+      id("com.android.application")
+      id("kotlin-android")
+      id("dev.flutter.flutter-gradle-plugin")
+  }
 
-android {
-    namespace = "com.example.sst_vpn"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"
+  android {
+      namespace = "com.sxbvpn.app"
+      compileSdk = flutter.compileSdkVersion
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
+      compileOptions {
+          sourceCompatibility = JavaVersion.VERSION_11
+          targetCompatibility = JavaVersion.VERSION_11
+      }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }
+      kotlinOptions {
+          jvmTarget = JavaVersion.VERSION_11.toString()
+      }
 
-    defaultConfig {
-        applicationId = "com.example.sst_vpn"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode()
-        versionName = flutter.versionName()
-    }
+      defaultConfig {
+          applicationId = "com.sxbvpn.app"
+          minSdk = 21
+          targetSdk = flutter.targetSdkVersion
+          versionCode = flutter.versionCode()
+          versionName = flutter.versionName()
+      }
 
-    buildTypes {
-        release {
-            signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = false        // Minification désactivée
-            isShrinkResources = false      // <-- LIGNE AJOUTÉE ICI pour corriger l'erreur
-        }
-    }
-}
+      buildTypes {
+          release {
+              signingConfig = signingConfigs.getByName("debug")
+              isMinifyEnabled = false
+              isShrinkResources = false
+          }
+      }
+  }
 
-flutter {
-    source = "../.."
-}
+  flutter {
+      source = "../.."
+  }
+  
