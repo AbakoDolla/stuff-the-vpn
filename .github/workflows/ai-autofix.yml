@@ -1,0 +1,219 @@
+name: AI Auto-Fix on Failure
+
+on:
+  workflow_run:
+    workflows:
+      - "Build SxB VPN APK"
+      - "CI"
+      - "Deploy Dashboard to Vercel"
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  issues: write
+
+jobs:
+  ai-fix:
+    name: Analyze failure and propose fix
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch failed job logs
+        id: fetch-logs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          JOBS=$(curl -s \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/$REPO/actions/runs/$RUN_ID/jobs")
+
+          FAILED_JOB_ID=$(echo "$JOBS" | node -e "
+            const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+            const f=d.jobs&&d.jobs.find(j=>j.conclusion==='failure');
+            if(f) process.stdout.write(String(f.id));
+          ")
+
+          FAILED_JOB_NAME=$(echo "$JOBS" | node -e "
+            const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+            const f=d.jobs&&d.jobs.find(j=>j.conclusion==='failure');
+            if(f) process.stdout.write(f.name);
+          ")
+
+          echo "failed_job_id=$FAILED_JOB_ID" >> $GITHUB_OUTPUT
+          echo "failed_job_name=$FAILED_JOB_NAME" >> $GITHUB_OUTPUT
+          [ -z "$FAILED_JOB_ID" ] && echo "No failed job found" && exit 0
+
+          curl -s \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/$REPO/actions/jobs/$FAILED_JOB_ID/logs" \
+            | tail -c 7000 > /tmp/failed_logs.txt
+
+          echo "Logs fetched: $(wc -c < /tmp/failed_logs.txt) bytes"
+
+      - name: Ask GitHub Models GPT-4o to diagnose and fix
+        id: ai-analysis
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          FAILED_JOB: ${{ steps.fetch-logs.outputs.failed_job_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          cat > /tmp/call-ai.mjs << 'JSEOF'
+          import https from 'node:https';
+          import fs from 'node:fs';
+
+          const logs = fs.existsSync('/tmp/failed_logs.txt')
+            ? fs.readFileSync('/tmp/failed_logs.txt', 'utf8') : 'No logs available';
+
+          const prompt = `You are an expert DevOps engineer. A GitHub Actions workflow failed.
+
+Workflow: ${process.env.WORKFLOW_NAME}
+Failed job: ${process.env.FAILED_JOB}
+Repository: ${process.env.REPO}
+
+Failed job logs (last 7000 chars):
+---
+${logs}
+---
+
+Analyze the error. Respond ONLY with valid JSON (no markdown wrapping):
+{
+  "diagnosis": "2-3 sentences describing what went wrong",
+  "root_cause": "the exact technical cause",
+  "files_to_fix": [
+    {
+      "path": "relative/path/to/file.ext",
+      "description": "what needs to change and why",
+      "fixed_content": "complete corrected file content as a string, or null if unknown"
+    }
+  ],
+  "summary": "one-line summary for PR/issue title"
+}`;
+
+          const body = JSON.stringify({
+            model: 'gpt-4o',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.1,
+            max_tokens: 4096,
+            response_format: { type: 'json_object' }
+          });
+
+          function fallback(reason) {
+            fs.writeFileSync('/tmp/ai.json', JSON.stringify({
+              diagnosis: reason,
+              root_cause: '',
+              files_to_fix: [],
+              summary: 'AI analysis failed — manual review needed'
+            }));
+          }
+
+          const req = https.request({
+            hostname: 'models.inference.ai.azure.com',
+            path: '/chat/completions',
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.GH_TOKEN}`,
+              'Content-Length': Buffer.byteLength(body)
+            }
+          }, (res) => {
+            let data = '';
+            res.on('data', c => data += c);
+            res.on('end', () => {
+              try {
+                const content = JSON.parse(data).choices?.[0]?.message?.content;
+                if (!content) throw new Error('Empty response: ' + data.slice(0, 200));
+                JSON.parse(content); // validate
+                fs.writeFileSync('/tmp/ai.json', content);
+                console.log('AI analysis complete');
+                console.log('Diagnosis:', JSON.parse(content).diagnosis);
+              } catch(e) {
+                fallback('AI parse error: ' + e.message + ' | raw: ' + data.slice(0, 200));
+              }
+            });
+          });
+          req.on('error', e => fallback('Network error: ' + e.message));
+          req.write(body);
+          req.end();
+          JSEOF
+          node /tmp/call-ai.mjs
+
+      - name: Write AI-fixed files to workspace
+        run: |
+          node -e "
+            const fs=require('fs'), path=require('path');
+            const d=JSON.parse(fs.readFileSync('/tmp/ai.json','utf8'));
+            let count=0;
+            for(const f of (d.files_to_fix||[]).filter(x=>x.fixed_content)){
+              const dir=path.dirname(f.path);
+              if(dir&&dir!=='.') fs.mkdirSync(dir,{recursive:true});
+              fs.writeFileSync(f.path, f.fixed_content);
+              console.log('Fixed:', f.path);
+              count++;
+            }
+            fs.writeFileSync('/tmp/fix_count.txt', String(count));
+            console.log('Total files fixed:', count);
+          "
+
+      - name: Create Pull Request with AI fixes
+        id: create-pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "fix(ai): auto-fix for ${{ github.event.workflow_run.name }} (run #${{ github.event.workflow_run.id }})"
+          branch: "ai-fix/run-${{ github.event.workflow_run.id }}"
+          delete-branch: true
+          title: "🤖 AI Fix: ${{ github.event.workflow_run.name }} failure"
+          body: |
+            ## 🤖 Correction automatique par IA
+
+            **Workflow échoué :** `${{ github.event.workflow_run.name }}`
+            **Run :** [#${{ github.event.workflow_run.id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }})
+
+            Le diagnostic complet est visible dans les logs du step **"Ask GitHub Models GPT-4o"**.
+
+            > ⚠️ Vérifiez les changements avant de merger. L'IA peut se tromper sur des cas complexes.
+          labels: "ai-fix,bug"
+
+      - name: Open Issue if no file changes were produced
+        if: steps.create-pr.outputs.pull-request-number == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+        run: |
+          DIAGNOSIS=$(node -e "const d=JSON.parse(require('fs').readFileSync('/tmp/ai.json','utf8')); process.stdout.write(d.diagnosis||'Unknown')")
+          ROOT_CAUSE=$(node -e "const d=JSON.parse(require('fs').readFileSync('/tmp/ai.json','utf8')); process.stdout.write(d.root_cause||'Unknown')")
+          SUMMARY=$(node -e "const d=JSON.parse(require('fs').readFileSync('/tmp/ai.json','utf8')); process.stdout.write(d.summary||'Fix needed')")
+          FILES=$(node -e "
+            const d=JSON.parse(require('fs').readFileSync('/tmp/ai.json','utf8'));
+            (d.files_to_fix||[]).forEach(f=>console.log('- ' + f.path + ': ' + f.description));
+          ")
+
+          curl -s -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/$REPO/issues" \
+            --data-binary @- << BODY
+          {
+            "title": "🤖 AI Diagnosis: ${SUMMARY}",
+            "body": "## Workflow: ${WORKFLOW_NAME}\n\n### Diagnostic\n${DIAGNOSIS}\n\n### Cause racine\n${ROOT_CAUSE}\n\n### Fichiers à corriger\n${FILES}\n\n[Voir les logs](https://github.com/${REPO}/actions/runs/${RUN_ID})",
+            "labels": ["bug", "ai-fix"]
+          }
+          BODY
