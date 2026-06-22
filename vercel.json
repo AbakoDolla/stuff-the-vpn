@@ -1,10 +1,11 @@
 {
   "version": 2,
   "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "npm run build --workspace=@stuff-the-vpn/dashboard",
-  "outputDirectory": "apps/dashboard/.next",
+  "buildCommand": "npm run build -w apps/dashboard",
   "framework": "nextjs",
+  "rootDirectory": "apps/dashboard",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.sxbvpn.com"
   }
 }
+
