@@ -1,13 +1,5 @@
 'use client';
-  import { useState, useEffect } from 'react';
-  import DashboardLayout from '@/components/DashboardLayout';
-  import StatsCard from '@/components/StatsCard';
-  import { api } from '@/lib/api';
-  import { formatGB, formatDate, relativeTime } from '@/lib/utils';
-  import {
-    Users, Ticket, Server, Activity, TrendingUp, AlertTriangle,
-    Wifi, WifiOff, Clock, Database
-  } from 'lucide-react';
+  import { Users, Ticket, Server, Clock, Database } from 'lucide-react';
   import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend
