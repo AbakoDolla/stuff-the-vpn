@@ -22,7 +22,10 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('sxb_token');
       localStorage.removeItem('sxb_user');
-      window.location.href = '/login';
+      // Clear the cookie that Next.js middleware reads.
+      // Without this the middleware keeps redirecting back to /dashboard → infinite loop.
+      document.cookie = 'stv_token=; path=/; max-age=0; SameSite=Lax';
+      setTimeout(() => { window.location.replace('/login'); }, 50);
     }
     return Promise.reject(err);
   }
