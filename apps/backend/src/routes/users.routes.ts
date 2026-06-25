@@ -1,0 +1,26 @@
+import { Router } from "express";
+import * as userController from "../controllers/user.controller.js";
+import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
+import { validate } from "../middleware/validate.middleware.js";
+import {
+  updateUserSchema,
+  suspendUserSchema,
+  addQuotaSchema,
+  extendExpirySchema,
+} from "../validators/user.validator.js";
+
+const router = Router();
+
+router.use(authMiddleware);
+router.use(requireRole("ADMIN", "SUPER_ADMIN"));
+
+router.get("/", userController.listUsers);
+router.get("/:id", userController.getUserById);
+router.patch("/:id", validate(updateUserSchema), userController.updateUser);
+router.delete("/:id", userController.deleteUser);
+
+router.patch("/:id/status", validate(suspendUserSchema), userController.setUserStatus);
+router.patch("/:id/quota", validate(addQuotaSchema), userController.addQuota);
+router.patch("/:id/extend", validate(extendExpirySchema), userController.extendExpiry);
+
+export default router;

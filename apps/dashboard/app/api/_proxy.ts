@@ -1,0 +1,43 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+const BACKEND_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://185.237.15.214/api').replace(/\/+$/, '');
+
+export async function proxyToBackend(request: NextRequest): Promise<NextResponse> {
+  try {
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/^\/api/, '') || '/';
+    const backendUrl = `${BACKEND_BASE}${path}${url.search}`;
+
+    const headers = new Headers();
+    const auth = request.headers.get('authorization');
+    if (auth) headers.set('authorization', auth);
+    const ct = request.headers.get('content-type');
+    if (ct) headers.set('content-type', ct);
+    const xfor = request.headers.get('x-forwarded-for');
+    if (xfor) headers.set('x-forwarded-for', xfor);
+
+    const hasBody = !['GET', 'HEAD', 'OPTIONS'].includes(request.method);
+    const body = hasBody ? await request.text() : undefined;
+
+    const res = await fetch(backendUrl, {
+      method: request.method,
+      headers,
+      body,
+      signal: AbortSignal.timeout(15000),
+    });
+
+    const text = await res.text();
+    return new NextResponse(text, {
+      status: res.status,
+      headers: {
+        'content-type': res.headers.get('content-type') ?? 'application/json',
+        'cache-control': 'no-store',
+      },
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { success: false, message: 'Backend inaccessible', error: String(err) },
+      { status: 503 }
+    );
+  }
+}
