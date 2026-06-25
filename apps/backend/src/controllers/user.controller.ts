@@ -4,6 +4,15 @@ import { sendSuccess } from "../utils/response.js";
 import { HTTP_STATUS } from "../constants/index.js";
 import type { AuthRequest } from "../types/index.js";
 
+export async function createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const user = await userService.createUser(req.body);
+    res.status(HTTP_STATUS.CREATED).json({ success: true, data: user, message: "User created successfully" });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const userId = req.user!.userId;

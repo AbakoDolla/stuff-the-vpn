@@ -1,5 +1,30 @@
+import bcrypt from "bcryptjs";
 import { prisma } from "../prisma/client.js";
 import { omit } from "../utils/crypto.js";
+
+  export async function createUser(data: {
+    username: string;
+    email: string;
+    password?: string;
+    role?: string;
+    deviceLimit?: number;
+    quotaRemainingGB?: number;
+    expireAt?: string;
+  }) {
+    const hashed = data.password ? await bcrypt.hash(data.password, 10) : null;
+    const user = await prisma.user.create({
+      data: {
+        username: data.username,
+        email: data.email,
+        password: hashed,
+        role: (data.role ?? "USER") as "USER" | "ADMIN" | "SUPER_ADMIN" | "RESELLER",
+        deviceLimit: data.deviceLimit ?? 2,
+        quotaRemainingGB: data.quotaRemainingGB ?? 10,
+        expireAt: data.expireAt ? new Date(data.expireAt) : null,
+      },
+    });
+    return omit(user, ["password"]);
+  }
 
   export async function listUsers(page = 1, limit = 20) {
     const skip = (page - 1) * limit;

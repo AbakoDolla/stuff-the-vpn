@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+  export const createUserSchema = z.object({
+    username: z.string().min(3).max(32),
+    email: z.string().email(),
+    password: z.string().min(6).optional(),
+    role: z.enum(["USER", "ADMIN", "SUPER_ADMIN", "RESELLER"]).optional(),
+    deviceLimit: z.number().int().min(1).max(100).optional(),
+    quotaRemainingGB: z.number().nonnegative().optional(),
+    expireAt: z.string().datetime().optional(),
+  });
+
   export const updateUserSchema = z.object({
     username: z.string().min(3).max(32).optional(),
     email: z.string().email().optional(),

@@ -3,6 +3,7 @@ import * as userController from "../controllers/user.controller.js";
 import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import {
+  createUserSchema,
   updateUserSchema,
   suspendUserSchema,
   addQuotaSchema,
@@ -14,6 +15,7 @@ const router = Router();
 router.use(authMiddleware);
 router.use(requireRole("ADMIN", "SUPER_ADMIN"));
 
+router.post("/", validate(createUserSchema), userController.createUser);
 router.get("/", userController.listUsers);
 router.get("/:id", userController.getUserById);
 router.patch("/:id", validate(updateUserSchema), userController.updateUser);
