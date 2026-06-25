@@ -8,11 +8,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # TODO (Phase 5): Ajouter les dépendances
-  # http: ^1.1.0
-  # shared_preferences: ^2.2.0
-  # provider: ^6.0.5
-  # go_router: ^10.0.0
+  flutter_v2ray: ^1.0.9
+  http: ^1.1.0
+  shared_preferences: ^2.2.0
+  provider: ^6.0.5
+  permission_handler: ^11.0.1
 
 dev_dependencies:
   flutter_test:
