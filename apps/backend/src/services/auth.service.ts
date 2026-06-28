@@ -12,9 +12,10 @@ export async function registerUser(input: RegisterInput) {
   const user = await prisma.user.create({
     data: {
       username: input.username,
-      email: input.email,
+      email:    input.email,
       password: hashed,
-      role: input.role ?? "USER",
+      // Défaut: CLIENT (aligné avec l'enum Prisma UserRole)
+      role: (input.role as "CLIENT" | "SUPPORT" | "RESELLER" | "ADMIN") ?? "CLIENT",
     },
   });
   return omit(user, ["password"]);
@@ -25,30 +26,33 @@ export async function loginUser(
   deviceName?: string,
   ipAddress?: string,
 ) {
-  const user = await prisma.user.findUnique({ where: { email: input.email ?? undefined } });
+  const identifier = input.email ?? input.phone;
+  if (!identifier) throw new Error("Invalid credentials");
+
+  const user = input.email
+    ? await prisma.user.findUnique({ where: { email: input.email } })
+    : await prisma.user.findUnique({ where: { phone: input.phone } });
+
   if (!user) throw new Error("Invalid credentials");
   if (user.status !== "ACTIVE") throw new Error(`Account is ${user.status.toLowerCase()}`);
-
   if (!user.password) throw new Error("Invalid credentials");
-  const hash: string = user.password;
-  const valid = await bcrypt.compare(input.password, hash);
+
+  const valid = await bcrypt.compare(input.password, user.password);
   if (!valid) throw new Error("Invalid credentials");
 
-  const payload: Omit<AuthPayload, "sessionId"> & { sessionId?: string } = {
-    userId: user.id,
-    role: user.role,
-  };
-
-  const token = jwt.sign(payload, env.JWT_SECRET, {
-    expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
-  });
+  const token = jwt.sign(
+    { userId: user.id, role: user.role } satisfies Omit<AuthPayload, "sessionId">,
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
+  );
 
   const session = await prisma.session.create({
     data: { token, deviceName, ipAddress, userId: user.id },
   });
 
+  // Re-sign with sessionId
   const finalToken = jwt.sign(
-    { userId: user.id, role: user.role, sessionId: session.id },
+    { userId: user.id, role: user.role, sessionId: session.id } satisfies AuthPayload,
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
   );
@@ -78,63 +82,55 @@ export async function loginWithLicense(
         username: `user_${token.slice(0, 8)}`,
         role: "CLIENT",
         status: "ACTIVE",
-        quotaRemainingGB: license.dataLimitGB,
-        deviceLimit: license.deviceLimit,
-        expireAt: license.expireAt,
+        deviceLimit: 1,
+        quotaRemainingGB: 0,
+        quotaUsedGB: 0,
       },
     });
-
-    await prisma.license.update({
-      where: { id: license.id },
-      data: { userId: user.id, phone, deviceId, deviceName },
-    });
+    // Link license to user
+    await licenseService.bindLicenseToUser(license.id, user.id);
   }
 
   if (user.status !== "ACTIVE") throw new Error(`ACCOUNT_${user.status}`);
 
-  await licenseService.bindDevice(token, deviceId, deviceName, phone);
+  // Device binding
+  const existingDevice = await prisma.device.findUnique({ where: { deviceId } });
+  if (!existingDevice) {
+    await prisma.device.create({
+      data: { deviceId, userId: user.id, deviceName },
+    });
+  } else if (existingDevice.userId !== user.id) {
+    throw new Error("DEVICE_BOUND_TO_ANOTHER_ACCOUNT");
+  }
 
-  const session = await prisma.session.create({
-    data: { token: "", deviceName, ipAddress, userId: user.id },
-  });
-
-  const finalToken = jwt.sign(
-    { userId: user.id, role: user.role, sessionId: session.id },
+  const sessionToken = jwt.sign(
+    { userId: user.id, role: user.role, sessionId: "" } satisfies AuthPayload,
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
   );
 
-  await prisma.session.update({ where: { id: session.id }, data: { token: finalToken } });
-  await prisma.license.update({ where: { id: license.id }, data: { lastUsedAt: new Date() } });
+  const session = await prisma.session.create({
+    data: { token: sessionToken, userId: user.id, deviceName, ipAddress },
+  });
 
-  return {
-    token: finalToken,
-    user: omit(user, ["password"]),
-    license: {
-      token: license.token,
-      dataLimitGB: license.dataLimitGB,
-      dataUsedGB: license.dataUsedGB,
-      deviceLimit: license.deviceLimit,
-      expireAt: license.expireAt,
-    },
-  };
+  const finalToken = jwt.sign(
+    { userId: user.id, role: user.role, sessionId: session.id } satisfies AuthPayload,
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
+  );
+  await prisma.session.update({ where: { id: session.id }, data: { token: finalToken } });
+
+  return { token: finalToken, user: omit(user, ["password"]) };
 }
 
 export async function refreshToken(userId: string, sessionId: string) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
-  const session = await prisma.session.findUnique({ where: { id: sessionId } });
-  if (!session || !session.isActive) throw new Error("SESSION_EXPIRED");
-
   const newToken = jwt.sign(
-    { userId: user.id, role: user.role, sessionId: session.id },
+    { userId: user.id, role: user.role, sessionId } satisfies AuthPayload,
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
   );
-
-  await prisma.session.update({
-    where: { id: session.id },
-    data: { token: newToken, lastUsedAt: new Date() },
-  });
+  await prisma.session.update({ where: { id: sessionId }, data: { token: newToken, lastUsedAt: new Date() } });
   return { token: newToken };
 }
 
@@ -144,5 +140,8 @@ export async function getMe(userId: string) {
 }
 
 export async function logoutSession(token: string) {
-  await prisma.session.deleteMany({ where: { token } });
+  await prisma.session.updateMany({
+    where: { token },
+    data: { isActive: false },
+  });
 }
