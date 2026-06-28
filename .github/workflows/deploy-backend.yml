@@ -12,6 +12,8 @@ jobs:
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
+    # Skipped if VPS secrets are not configured
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,9 +27,8 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             cd ~/stuff-the-vpn
-            git pull origin main
-            docker compose pull
-            docker compose build backend
-            docker compose up -d backend
-            docker compose exec backend sh -c "npx prisma migrate deploy"
-            echo "✓ Backend deployed successfully"
+            git pull
+            cd apps/backend
+            npm install
+            npx prisma migrate deploy
+            pm2 restart sxbvpn-backend || pm2 start dist/index.mjs --name sxbvpn-backend
