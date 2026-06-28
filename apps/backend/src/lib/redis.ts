@@ -1,34 +1,49 @@
+/**
+ * redis.ts — Client Redis singleton
+ * Utilisé pour : rate limiting, cache sessions, pub/sub Socket.IO
+ */
 import { createClient } from "redis";
+import { logger } from "./logger.js";
 import { env } from "../config/env.js";
 
-let client: ReturnType<typeof createClient> | null = null;
+const client = createClient({ url: env.REDIS_URL });
 
-export async function getRedis() {
-  if (!client) {
-    client = createClient({ url: env.REDIS_URL ?? "redis://localhost:6379" });
-    client.on("error", (err) => console.error("[Redis] error:", err));
-    await client.connect();
+client.on("error", (err) => { logger.error({ err }, "Redis client error"); });
+client.on("connect", () => { logger.info("Redis connected"); });
+
+let _connected = false;
+
+export async function connectRedis(): Promise<void> {
+  if (_connected) return;
+  await client.connect();
+  _connected = true;
+}
+
+export async function disconnectRedis(): Promise<void> {
+  if (!_connected) return;
+  await client.disconnect();
+  _connected = false;
+}
+
+export { client as redis };
+
+export async function cacheSet(key: string, value: unknown, ttlSeconds = 300): Promise<void> {
+  try {
+    await client.setEx(`sxbvpn:${key}`, ttlSeconds, JSON.stringify(value));
+  } catch (err) {
+    logger.warn({ err, key }, "Redis cacheSet failed");
   }
-  return client;
 }
 
-export async function redisSet(key: string, value: string, ttlSec?: number) {
-  const r = await getRedis();
-  if (ttlSec) await r.set(key, value, { EX: ttlSec });
-  else await r.set(key, value);
+export async function cacheGet<T>(key: string): Promise<T | null> {
+  try {
+    const raw = await client.get(`sxbvpn:${key}`);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
 }
 
-export async function redisGet(key: string): Promise<string | null> {
-  const r = await getRedis();
-  return r.get(key);
-}
-
-export async function redisDel(key: string) {
-  const r = await getRedis();
-  return r.del(key);
-}
-
-export async function redisIncr(key: string) {
-  const r = await getRedis();
-  return r.incr(key);
+export async function cacheDel(key: string): Promise<void> {
+  try { await client.del(`sxbvpn:${key}`); } catch { /* ignore */ }
 }
