@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
+mport { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, endpoints } from '@/lib/api';
 import { toast } from 'sonner';
@@ -80,7 +81,8 @@ export default function InboundsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <DashboardLayout>
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">Inbounds VPN</h1>
@@ -296,5 +298,6 @@ export default function InboundsPage() {
         </div>
       )}
     </div>
+    </DashboardLayout>
   );
 }
