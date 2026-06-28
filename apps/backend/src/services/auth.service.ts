@@ -25,13 +25,13 @@ export async function loginUser(
   deviceName?: string,
   ipAddress?: string,
 ) {
-  const user = await prisma.user.findUnique({ where: { email: input.email } });
+  const user = await prisma.user.findUnique({ where: { email: input.email ?? undefined } });
   if (!user) throw new Error("Invalid credentials");
   if (user.status !== "ACTIVE") throw new Error(`Account is ${user.status.toLowerCase()}`);
 
-  // password can be null for license-only accounts
   if (!user.password) throw new Error("Invalid credentials");
-  const valid = await bcrypt.compare(input.password, user.password);
+  const hash: string = user.password;
+  const valid = await bcrypt.compare(input.password, hash);
   if (!valid) throw new Error("Invalid credentials");
 
   const payload: Omit<AuthPayload, "sessionId"> & { sessionId?: string } = {
@@ -131,7 +131,10 @@ export async function refreshToken(userId: string, sessionId: string) {
     { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
   );
 
-  await prisma.session.update({ where: { id: session.id }, data: { token: newToken, lastUsedAt: new Date() } });
+  await prisma.session.update({
+    where: { id: session.id },
+    data: { token: newToken, lastUsedAt: new Date() },
+  });
   return { token: newToken };
 }
 
