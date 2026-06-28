@@ -26,14 +26,19 @@ const envSchema = z.object({
   CORS_ORIGIN:       z.string().default("*"),
 
   // Seed
-  SEED_ADMIN_EMAIL:    z.string().email().default("admin@sxbvpn.com"),
+  SEED_ADMIN_EMAIL:    z.string().default("admin@sxbvpn.com"),
   SEED_ADMIN_USERNAME: z.string().default("superadmin"),
   SEED_ADMIN_PASSWORD: z.string().default("Admin123!"),
 
   // V2Ray (optional)
-  V2RAY_API_URL:     z.string().optional(),
-  V2RAY_API_ENABLED: z.coerce.boolean().default(false),
-  TRAFFIC_SYNC_INTERVAL_MS: z.coerce.number().default(60000),
+  V2RAY_API_URL:              z.string().optional(),
+  V2RAY_API_ENABLED:          z.coerce.boolean().default(false),
+  TRAFFIC_SYNC_INTERVAL_MS:   z.coerce.number().default(60000),
+
+  // Firebase (optional)
+  FIREBASE_PROJECT_ID:        z.string().optional(),
+  FIREBASE_PRIVATE_KEY:       z.string().optional(),
+  FIREBASE_CLIENT_EMAIL:      z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -41,8 +46,8 @@ export type Env = z.infer<typeof envSchema>;
 function validateEnv(): Env {
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
-    console.error("❌ Invalid environment variables:");
-    result.error.issues.forEach((i) => console.error(`  ${i.path.join(".")}: ${i.message}`));
+    console.error("\u274c Invalid environment variables:");
+    result.error.issues.forEach((i) => console.error(`  \${i.path.join(".")}: \${i.message}`));
     process.exit(1);
   }
   return result.data;
