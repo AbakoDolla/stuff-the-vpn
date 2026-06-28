@@ -1,72 +1,80 @@
-# ─── Docker Compose — Stuff The VPN ──────────────────────────────────────────
-  # Lance l'ensemble de la stack localement.
-  version: '3.9'
+version: '3.9'
 
-  services:
-    postgres:
-      image: postgres:16-alpine
-      container_name: stv_postgres
-      environment:
-        POSTGRES_DB: stuff_the_vpn
-        POSTGRES_USER: stv_user
-        POSTGRES_PASSWORD: stv_password
-      ports:
-        - "5432:5432"
-      volumes:
-        - postgres_data:/var/lib/postgresql/data
-      healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U stv_user -d stuff_the_vpn"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: stv_postgres
+    environment:
+      POSTGRES_DB: stuff_the_vpn
+      POSTGRES_USER: stv_user
+      POSTGRES_PASSWORD: stv_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stv_user -d stuff_the_vpn"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
-    redis:
-      image: redis:7-alpine
-      container_name: stv_redis
-      ports:
-        - "6379:6379"
-      volumes:
-        - redis_data:/data
-      command: redis-server --appendonly yes
+  redis:
+    image: redis:7-alpine
+    container_name: stv_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
-    backend:
-      build:
-        context: .
-        dockerfile: docker/backend.Dockerfile
-      container_name: stv_backend
-      environment:
-        NODE_ENV: production
-        PORT: 5000
-        DATABASE_URL: postgresql://stv_user:stv_password@postgres:5432/stuff_the_vpn
-        JWT_SECRET: ${JWT_SECRET:-changeme_in_production_32chars_min}
-        JWT_EXPIRES_IN: 7d
-        CORS_ORIGIN: http://localhost:3000
-        SEED_ADMIN: "true"
-        ADMIN_USERNAME: SxBVPN
-        ADMIN_EMAIL: admin@sxbvpn.com
-        ADMIN_PASSWORD: ${ADMIN_PASSWORD:-SxBvpn2026}
-      ports:
-        - "5000:5000"
-      depends_on:
-        postgres:
-          condition: service_healthy
-      restart: unless-stopped
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: stv_backend
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://stv_user:stv_password@postgres:5432/stuff_the_vpn
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-changeme_in_production_32chars_min}
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      SEED_ADMIN: "true"
+      ADMIN_USERNAME: SxBVPN
+      ADMIN_EMAIL: admin@sxbvpn.com
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-SxBvpn2026}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-change_me_32_chars_minimum_here!!}
+      V2RAY_API_ENABLED: "false"
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
-    dashboard:
-      build:
-        context: apps/dashboard
-        dockerfile: ../../docker/dashboard.Dockerfile
-      container_name: stv_dashboard
-      environment:
-        NODE_ENV: production
-        NEXT_PUBLIC_API_URL: http://backend:5000
-      ports:
-        - "3000:3000"
-      depends_on:
-        - backend
-      restart: unless-stopped
+  dashboard:
+    build:
+      context: apps/dashboard
+      dockerfile: ../../docker/dashboard.Dockerfile
+    container_name: stv_dashboard
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
 
-  volumes:
-    postgres_data:
-    redis_data:
-  
+volumes:
+  postgres_data:
+  redis_data:
