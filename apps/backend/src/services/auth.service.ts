@@ -76,7 +76,7 @@ export async function loginWithLicense(
       data: {
         phone,
         username: `user_${token.slice(0, 8)}`,
-        role: "USER",
+        role: "CLIENT",
         status: "ACTIVE",
         quotaRemainingGB: license.dataLimitGB,
         deviceLimit: license.deviceLimit,
