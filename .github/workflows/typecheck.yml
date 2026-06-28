@@ -13,12 +13,16 @@ jobs:
     defaults:
       run:
         working-directory: apps/backend
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci_db
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npx tsc --noEmit
+      - name: Install deps
+        run: npm install
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: TypeCheck
+        run: npx tsc --noEmit
