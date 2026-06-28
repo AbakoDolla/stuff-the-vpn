@@ -1,0 +1,25 @@
+{
+  "name": "stuff-the-vpn",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plateforme SaaS VPN commerciale — V2Ray & SSH",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "echo 'Use docker-compose or run apps individually. See docs/deployment.md'",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.1.3",
+    "prettier": "^2.8.8",
+    "eslint": "^8.42.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

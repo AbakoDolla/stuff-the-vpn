@@ -1,27 +1,51 @@
-import dotenv from "dotenv";
-dotenv.config();
+import { z } from "zod";
 
-function required(key: string): string {
-  const val = process.env[key];
-  if (!val) throw new Error(`Missing required env var: ${key}`);
-  return val;
+const envSchema = z.object({
+  // Server
+  PORT:              z.coerce.number().default(4000),
+  NODE_ENV:          z.enum(["development", "production", "test"]).default("development"),
+
+  // Database
+  DATABASE_URL:      z.string().min(1, "DATABASE_URL is required"),
+
+  // Redis
+  REDIS_URL:         z.string().default("redis://localhost:6379"),
+
+  // JWT
+  JWT_SECRET:        z.string().min(32, "JWT_SECRET must be at least 32 chars"),
+  JWT_EXPIRES_IN:    z.string().default("7d"),
+  JWT_REFRESH_EXPIRES_IN: z.string().default("30d"),
+
+  // Encryption (AES-256 key for VPN configs)
+  ENCRYPTION_KEY:    z.string().min(32).default("change_me_32_chars_minimum_here!!"),
+
+  // Auth
+  BCRYPT_ROUNDS:     z.coerce.number().default(12),
+
+  // CORS
+  CORS_ORIGIN:       z.string().default("*"),
+
+  // Seed
+  SEED_ADMIN_EMAIL:    z.string().email().default("admin@sxbvpn.com"),
+  SEED_ADMIN_USERNAME: z.string().default("superadmin"),
+  SEED_ADMIN_PASSWORD: z.string().default("Admin123!"),
+
+  // V2Ray (optional)
+  V2RAY_API_URL:     z.string().optional(),
+  V2RAY_API_ENABLED: z.coerce.boolean().default(false),
+  TRAFFIC_SYNC_INTERVAL_MS: z.coerce.number().default(60000),
+});
+
+export type Env = z.infer<typeof envSchema>;
+
+function validateEnv(): Env {
+  const result = envSchema.safeParse(process.env);
+  if (!result.success) {
+    console.error("❌ Invalid environment variables:");
+    result.error.issues.forEach((i) => console.error(`  ${i.path.join(".")}: ${i.message}`));
+    process.exit(1);
+  }
+  return result.data;
 }
 
-export const env = {
-  NODE_ENV: process.env["NODE_ENV"] ?? "development",
-  PORT: process.env["PORT"] ?? "5000",
-  DATABASE_URL: required("DATABASE_URL"),
-  JWT_SECRET: process.env["JWT_SECRET"] ?? "changeme_jwt_secret_32chars_min!!",
-  JWT_EXPIRES_IN: process.env["JWT_EXPIRES_IN"] ?? "7d",
-  BCRYPT_ROUNDS: Number(process.env["BCRYPT_ROUNDS"] ?? "12"),
-  CORS_ORIGIN: process.env["CORS_ORIGIN"] ?? "*",
-
-  // V2Ray / Xray Stats API
-  // Set V2RAY_API_URL to your running instance (e.g. http://127.0.0.1:10085)
-  // Set V2RAY_API_ENABLED=false to disable all V2Ray integration (e.g. in dev)
-  V2RAY_API_URL: process.env["V2RAY_API_URL"] ?? "http://127.0.0.1:10085",
-  V2RAY_API_ENABLED: process.env["V2RAY_API_ENABLED"] !== "false",
-
-  // How often (ms) the traffic sync loop runs. Default: 60 s
-  TRAFFIC_SYNC_INTERVAL_MS: Number(process.env["TRAFFIC_SYNC_INTERVAL_MS"] ?? "60000"),
-};
+export const env = validateEnv();
