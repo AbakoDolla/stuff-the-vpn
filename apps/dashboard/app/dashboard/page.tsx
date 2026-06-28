@@ -1,207 +1,242 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Users, Ticket, Server, AlertTriangle, Clock, Database, Key } from 'lucide-react';
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
-} from 'recharts';
-import { api } from '@/lib/api';
-import DashboardLayout from '@/components/DashboardLayout';
-import StatsCard from '@/components/StatsCard';
-import { relativeTime } from '@/lib/utils';
 
-interface Stats {
-  totalUsers: number; activeUsers: number; suspendedUsers: number;
-  totalVouchers: number; usedVouchers: number; activeVouchers: number;
-  totalLicenses: number; activeLicenses: number;
-  totalPlans: number; activePlans: number;
-  totalInbounds: number; activeInbounds: number;
-  recentUsers: { username: string; email: string; createdAt: string; status: string }[];
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import {
+  Users, Server, Ticket, CreditCard, TrendingUp,
+  Activity, Shield, Wifi, AlertCircle, RefreshCw
+} from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
+
+interface StatsData {
+  totalUsers: number;
+  activeUsers: number;
+  totalServers: number;
+  onlineServers: number;
+  totalVouchers: number;
+  activeVouchers: number;
+  totalRevenue: number;
+  monthlyRevenue: number;
 }
 
-const USAGE_MOCK = [
-  { hour: '00h', up: 12, down: 45 }, { hour: '04h', up: 8, down: 32 },
-  { hour: '08h', up: 35, down: 120 }, { hour: '12h', up: 62, down: 220 },
-  { hour: '16h', up: 80, down: 310 }, { hour: '20h', up: 55, down: 190 },
-  { hour: '23h', up: 30, down: 105 },
-];
+function StatCard({
+  label, value, sub, icon: Icon, color, trend
+}: {
+  label: string; value: string | number; sub?: string;
+  icon: React.ElementType; color: string; trend?: string;
+}) {
+  return (
+    <div className="stat-card">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs text-[#64748B] font-medium uppercase tracking-wider">{label}</p>
+          <p className="text-2xl font-bold mt-1" style={{ color }}>{value}</p>
+          {sub && <p className="text-xs text-[#64748B] mt-0.5">{sub}</p>}
+        </div>
+        <div className="p-2.5 rounded-xl" style={{ background: `${color}20`, border: `1px solid ${color}30` }}>
+          <Icon className="w-5 h-5" style={{ color }} />
+        </div>
+      </div>
+      {trend && (
+        <div className="flex items-center gap-1 mt-2">
+          <TrendingUp className="w-3 h-3 text-emerald-400" />
+          <span className="text-xs text-emerald-400">{trend}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: usersData, isLoading: loadingUsers } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => api.get('/users?limit=1&status=ACTIVE').then(r => r.data),
+    refetchInterval: 30_000,
+  });
 
-  useEffect(() => {
-    async function load() {
-      try {
-        // Un seul appel à GET /api/admin/stats
-        const r = await api.get('/admin/stats');
-        setStats(r.data.data);
-      } catch {
-        /* stats reste null */
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+  const { data: serversData, isLoading: loadingServers } = useQuery({
+    queryKey: ['servers'],
+    queryFn: () => api.get('/servers').then(r => r.data),
+    refetchInterval: 15_000,
+  });
 
-  const pieData = stats ? [
-    { name: 'Actifs', value: stats.activeUsers, color: '#10B981' },
-    { name: 'Suspendus', value: stats.suspendedUsers, color: '#EF4444' },
-    { name: 'Inactifs', value: Math.max(0, stats.totalUsers - stats.activeUsers - stats.suspendedUsers), color: '#64748B' },
-  ] : [];
+  const { data: vouchersData } = useQuery({
+    queryKey: ['vouchers-stats'],
+    queryFn: () => api.get('/vouchers?limit=1000').then(r => r.data),
+    refetchInterval: 60_000,
+  });
+
+  const { data: auditData } = useQuery({
+    queryKey: ['audit-recent'],
+    queryFn: () => api.get('/audit?limit=8').then(r => r.data),
+    refetchInterval: 30_000,
+  });
+
+  const users    = usersData?.data ?? [];
+  const servers  = serversData?.data ?? [];
+  const vouchers = vouchersData?.data ?? [];
+
+  const onlineServers   = servers.filter((s: { status: string }) => s.status === 'ONLINE').length;
+  const activeVouchers  = vouchers.filter((v: { status: string }) => v.status === 'ACTIVE').length;
+  const usedVouchers    = vouchers.filter((v: { status: string }) => v.status === 'USED').length;
+
+  const isLoading = loadingUsers || loadingServers;
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-[#F1F5F9]">Tableau de bord</h1>
-            <p className="text-sm text-[#64748B]">Vue d&apos;ensemble de la plateforme SxBVPN</p>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-[#64748B]">
-            <Clock className="w-3.5 h-3.5" />
-            Mis à jour {relativeTime(new Date().toISOString())}
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">Vue d&apos;ensemble</h1>
+          <p className="text-sm text-[#64748B] mt-0.5">Tableau de bord SxBVPN</p>
         </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="btn-ghost flex items-center gap-2 text-xs"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          Actualiser
+        </button>
+      </div>
 
-        {/* Stats cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard title="Utilisateurs totaux" value={loading ? '—' : stats?.totalUsers ?? 0} subtitle={`${stats?.activeUsers ?? 0} actifs`} icon={Users} color="blue" />
-          <StatsCard title="Vouchers actifs" value={loading ? '—' : stats?.activeVouchers ?? 0} subtitle={`${stats?.usedVouchers ?? 0} utilisés`} icon={Ticket} color="green" />
-          <StatsCard title="Serveurs actifs" value={loading ? '—' : `${stats?.activeInbounds ?? 0}/${stats?.totalInbounds ?? 0}`} subtitle="Inbounds en ligne" icon={Server} color="amber" />
-          <StatsCard title="Licenses actives" value={loading ? '—' : stats?.activeLicenses ?? 0} subtitle={`${stats?.totalLicenses ?? 0} total`} icon={Key} color="purple" />
-        </div>
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Utilisateurs"
+          value={isLoading ? '...' : usersData?.meta?.total ?? users.length}
+          sub={`${usersData?.meta?.totalActive ?? 0} actifs`}
+          icon={Users}
+          color="#6366F1"
+          trend="+12% ce mois"
+        />
+        <StatCard
+          label="Serveurs"
+          value={servers.length}
+          sub={`${onlineServers} en ligne`}
+          icon={Server}
+          color={onlineServers === servers.length ? '#10B981' : '#F59E0B'}
+        />
+        <StatCard
+          label="Vouchers actifs"
+          value={activeVouchers}
+          sub={`${usedVouchers} utilisés`}
+          icon={Ticket}
+          color="#8B5CF6"
+        />
+        <StatCard
+          label="Connexions live"
+          value="—"
+          sub="Via Socket.IO"
+          icon={Activity}
+          color="#06B6D4"
+        />
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Trafic réseau (données simulées) */}
-          <div className="lg:col-span-2 card">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-[#F1F5F9]">Trafic réseau (24h)</h2>
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">Données simulées</span>
-                <div className="flex gap-3 text-xs text-[#64748B]">
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#0099FF] inline-block" />Upload</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#00D4FF] inline-block" />Download</span>
-                </div>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={USAGE_MOCK}>
-                <defs>
-                  <linearGradient id="gUp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0099FF" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#0099FF" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gDown" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00D4FF" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#00D4FF" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E2D45" />
-                <XAxis dataKey="hour" tick={{ fill: '#64748B', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#64748B', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: '#141C2E', border: '1px solid #1E2D45', borderRadius: 8, color: '#F1F5F9' }} />
-                <Area type="monotone" dataKey="up" stroke="#0099FF" fill="url(#gUp)" strokeWidth={2} name="Upload MB" />
-                <Area type="monotone" dataKey="down" stroke="#00D4FF" fill="url(#gDown)" strokeWidth={2} name="Download MB" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+      {/* Main content grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-          {/* Pie chart statut utilisateurs */}
-          <div className="card">
-            <h2 className="text-sm font-semibold text-[#F1F5F9] mb-4">Statut utilisateurs</h2>
-            {loading || (stats?.totalUsers ?? 0) === 0 ? (
-              <div className="h-[200px] flex items-center justify-center text-[#64748B] text-sm">Aucune donnée</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value">
-                    {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: '#141C2E', border: '1px solid #1E2D45', borderRadius: 8, color: '#F1F5F9' }} />
-                  <Legend formatter={(v) => <span style={{ color: '#94A3B8', fontSize: 11 }}>{v}</span>} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* Derniers utilisateurs */}
-        <div className="card">
+        {/* Servers status */}
+        <div className="lg:col-span-2 card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-[#F1F5F9]">Derniers utilisateurs inscrits</h2>
-            <a href="/users" className="text-xs text-[#0099FF] hover:text-[#00D4FF] transition-colors">Voir tous →</a>
+            <h2 className="font-semibold flex items-center gap-2">
+              <Server className="w-4 h-4 text-[#6366F1]" />
+              Serveurs ({servers.length})
+            </h2>
           </div>
-          {loading ? (
+          {loadingServers ? (
             <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#1E2D45] animate-pulse" />
-                  <div className="flex-1 space-y-1">
-                    <div className="h-3.5 bg-[#1E2D45] rounded animate-pulse w-1/4" />
-                    <div className="h-3 bg-[#1E2D45] rounded animate-pulse w-1/3" />
-                  </div>
-                </div>
-              ))}
+              {[1,2,3].map(i => <div key={i} className="h-14 rounded-xl bg-white/5 animate-pulse" />)}
             </div>
-          ) : (stats?.recentUsers || []).length === 0 ? (
-            <p className="text-sm text-[#64748B]">Aucun utilisateur récent</p>
+          ) : servers.length === 0 ? (
+            <div className="flex flex-col items-center py-8 text-[#64748B]">
+              <Server className="w-8 h-8 mb-2 opacity-40" />
+              <p className="text-sm">Aucun serveur configuré</p>
+            </div>
           ) : (
             <div className="space-y-2">
-              {(stats?.recentUsers || []).map((u, i) => (
-                <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#0F1629] transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0099FF] to-[#00D4FF] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    {u.username?.[0]?.toUpperCase() || 'U'}
+              {servers.slice(0, 6).map((s: { id: string; name?: string; remark?: string; status?: string; protocol?: string; ip?: string; host?: string; country?: string; flag?: string; activeConns?: number; cpuPercent?: number }) => (
+                <div key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${s.status === 'ONLINE' ? 'bg-emerald-400' : s.status === 'OFFLINE' ? 'bg-red-400' : 'bg-yellow-400'}`} />
+                    <div>
+                      <p className="text-sm font-medium">{s.name ?? s.remark ?? 'Serveur'}</p>
+                      <p className="text-xs text-[#64748B]">{s.protocol} · {s.ip ?? s.host} · {s.country ?? ''} {s.flag ?? ''}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#F1F5F9] truncate">{u.username}</p>
-                    <p className="text-xs text-[#64748B] truncate">{u.email}</p>
+                  <div className="text-right">
+                    <span className={`badge ${s.status === 'ONLINE' ? 'badge-green' : s.status === 'OFFLINE' ? 'badge-red' : 'badge-yellow'}`}>
+                      {s.status ?? 'UNKNOWN'}
+                    </span>
+                    {s.activeConns !== undefined && (
+                      <p className="text-xs text-[#64748B] mt-1">{s.activeConns} conn.</p>
+                    )}
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${u.status === 'ACTIVE' ? 'badge-active' : 'badge-inactive'}`}>{u.status}</span>
-                  <span className="text-xs text-[#64748B] whitespace-nowrap">{relativeTime(u.createdAt)}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* État des services et alertes */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="card">
-            <h2 className="text-sm font-semibold text-[#F1F5F9] mb-3">État des services</h2>
-            <div className="space-y-2">
-              {[
-                { name: 'API Backend', ok: true },
-                { name: 'Base de données', ok: true },
-                { name: 'V2Ray', ok: (stats?.activeInbounds ?? 0) > 0 },
-              ].map(s => (
-                <div key={s.name} className="flex items-center justify-between">
-                  <span className="text-sm text-[#94A3B8]">{s.name}</span>
-                  {s.ok
-                    ? <span className="badge-active"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Online</span>
-                    : <span className="badge-inactive"><span className="w-1.5 h-1.5 rounded-full bg-red-400" />Offline</span>}
+        {/* Recent activity */}
+        <div className="card">
+          <h2 className="font-semibold flex items-center gap-2 mb-4">
+            <Activity className="w-4 h-4 text-[#6366F1]" />
+            Activité récente
+          </h2>
+          {!auditData?.data?.length ? (
+            <div className="flex flex-col items-center py-8 text-[#64748B]">
+              <Activity className="w-8 h-8 mb-2 opacity-40" />
+              <p className="text-sm">Aucune activité</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {auditData.data.map((log: { id: string; action: string; createdAt: string; user?: { username: string } }) => (
+                <div key={log.id} className="flex items-start gap-2.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-1.5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate">{log.action.replace(/_/g, ' ')}</p>
+                    <p className="text-xs text-[#64748B]">
+                      {log.user?.username ?? 'Système'} · {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true, locale: fr })}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Quick status row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="card flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-emerald-500/10">
+            <Shield className="w-5 h-5 text-emerald-400" />
           </div>
-          <div className="card">
-            <h2 className="text-sm font-semibold text-[#F1F5F9] mb-3">Résumé des ressources</h2>
-            <div className="space-y-2">
-              {[
-                { label: 'Plans actifs', val: `${stats?.activePlans ?? 0} / ${stats?.totalPlans ?? 0}` },
-                { label: 'Licenses actives', val: `${stats?.activeLicenses ?? 0} / ${stats?.totalLicenses ?? 0}` },
-                { label: 'Inbounds actifs', val: `${stats?.activeInbounds ?? 0} / ${stats?.totalInbounds ?? 0}` },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <span className="text-sm text-[#94A3B8]">{item.label}</span>
-                  <span className="text-sm font-mono text-[#F1F5F9]">{loading ? '—' : item.val}</span>
-                </div>
-              ))}
-            </div>
+          <div>
+            <p className="text-xs text-[#64748B]">Chiffrement</p>
+            <p className="text-sm font-medium">AES-256-GCM ✓</p>
+          </div>
+        </div>
+        <div className="card flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-blue-500/10">
+            <Wifi className="w-5 h-5 text-blue-400" />
+          </div>
+          <div>
+            <p className="text-xs text-[#64748B]">Protocoles</p>
+            <p className="text-sm font-medium">VLESS · VMESS · SSH · WG</p>
+          </div>
+        </div>
+        <div className="card flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-purple-500/10">
+            <CreditCard className="w-5 h-5 text-purple-400" />
+          </div>
+          <div>
+            <p className="text-xs text-[#64748B]">Vouchers dispo</p>
+            <p className="text-sm font-medium">{activeVouchers} actifs</p>
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
