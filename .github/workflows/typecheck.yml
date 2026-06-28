@@ -15,11 +15,18 @@ jobs:
         working-directory: apps/backend
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci_db
+      JWT_SECRET: ci_jwt_secret_at_least_32_chars_here_ok
+      ENCRYPTION_KEY: ci_encryption_key_32chars_minimum!!
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
+      PORT: "4000"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: apps/backend/package-lock.json
       - name: Install deps
         run: npm install
       - name: Generate Prisma client
