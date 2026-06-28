@@ -2,13 +2,6 @@ import { PrismaClient } from "@prisma/client";
 import { logger } from "../lib/logger.js";
 
 function createPrismaClient() {
-  // Support SUPABASE_DATABASE_URL override (utile sur certains hébergeurs)
-  const databaseUrl = process.env["SUPABASE_DATABASE_URL"] ?? process.env["DATABASE_URL"];
-  if (!databaseUrl) throw new Error("DATABASE_URL is required");
-
-  // Injecte l'URL dynamiquement pour le client Prisma 5
-  process.env["DATABASE_URL"] = databaseUrl;
-
   const client = new PrismaClient({
     log: [
       { emit: "event", level: "error" },
