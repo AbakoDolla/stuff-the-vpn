@@ -665,3 +665,70 @@ model VpnUserProfile {
 
   @@map("vpn_user_profiles")
 }
+
+// ═══════════════════════════ INBOUND (X-Ray / V2Ray entry points) ═══════════════════════════
+
+enum InboundProtocol {
+  VLESS
+  VLESS_REALITY
+  VMESS
+  TROJAN
+  TROJAN_GO
+  SHADOWSOCKS
+  SHADOWSOCKS_R
+  SSH
+  SSH_PAYLOAD
+  SSH_SSL
+  SSH_WEBSOCKET
+  SSH_SLOWDNS
+  WIREGUARD
+  OPENVPN
+  HTTP_PROXY
+  SOCKS5
+  HYSTERIA2
+  TUIC
+}
+
+model Inbound {
+  id          String          @id @default(cuid())
+  remark      String
+  protocol    InboundProtocol
+  host        String
+  port        Int
+  // V2Ray/VLESS/VMESS/Trojan
+  uuid        String?
+  path        String?
+  sni         String?
+  network     String?         // tcp | ws | grpc | h2
+  tls         Boolean         @default(false)
+  pbk         String?         // VLESS Reality public key
+  sid         String?         // VLESS Reality short ID
+  fp          String?         // fingerprint
+  // SSH
+  sshUser     String?
+  sshPassword String?
+  sshPayload  String?
+  // Shadowsocks
+  ssMethod    String?
+  ssPassword  String?
+  // WireGuard
+  wgPrivateKey  String?
+  wgPublicKey   String?
+  wgPeerKey     String?
+  wgDns         String?
+  // OpenVPN
+  ovpnConfig  String?         // full .ovpn file content
+  // Stats
+  activeConns Int?
+  totalUpGB   Float           @default(0)
+  totalDownGB Float           @default(0)
+  // Xray API port for per-user traffic stats
+  xrayApiPort Int?
+  enabled     Boolean         @default(true)
+  isPremium   Boolean         @default(false)
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("inbounds")
+}
