@@ -177,6 +177,7 @@ model User {
   ticketReplies    TicketReply[]
   payments         Payment[]
   apiKeys          ApiKey[]
+  vpnUserProfiles  VpnUserProfile[]
   ownedReseller    Reseller?    @relation("ResellerOwner")
 
   @@map("users")
@@ -348,7 +349,8 @@ model Plan {
   vpnProfiles  VpnProfile[]
   vouchers     Voucher[]
   payments     Payment[]
-  serverGroups PlanServerGroup[]
+  serverGroups    PlanServerGroup[]
+  vpnUserProfiles VpnUserProfile[]
 
   @@map("plans")
 }
@@ -563,4 +565,103 @@ model Blacklist {
 
   @@unique([type, value])
   @@map("blacklist")
+}
+
+// ═══════════════════════════ VPN TEMPLATES (Admin) ═══════════════════════════
+
+enum VpnProtocol {
+  SSH
+  SSH_PAYLOAD
+  SSH_SSL
+  SSH_WEBSOCKET
+  SSH_SLOWDNS
+  VMESS
+  VLESS
+  VLESS_REALITY
+  TROJAN
+  TROJAN_GO
+  SHADOWSOCKS
+  SHADOWSOCKS_R
+  WIREGUARD
+  OPENVPN
+  HTTP_PROXY
+  SOCKS5
+  HYSTERIA2
+  TUIC
+}
+
+model VpnTemplate {
+  id           String      @id @default(cuid())
+  name         String
+  description  String?
+  category     String?
+  protocol     VpnProtocol
+  displayName  String?
+  country      String?
+  city         String?
+  flag         String?
+  icon         String?
+  color        String?
+  tags         Json        @default("[]")
+  notes        String?
+  author       String?
+
+  // Security — ALL sensitive fields stored encrypted
+  encryptedConfig String
+
+  // Access
+  isPremium    Boolean @default(false)
+  isActive     Boolean @default(true)
+  sortOrder    Int     @default(0)
+
+  // Scheduling
+  scheduledAt        DateTime?
+  scheduledExpireAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userProfiles VpnUserProfile[]
+  assignments  VpnTemplateAssignment[]
+
+  @@map("vpn_templates")
+}
+
+model VpnTemplateAssignment {
+  id         String   @id @default(cuid())
+  type       String   // plan | reseller | server
+  targetId   String
+  createdAt  DateTime @default(now())
+
+  templateId String
+  template   VpnTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, type, targetId])
+  @@map("vpn_template_assignments")
+}
+
+model VpnUserProfile {
+  id             String           @id @default(cuid())
+  status         VpnProfileStatus @default(ACTIVE)
+  deviceLimit    Int              @default(1)
+  maxSpeedMbps   Int?
+  quotaGB        Float?
+  uploadUsedMB   Float            @default(0)
+  downloadUsedMB Float            @default(0)
+  lastConnectedAt DateTime?
+  expireAt        DateTime?
+  scheduledAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  templateId String
+  template   VpnTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId     String?
+  plan       Plan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
+  deviceId   String?
+  device     Device?     @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@map("vpn_user_profiles")
 }
