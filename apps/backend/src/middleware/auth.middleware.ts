@@ -2,7 +2,7 @@ import type { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { sendError } from "../utils/response.js";
-import { HTTP_STATUS, ROLES } from "../constants/index.js";
+import { HTTP_STATUS } from "../constants/index.js";
 import type { AuthPayload, AuthRequest } from "../types/index.js";
 import { prisma } from "../prisma/client.js";
 
@@ -22,10 +22,16 @@ export async function authMiddleware(
     const payload = jwt.verify(token, env.JWT_SECRET) as AuthPayload;
 
     const session = await prisma.session.findUnique({ where: { token } });
-    if (!session) {
+    if (!session || !session.isActive) {
       sendError(res, "Session expired or invalid", HTTP_STATUS.UNAUTHORIZED);
       return;
     }
+
+    // Rafraîchir lastUsedAt de façon non-bloquante
+    void prisma.session.update({
+      where: { id: session.id },
+      data: { lastUsedAt: new Date() },
+    }).catch(() => {/* ignore */});
 
     req.user = payload;
     next();
@@ -34,12 +40,21 @@ export async function authMiddleware(
   }
 }
 
-export function requireRole(...roles: (keyof typeof ROLES)[]) {
+/**
+ * Vérifie que l'utilisateur a un des rôles requis.
+ * Les rôles sont passés en string (UserRole Prisma).
+ */
+export function requireRole(...roles: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (!req.user || !roles.includes(req.user.role as keyof typeof ROLES)) {
+    if (!req.user || !roles.includes(req.user.role as string)) {
       sendError(res, "Insufficient permissions", HTTP_STATUS.FORBIDDEN);
       return;
     }
     next();
   };
 }
+
+/** Alias pratiques */
+export const requireAdmin     = requireRole("ADMIN", "SUPER_ADMIN");
+export const requireSuperAdmin = requireRole("SUPER_ADMIN");
+export const requireReseller  = requireRole("RESELLER", "ADMIN", "SUPER_ADMIN");
