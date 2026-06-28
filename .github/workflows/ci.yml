@@ -8,46 +8,54 @@ on:
 
 jobs:
   backend-typecheck:
-    name: Backend — TypeCheck
+    name: CI / Backend — TypeCheck
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/backend
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci_db
+      JWT_SECRET: ci_jwt_secret_at_least_32_chars_here!!
+      ENCRYPTION_KEY: ci_encryption_key_32_chars_here!!
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: apps/backend/package-lock.json
       - name: Install backend deps
         run: npm install
       - name: Generate Prisma client
         run: npx prisma generate
-        env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci_db
       - name: TypeCheck
         run: npx tsc --noEmit
 
   dashboard-build:
-    name: Dashboard — Build Check
+    name: CI / Dashboard — Build Check
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/dashboard
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api
+      NEXT_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: apps/dashboard/package-lock.json
       - name: Install dashboard deps
         run: npm install --legacy-peer-deps
       - name: Build Next.js
         run: npm run build
-        env:
-          NEXT_TELEMETRY_DISABLED: 1
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:5000' }}
 
   flutter-build:
-    name: Flutter — Build APK
+    name: CI / Flutter — Build APK
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -60,7 +68,7 @@ jobs:
           flutter-version: '3.24.0'
           channel: stable
           cache: true
-      - name: Flutter pub get
+      - name: Flutter pub get (sxb_vpn)
         working-directory: mobile_app_sxb_vpn
         run: flutter pub get
       - name: Flutter analyze
