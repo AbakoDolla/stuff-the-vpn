@@ -2,6 +2,7 @@ import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { prisma } from "./prisma/client.js";
 import { startTrafficSync, stopTrafficSync } from "./services/traffic-sync.service.js";
+import { startWireGuardSync, stopWireGuardSync } from "./services/wireguard-sync.service.js";
 
 const rawPort = process.env["PORT"];
 
@@ -51,12 +52,14 @@ const server = app.listen(port, async (err?: Error) => {
 
   // Start V2Ray traffic sync loop (gracefully no-ops if V2Ray is unreachable)
   startTrafficSync();
+  startWireGuardSync();
 });
 
 // Graceful shutdown
 function shutdown(signal: string) {
   logger.info({ signal }, "Shutdown signal received");
   stopTrafficSync();
+  stopWireGuardSync();
   server.close(() => {
     void prisma.$disconnect().finally(() => {
       logger.info("Server closed");

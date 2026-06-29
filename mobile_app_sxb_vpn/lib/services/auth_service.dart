@@ -40,7 +40,7 @@ class AuthService {
       final json = response.data as Map<String, dynamic>;
       final payload = (json["data"] as Map<String, dynamic>?) ?? json;
 
-      final jwtToken = payload["token"]?.toString();
+      final jwtToken = (payload["accessToken"] ?? payload["token"])?.toString();
       if (jwtToken == null) return const AuthResult(success: false, error: "No token received");
 
       await _storage.saveToken(jwtToken);

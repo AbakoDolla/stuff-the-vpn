@@ -207,7 +207,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                       colors: [AppColors.primary, AppColors.accent],
                     ).createShader(bounds),
                     child: Text(
-                      'Stuff X Billal VPN',
+                      'Stuff X Bilal VPN',
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
                         color: Colors.white,
                         letterSpacing: 2,

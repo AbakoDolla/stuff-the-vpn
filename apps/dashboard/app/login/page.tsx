@@ -40,14 +40,14 @@ export default function LoginPage() {
             <div className="absolute inset-0 rounded-2xl bg-blue-500/20 blur-xl scale-110" />
             <Image
               src="/logo.png"
-              alt="Stuff X Billal VPN Logo"
+              alt="Stuff X Bilal VPN Logo"
               width={88}
               height={88}
               className="relative rounded-2xl shadow-lg"
               style={{boxShadow: '0 0 32px rgba(0,153,255,0.5)'}}
             />
           </div>
-          <h1 className="text-2xl font-bold text-[#F1F5F9] tracking-wide">Stuff X Billal VPN</h1>
+          <h1 className="text-2xl font-bold text-[#F1F5F9] tracking-wide">Stuff X Bilal VPN</h1>
           <p className="text-[#64748B] text-sm mt-1">Panneau d&apos;administration</p>
         </div>
 
@@ -80,7 +80,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <p className="text-center text-xs text-[#1E2D45] mt-6">Stuff X Billal VPN — Dashboard v2.0</p>
+        <p className="text-center text-xs text-[#1E2D45] mt-6">Stuff X Bilal VPN — Dashboard v2.0</p>
       </div>
     </div>
   );

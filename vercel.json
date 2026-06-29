@@ -1,9 +1,0 @@
-{
-  "version": 2,
-  "buildCommand": "cd apps/dashboard && npm install --legacy-peer-deps && npm run build",
-  "outputDirectory": "apps/dashboard/.next",
-  "framework": "nextjs",
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@next_public_api_url"
-  }
-}

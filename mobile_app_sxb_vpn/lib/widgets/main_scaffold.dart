@@ -28,9 +28,9 @@ class _MainScaffoldState extends State<MainScaffold>
     super.initState();
     _navItems = const [
       _NavItem(icon: Icons.home_rounded, activeIcon: Icons.home_rounded, label: 'Accueil'),
+      _NavItem(icon: Icons.shield_outlined, activeIcon: Icons.shield_rounded, label: 'VPN'),
       _NavItem(icon: Icons.public_rounded, activeIcon: Icons.public_rounded, label: 'Serveurs'),
       _NavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profil'),
-      _NavItem(icon: Icons.bar_chart_rounded, activeIcon: Icons.bar_chart_rounded, label: 'Usage'),
     ];
   }
 

@@ -19,6 +19,7 @@ import settingsRouter from "./settings.routes.js";
 import vpnProfilesRouter from "./vpn-profiles.routes.js";
 import vpnTemplatesRouter from "./vpn-templates.routes.js";
 import ticketsRouter from "./tickets.routes.js";
+import mobileRouter from "./mobile.routes.js";
 import paymentsRouter from "./payments.routes.js";
 
 const router: IRouter = Router();
