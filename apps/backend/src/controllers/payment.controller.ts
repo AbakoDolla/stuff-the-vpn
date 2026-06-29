@@ -34,7 +34,7 @@ export async function createPayment(req: AuthRequest, res: Response, next: NextF
 
 export async function updateStatus(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const p = await prisma.payment.update({ where: { id: req.params["id"] }, data: { status: req.body.status } });
+    const p = await prisma.payment.update({ where: { id: String(req.params["id"]) }, data: { status: req.body.status } });
     await audit({ action: req.body.status === "COMPLETED" ? "PAYMENT_COMPLETE" : "PAYMENT_FAIL", userId: req.user?.userId, entityId: p.id, req });
     sendSuccess(res, p, "Payment updated");
   } catch (err) { next(err); }

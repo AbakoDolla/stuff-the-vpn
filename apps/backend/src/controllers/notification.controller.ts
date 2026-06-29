@@ -16,14 +16,14 @@ export async function listNotifications(req: AuthRequest, res: Response, next: N
 
 export async function markRead(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await prisma.notification.update({ where: { id: req.params["id"] }, data: { isRead: true, readAt: new Date() } });
+    await prisma.notification.update({ where: { id: String(req.params["id"]) }, data: { isRead: true } });
     sendSuccess(res, null, "Marked as read");
   } catch (err) { next(err); }
 }
 
 export async function markAllRead(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await prisma.notification.updateMany({ where: { userId: req.user!.userId, isRead: false }, data: { isRead: true, readAt: new Date() } });
+    await prisma.notification.updateMany({ where: { userId: req.user!.userId, isRead: false }, data: { isRead: true } });
     sendSuccess(res, null, "All marked as read");
   } catch (err) { next(err); }
 }

@@ -33,7 +33,7 @@ export async function getStats(req: Request, res: Response, next: NextFunction):
       prisma.inbound.count(),
       prisma.inbound.count({ where: { enabled: true } }),
       prisma.plan.count(),
-      prisma.plan.count({ where: { active: true } }),
+      prisma.plan.count({ where: { isActive: true } }),
       prisma.user.findMany({
         take: 5,
         orderBy: { createdAt: "desc" },
@@ -41,13 +41,13 @@ export async function getStats(req: Request, res: Response, next: NextFunction):
       }),
       // Sum all usage logs for total bandwidth consumed
       prisma.usageLog.aggregate({
-        _sum: { uploadMB: true, downloadMB: true },
+        _sum: { uploadGB: true, downloadGB: true },
       }),
     ]);
 
     // Total bandwidth in GB from DB logs
-    const totalUploadMB = bandwidthAgg._sum.uploadMB ?? 0;
-    const totalDownloadMB = bandwidthAgg._sum.downloadMB ?? 0;
+    const totalUploadMB = bandwidthAgg._sum.uploadGB ?? 0;
+    const totalDownloadMB = bandwidthAgg._sum.downloadGB ?? 0;
     const totalBandwidthGB = parseFloat(((totalUploadMB + totalDownloadMB) / 1024).toFixed(3));
 
     // Live V2Ray data (non-blocking — falls back gracefully if V2Ray is down)

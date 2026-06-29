@@ -15,7 +15,7 @@ export async function registerUser(input: RegisterInput) {
       email:    input.email,
       password: hashed,
       // Défaut: CLIENT (aligné avec l'enum Prisma UserRole)
-      role: (input.role as "CLIENT" | "SUPPORT" | "RESELLER" | "ADMIN") ?? "CLIENT",
+      role: (input.role as "USER" | "SUPPORT" | "RESELLER" | "ADMIN" | "SUPER_ADMIN") ?? "USER",
     },
   });
   return omit(user, ["password"]);
@@ -31,7 +31,7 @@ export async function loginUser(
 
   const user = input.email
     ? await prisma.user.findUnique({ where: { email: input.email } })
-    : await prisma.user.findUnique({ where: { phone: input.phone } });
+    : await prisma.user.findFirst({ where: { phone: input.phone } });
 
   if (!user) throw new Error("Invalid credentials");
   if (user.status !== "ACTIVE") throw new Error(`Account is ${user.status.toLowerCase()}`);
@@ -80,7 +80,7 @@ export async function loginWithLicense(
       data: {
         phone,
         username: `user_${token.slice(0, 8)}`,
-        role: "CLIENT",
+        role: "USER",
         status: "ACTIVE",
         deviceLimit: 1,
         quotaRemainingGB: 0,
@@ -94,7 +94,7 @@ export async function loginWithLicense(
   if (user.status !== "ACTIVE") throw new Error(`ACCOUNT_${user.status}`);
 
   // Device binding
-  const existingDevice = await prisma.device.findUnique({ where: { deviceId } });
+  const existingDevice = await prisma.device.findUnique({ where: { userId_deviceId: { userId: user.id, deviceId } } });
   if (!existingDevice) {
     await prisma.device.create({
       data: { deviceId, userId: user.id, deviceName },

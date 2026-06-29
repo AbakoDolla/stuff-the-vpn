@@ -8,7 +8,7 @@ export async function listLogs(req: Request, res: Response, next: NextFunction) 
     const logs = await prisma.auditLog.findMany({
       where: {
         ...(userId && { userId }),
-        ...(action && { action: action as "AUTH_LOGIN" }),
+        ...(action && { action: action as "USER_LOGIN" }),
       },
       include: { user: { select: { username: true, email: true } } },
       orderBy: { createdAt: "desc" },

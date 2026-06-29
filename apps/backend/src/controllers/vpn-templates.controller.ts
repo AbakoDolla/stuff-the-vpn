@@ -108,7 +108,7 @@ export async function listTemplates(req: Request, res: Response, next: NextFunct
 
 export async function getTemplate(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const t = await prisma.vpnTemplate.findUniqueOrThrow({ where: { id: req.params["id"] } });
+    const t = await prisma.vpnTemplate.findUniqueOrThrow({ where: { id: String(req.params["id"]) } });
     // Decrypt config for admin view
     let rawConfig: ConfigMap = {};
     try { rawConfig = JSON.parse(decrypt(t.encryptedConfig)); } catch {}
@@ -141,7 +141,7 @@ export async function updateTemplate(req: AuthRequest, res: Response, next: Next
   try {
     const { rawConfig, encryptedConfig: _ignored, ...meta } = req.body as { rawConfig?: ConfigMap; encryptedConfig?: unknown } & Record<string, unknown>;
 
-    const existing = await prisma.vpnTemplate.findUniqueOrThrow({ where: { id: req.params["id"] } });
+    const existing = await prisma.vpnTemplate.findUniqueOrThrow({ where: { id: String(req.params["id"]) } });
     let enc = existing.encryptedConfig;
 
     if (rawConfig) {
@@ -152,7 +152,7 @@ export async function updateTemplate(req: AuthRequest, res: Response, next: Next
     }
 
     const t = await prisma.vpnTemplate.update({
-      where: { id: req.params["id"] },
+      where: { id: String(req.params["id"]) },
       data: { ...(meta as Parameters<typeof prisma.vpnTemplate.update>[0]["data"]), encryptedConfig: enc },
     });
     await audit({ action: "VPN_CREATE", userId: req.user?.userId, entity: "vpn_template", entityId: t.id, req });
@@ -162,15 +162,15 @@ export async function updateTemplate(req: AuthRequest, res: Response, next: Next
 
 export async function deleteTemplate(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await prisma.vpnTemplate.delete({ where: { id: req.params["id"] } });
-    await audit({ action: "VPN_DELETE", userId: req.user?.userId, entity: "vpn_template", entityId: req.params["id"], req });
+    await prisma.vpnTemplate.delete({ where: { id: String(req.params["id"]) } });
+    await audit({ action: "VPN_DELETE", userId: req.user?.userId, entity: "vpn_template", entityId: String(req.params["id"]), req });
     sendSuccess(res, null, "Template deleted");
   } catch (err) { next(err); }
 }
 
 export async function duplicateTemplate(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const src = await prisma.vpnTemplate.findUniqueOrThrow({ where: { id: req.params["id"] } });
+    const src = await prisma.vpnTemplate.findUniqueOrThrow({ where: { id: String(req.params["id"]) } });
     const { id: _id, createdAt: _ca, updatedAt: _ua, ...data } = src;
     const copy = await prisma.vpnTemplate.create({ data: { ...data, name: `${data.name} (copie)`, isActive: false } });
     res.status(HTTP_STATUS.CREATED).json({ success: true, data: copy, message: "Template duplicated" });
@@ -181,9 +181,9 @@ export async function assignTemplate(req: AuthRequest, res: Response, next: Next
   try {
     const { type, targetId } = req.body as { type: string; targetId: string };
     const a = await prisma.vpnTemplateAssignment.upsert({
-      where: { templateId_type_targetId: { templateId: req.params["id"]!, type, targetId } },
+      where: { templateId_type_targetId: { templateId: String(req.params["id"]), type, targetId } },
       update: {},
-      create: { templateId: req.params["id"]!, type, targetId },
+      create: { templateId: String(req.params["id"]), type, targetId },
     });
     sendSuccess(res, a, "Assignment created");
   } catch (err) { next(err); }
@@ -193,7 +193,7 @@ export async function unassignTemplate(req: AuthRequest, res: Response, next: Ne
   try {
     const { type, targetId } = req.query as { type: string; targetId: string };
     await prisma.vpnTemplateAssignment.deleteMany({
-      where: { templateId: req.params["id"], type, targetId },
+      where: { templateId: String(req.params["id"]), type, targetId },
     });
     sendSuccess(res, null, "Assignment removed");
   } catch (err) { next(err); }
@@ -280,7 +280,7 @@ export async function createUserProfile(req: AuthRequest, res: Response, next: N
 export async function setUserProfileStatus(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const p = await prisma.vpnUserProfile.update({
-      where: { id: req.params["id"] },
+      where: { id: String(req.params["id"]) },
       data: { status: req.body.status },
     });
     sendSuccess(res, p, "Profile status updated");

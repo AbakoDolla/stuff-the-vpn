@@ -34,7 +34,7 @@ import { omit } from "../utils/crypto.js";
       orderBy: { createdAt: "desc" },
       include: { reseller: { select: { id: true, name: true } } },
     });
-    return data.map((u) => omit(u, ["password"]));
+    return data.map((u) => { const { password: _pw, ...rest } = u; return rest; });
   }
 
   export async function getUserById(id: string) {

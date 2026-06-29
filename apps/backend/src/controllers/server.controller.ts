@@ -20,7 +20,7 @@ export async function listServers(req: Request, res: Response, next: NextFunctio
 export async function getServer(req: Request, res: Response, next: NextFunction) {
   try {
     const server = await prisma.inbound.findUniqueOrThrow({
-      where: { id: req.params["id"] },
+      where: { id: String(req.params["id"]) },
     });
     sendSuccess(res, server, "Server fetched");
   } catch (err) { next(err); }
@@ -47,7 +47,7 @@ export async function createServer(req: AuthRequest, res: Response, next: NextFu
 export async function updateServer(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const server = await prisma.inbound.update({
-      where: { id: req.params["id"] },
+      where: { id: String(req.params["id"]) },
       data: req.body as Partial<{
         protocol: InboundProtocol;
         host: string;
@@ -64,7 +64,7 @@ export async function updateServer(req: AuthRequest, res: Response, next: NextFu
 
 export async function deleteServer(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await prisma.inbound.delete({ where: { id: req.params["id"] } });
+    await prisma.inbound.delete({ where: { id: String(req.params["id"]) } });
     sendSuccess(res, null, "Server deleted");
   } catch (err) { next(err); }
 }
@@ -72,7 +72,7 @@ export async function deleteServer(req: AuthRequest, res: Response, next: NextFu
 export async function pingServer(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const server = await prisma.inbound.findUniqueOrThrow({
-      where: { id: req.params["id"] },
+      where: { id: String(req.params["id"]) },
     });
     sendSuccess(res, { host: server.host, port: server.port, online: true }, "Ping OK");
   } catch (err) { next(err); }

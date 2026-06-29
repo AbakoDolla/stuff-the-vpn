@@ -36,7 +36,7 @@ export async function createTicket(req: AuthRequest, res: Response, next: NextFu
 export async function getTicket(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const ticket = await prisma.ticket.findUniqueOrThrow({
-      where: { id: req.params["id"] },
+      where: { id: String(req.params["id"]) },
       include: { replies: { include: { author: { select: { username: true, role: true } } }, orderBy: { createdAt: "asc" } } },
     });
     sendSuccess(res, ticket, "Ticket fetched");
@@ -47,10 +47,10 @@ export async function reply(req: AuthRequest, res: Response, next: NextFunction)
   try {
     const isStaff = req.user && ["ADMIN","SUPER_ADMIN","SUPPORT"].includes(req.user.role);
     const r = await prisma.ticketReply.create({
-      data: { ticketId: req.params["id"]!, body: req.body.body, authorId: req.user!.userId, isStaff: !!isStaff },
+      data: { ticketId: String(req.params["id"]), body: req.body.body, authorId: req.user!.userId, isStaff: !!isStaff },
     });
-    await prisma.ticket.update({ where: { id: req.params["id"] }, data: { status: isStaff ? "IN_PROGRESS" : "OPEN", updatedAt: new Date() } });
-    await audit({ action: "TICKET_REPLY", userId: req.user?.userId, entityId: req.params["id"], req });
+    await prisma.ticket.update({ where: { id: String(req.params["id"]) }, data: { status: isStaff ? "IN_PROGRESS" : "OPEN", updatedAt: new Date() } });
+    await audit({ action: "TICKET_REPLY", userId: req.user?.userId, entityId: String(req.params["id"]), req });
     res.status(HTTP_STATUS.CREATED).json({ success: true, data: r, message: "Reply sent" });
   } catch (err) { next(err); }
 }
@@ -58,8 +58,8 @@ export async function reply(req: AuthRequest, res: Response, next: NextFunction)
 export async function close(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const ticket = await prisma.ticket.update({
-      where: { id: req.params["id"] },
-      data: { status: "CLOSED", closedAt: new Date() },
+      where: { id: String(req.params["id"]) },
+      data: { status: "CLOSED" },
     });
     await audit({ action: "TICKET_CLOSE", userId: req.user?.userId, entityId: ticket.id, req });
     sendSuccess(res, ticket, "Ticket closed");

@@ -147,3 +147,10 @@ export async function listLicenses(page = 1, limit = 20) {
   ]);
   return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
+export async function bindLicenseToUser(licenseId: string, userId: string) {
+  return prisma.license.update({
+    where: { id: licenseId },
+    data: { userId, lastUsedAt: new Date() },
+  });
+}
+

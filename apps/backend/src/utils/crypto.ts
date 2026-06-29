@@ -1,5 +1,4 @@
 /**
- * utils/crypto.ts — re-exports depuis lib/crypto.ts
- * Conservé pour compatibilité avec les imports existants.
+ * utils/crypto.ts — re-exports from lib/crypto.ts for backwards compat
  */
-export { encryptConfig, decryptConfig, omit } from "../lib/crypto.js";
+export { encryptConfig, decryptConfig, generateVoucherCode, omit } from "../lib/crypto.js";

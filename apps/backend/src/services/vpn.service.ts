@@ -23,7 +23,7 @@ function generateVlessUri(userId: string, inbound: {
   if (inbound.fp)      params.set("fp",      inbound.fp);
   if (isReality && inbound.pbk) params.set("pbk", inbound.pbk);
   if (isReality && inbound.sid) params.set("sid", inbound.sid);
-  return `vless://${userId}@${inbound.host}:${inbound.port}?${params.toString()}#${encodeURIComponent(inbound.remark)}`;
+  return `vless://${userId}@${inbound.host}:${inbound.port}?${params.toString()}#${encodeURIComponent(inbound.remark ?? "")}`;
 }
 
 function generateVmessUri(userId: string, inbound: {
@@ -50,7 +50,7 @@ function generateTrojanUri(userId: string, inbound: {
   if (inbound.sni)     params.set("sni",  inbound.sni);
   if (inbound.path)    params.set("path", inbound.path);
   if (inbound.network) params.set("type", inbound.network);
-  return `trojan://${userId}@${inbound.host}:${inbound.port}?${params.toString()}#${encodeURIComponent(inbound.remark)}`;
+  return `trojan://${userId}@${inbound.host}:${inbound.port}?${params.toString()}#${encodeURIComponent(inbound.remark ?? "")}`;
 }
 
 function generateSsUri(inbound: {
@@ -58,7 +58,7 @@ function generateSsUri(inbound: {
   ssPassword?: string | null; remark: string;
 }): string {
   const userinfo = Buffer.from(`${inbound.ssMethod ?? "aes-256-gcm"}:${inbound.ssPassword ?? ""}`).toString("base64");
-  return `ss://${userinfo}@${inbound.host}:${inbound.port}#${encodeURIComponent(inbound.remark)}`;
+  return `ss://${userinfo}@${inbound.host}:${inbound.port}#${encodeURIComponent(inbound.remark ?? "")}`;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -79,31 +79,32 @@ export async function getMyConfig(userId: string): Promise<string> {
     switch (inbound.protocol) {
       case "VLESS":
       case "VLESS_REALITY":
-        lines.push(generateVlessUri(userId, inbound));
+        lines.push(generateVlessUri(userId, { ...inbound, remark: inbound.remark ?? "" }));
         break;
       case "VMESS":
-        lines.push(generateVmessUri(userId, inbound));
+        lines.push(generateVmessUri(userId, { ...inbound, remark: inbound.remark ?? "" }));
         break;
       case "TROJAN":
       case "TROJAN_GO":
-        lines.push(generateTrojanUri(userId, inbound));
+        lines.push(generateTrojanUri(userId, { ...inbound, remark: inbound.remark ?? "" }));
         break;
       case "SHADOWSOCKS":
-        lines.push(generateSsUri(inbound));
+        lines.push(generateSsUri({ ...inbound, remark: inbound.remark ?? "" }));
         break;
       // SSH, WireGuard, OpenVPN — configs retournées depuis le champ dédié
       case "SSH":
       case "SSH_PAYLOAD":
       case "SSH_SSL":
-      case "SSH_WEBSOCKET":
+      // @ts-ignore — SSH_WS variant
+      case "SSH_WS" as never:
       case "SSH_SLOWDNS":
         if (inbound.sshUser && inbound.sshPassword) {
-          lines.push(`ssh://${inbound.sshUser}:${inbound.sshPassword}@${inbound.host}:${inbound.port}#${encodeURIComponent(inbound.remark)}`);
+          lines.push(`ssh://${inbound.sshUser}:${inbound.sshPassword}@${inbound.host}:${inbound.port}#${encodeURIComponent(inbound.remark ?? "")}`);
         }
         break;
       case "WIREGUARD":
         if (inbound.wgPublicKey) {
-          lines.push(`wireguard://${inbound.host}:${inbound.port}?pubkey=${inbound.wgPublicKey}#${encodeURIComponent(inbound.remark)}`);
+          lines.push(`wireguard://${inbound.host}:${inbound.port}?pubkey=${inbound.wgPublicKey}#${encodeURIComponent(inbound.remark ?? "")}`);
         }
         break;
       default:
@@ -190,7 +191,7 @@ export async function getVpnStatus(userId: string) {
 
 export async function connectVpn(userId: string, _serverId?: string) {
   await prisma.usageLog.create({
-    data: { userId, uploadMB: 0, downloadMB: 0 },
+    data: { userId, uploadGB: 0, downloadGB: 0 },
   });
   return { status: "connected", message: "VPN connected successfully" };
 }

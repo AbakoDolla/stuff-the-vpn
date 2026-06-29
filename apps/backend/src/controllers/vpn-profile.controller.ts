@@ -56,8 +56,8 @@ export async function createProfile(req: AuthRequest, res: Response, next: NextF
 
 export async function deleteProfile(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await prisma.vpnProfile.delete({ where: { id: req.params["id"] } });
-    await audit({ action: "VPN_DELETE", userId: req.user?.userId, entityId: req.params["id"], req });
+    await prisma.vpnProfile.delete({ where: { id: String(req.params["id"]) } });
+    await audit({ action: "VPN_DELETE", userId: req.user?.userId, entityId: String(req.params["id"]), req });
     sendSuccess(res, null, "Profile deleted");
   } catch (err) { next(err); }
 }
@@ -65,7 +65,7 @@ export async function deleteProfile(req: AuthRequest, res: Response, next: NextF
 export async function setProfileStatus(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const profile = await prisma.vpnProfile.update({
-      where: { id: req.params["id"] },
+      where: { id: String(req.params["id"]) },
       data: { status: req.body.status },
     });
     sendSuccess(res, profile, "Profile status updated");
@@ -76,7 +76,7 @@ export async function recordConnect(req: AuthRequest, res: Response, next: NextF
   try {
     await prisma.vpnProfile.updateMany({
       where: { userId: req.user!.userId, status: "ACTIVE" },
-      data: { lastConnectedAt: new Date() },
+      data: { updatedAt: new Date() },
     });
     sendSuccess(res, null, "Connect recorded");
   } catch (err) { next(err); }

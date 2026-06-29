@@ -17,32 +17,32 @@ export async function list(req: Request, res: Response): Promise<void> {
 }
 
 export async function getById(req: Request, res: Response): Promise<void> {
-  const inbound = await inboundService.getInboundById(req.params.id);
+  const inbound = await inboundService.getInboundById(String(req.params.id));
   sendSuccess(res, inbound);
 }
 
 export async function create(req: Request, res: Response): Promise<void> {
   const parsed = v.createInboundSchema.parse(req.body);
-  const inbound = await inboundService.createInbound(parsed);
-  sendSuccess(res, inbound, HTTP_STATUS.CREATED);
+  const inbound = await inboundService.createInbound(parsed as never);
+  sendSuccess(res, inbound, "Inbound created", HTTP_STATUS.CREATED);
 }
 
 export async function update(req: Request, res: Response): Promise<void> {
   const parsed = v.updateInboundSchema.parse(req.body);
-  const inbound = await inboundService.updateInbound(req.params.id, parsed);
+  const inbound = await inboundService.updateInbound(String(req.params.id), parsed as never);
   sendSuccess(res, inbound);
 }
 
 export async function remove(req: Request, res: Response): Promise<void> {
-  await inboundService.deleteInbound(req.params.id);
-  sendSuccess(res, null, HTTP_STATUS.NO_CONTENT);
+  await inboundService.deleteInbound(String(req.params.id));
+  sendSuccess(res, null, "Deleted", HTTP_STATUS.NO_CONTENT);
 }
 
 export async function updateStats(req: Request, res: Response): Promise<void> {
   const { activeConns, totalUpGB, totalDownGB } = req.body as {
     activeConns?: number; totalUpGB?: number; totalDownGB?: number;
   };
-  const inbound = await inboundService.updateInboundStats(req.params.id, {
+  const inbound = await inboundService.updateInboundStats(String(req.params.id), {
     activeConns, totalUpGB, totalDownGB,
   });
   sendSuccess(res, inbound);

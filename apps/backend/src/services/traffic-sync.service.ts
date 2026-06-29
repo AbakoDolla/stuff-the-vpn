@@ -70,8 +70,8 @@ export async function syncTrafficOnce(): Promise<{
         prisma.usageLog.create({
           data: {
             userId: user.id,
-            uploadMB: parseFloat((delta.uplinkBytes / 1_048_576).toFixed(3)),
-            downloadMB: parseFloat((delta.downlinkBytes / 1_048_576).toFixed(3)),
+            uploadGB: parseFloat((delta.uplinkBytes / 1_048_576).toFixed(3)),
+            downloadGB: parseFloat((delta.downlinkBytes / 1_048_576).toFixed(3)),
           },
         }),
       ]);

@@ -29,8 +29,8 @@ export async function createKey(req: AuthRequest, res: Response, next: NextFunct
 
 export async function revokeKey(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await prisma.apiKey.update({ where: { id: req.params["id"] }, data: { isActive: false } });
-    await audit({ action: "APIKEY_REVOKE", userId: req.user?.userId, entityId: req.params["id"], req });
+    await prisma.apiKey.update({ where: { id: String(req.params["id"]) }, data: { isActive: false } });
+    await audit({ action: "APIKEY_REVOKE", userId: req.user?.userId, entityId: String(req.params["id"]), req });
     sendSuccess(res, null, "API key revoked");
   } catch (err) { next(err); }
 }
