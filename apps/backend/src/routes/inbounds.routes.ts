@@ -1,34 +1,18 @@
 import { Router } from "express";
-import * as inboundController from "../controllers/inbound.controller.js";
+import * as ctrl from "../controllers/inbound.controller.js";
 import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
-import { validate } from "../middleware/validate.middleware.js";
-import { createInboundSchema, updateInboundSchema } from "../validators/inbound.validator.js";
+import { asyncHandler } from "../utils/async-handler.js";
 
 const router = Router();
 
-router.use(authMiddleware);
-
-// All authenticated users can view inbounds
-router.get("/", inboundController.listInbounds);
-router.get("/:id", inboundController.getInboundById);
+// Public (mobile app) — list active inbounds
+router.get("/",     asyncHandler(ctrl.list));
+router.get("/:id",  asyncHandler(ctrl.getById));
 
 // Admin only
-router.post(
-  "/",
-  requireRole("ADMIN", "SUPER_ADMIN"),
-  validate(createInboundSchema),
-  inboundController.createInbound,
-);
-router.patch(
-  "/:id",
-  requireRole("ADMIN", "SUPER_ADMIN"),
-  validate(updateInboundSchema),
-  inboundController.updateInbound,
-);
-router.delete(
-  "/:id",
-  requireRole("ADMIN", "SUPER_ADMIN"),
-  inboundController.deleteInbound,
-);
+router.post("/",           authMiddleware, requireRole(["ADMIN","SUPER_ADMIN"]), asyncHandler(ctrl.create));
+router.put("/:id",         authMiddleware, requireRole(["ADMIN","SUPER_ADMIN"]), asyncHandler(ctrl.update));
+router.delete("/:id",      authMiddleware, requireRole(["ADMIN","SUPER_ADMIN"]), asyncHandler(ctrl.remove));
+router.patch("/:id/stats", authMiddleware, requireRole(["ADMIN","SUPER_ADMIN"]), asyncHandler(ctrl.updateStats));
 
 export default router;
