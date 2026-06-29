@@ -1,12 +1,13 @@
 <div align="center">
   <h1>🔐 STUFF THE VPN</h1>
-  <p><strong>Plateforme SaaS VPN commerciale — V2Ray & SSH</strong></p>
+  <p><strong>Plateforme SaaS VPN commerciale — Multi-protocole</strong></p>
   <p>
-    <img src="https://img.shields.io/badge/status-in%20development-yellow" alt="Status" />
-    <img src="https://img.shields.io/badge/license-proprietary-red" alt="License" />
+    <img src="https://img.shields.io/badge/status-beta-blue" alt="Status" />
+    <img src="https://img.shields.io/badge/backend-0%20TS%20errors-brightgreen" alt="Backend Build" />
     <img src="https://img.shields.io/badge/backend-Node.js%20%7C%20TypeScript-blue" alt="Backend" />
-    <img src="https://img.shields.io/badge/frontend-Next.js%20%7C%20TailwindCSS-black" alt="Frontend" />
+    <img src="https://img.shields.io/badge/frontend-Next.js%2015%20%7C%20TailwindCSS-black" alt="Frontend" />
     <img src="https://img.shields.io/badge/mobile-Flutter-02569B" alt="Mobile" />
+    <img src="https://img.shields.io/badge/database-PostgreSQL%20%2B%20Prisma%207-336791" alt="Database" />
   </p>
 </div>
 
@@ -14,69 +15,96 @@
 
 ## 📌 Description
 
-**Stuff The VPN** est une plateforme SaaS VPN commerciale complète, prenant en charge les protocoles **V2Ray** et **SSH**. Elle permet la vente de services VPN via un système de vouchers, avec gestion des quotas, suivi de la consommation et un réseau de revendeurs.
+**Stuff The VPN** est une plateforme SaaS VPN commerciale complète, prenant en charge les protocoles **VLESS, VMess, Trojan, Shadowsocks, WireGuard, OpenVPN et SSH**. Elle permet la vente de services VPN via un système de vouchers/licences, avec gestion des quotas, suivi de la consommation en temps réel et un réseau de revendeurs.
 
 ---
 
-## ✨ Fonctionnalités prévues
+## ✨ Fonctionnalités implémentées
 
-| Fonctionnalité | Description |
-|---|---|
-| 🎟️ Système de vouchers | Génération, activation et gestion des codes d'accès |
-| 📊 Gestion des quotas | Limitation de la bande passante et de la durée |
-| 📈 Suivi de consommation | Monitoring en temps réel de l'utilisation par utilisateur |
-| 🤝 Système de revendeurs | Réseau de distribution avec tableaux de bord dédiés |
-| 🖥️ Dashboard d'administration | Interface centralisée de gestion complète |
-| 🔐 Distribution sécurisée | Génération et distribution chiffrée des configurations V2Ray/SSH |
+| Module | Statut | Description |
+|--------|--------|-------------|
+| 🎟️ Vouchers & Licences | ✅ | Génération, activation, quota par licence |
+| 📊 Quotas & Usage | ✅ | Sync trafic V2Ray en temps réel |
+| 🔐 Auth JWT | ✅ | Login, refresh, devices, 2FA ready |
+| 👥 Utilisateurs | ✅ | CRUD, rôles, statuts, limites appareils |
+| 🤝 Revendeurs | ✅ | Réseau multi-niveaux avec commission |
+| 🖥️ Inbounds VPN | ✅ | VLESS/Reality, VMess, Trojan, SS, WG, SSH |
+| 🔑 Templates VPN | ✅ | Configs chiffrées AES-256, clés auto-générées |
+| 📋 Tickets support | ✅ | Système de tickets avec priorités |
+| 🔔 Notifications | ✅ | In-app notifications |
+| 📈 Statistiques admin | ✅ | Métriques V2Ray live + DB stats |
+| 🔍 Audit logs | ✅ | Traçabilité complète des actions |
+| 🔑 API Keys | ✅ | Clés API pour intégrations tierces |
+| 💳 Paiements | ✅ | Modèle Payment (Mobile Money, etc.) |
+| ⚙️ Settings | ✅ | Paramètres dynamiques via BDD |
 
 ---
 
 ## 🛠️ Stack technique
 
-### Backend
-- **Runtime**: Node.js LTS
-- **Langage**: TypeScript
-- **Framework**: Express
-- **Base de données**: PostgreSQL + Prisma ORM
-- **Auth**: JWT + sessions
+### Backend (`apps/backend`)
+- **Runtime**: Node.js 20 LTS
+- **Langage**: TypeScript 5 — **0 erreurs** ✅
+- **Framework**: Express 5
+- **Base de données**: PostgreSQL 16 + Prisma 7 ORM
+- **Auth**: JWT (access + refresh) + bcrypt
+- **Config VPN**: Chiffrement AES-256
+- **Build**: esbuild → `dist/index.mjs` (2.3 MB, 955ms)
 
-### Dashboard (Web Admin)
-- **Framework**: Next.js 14
-- **Styling**: TailwindCSS
-- **Langage**: TypeScript
+### Dashboard (`apps/dashboard`)
+- **Framework**: Next.js 15.0.3
+- **Styling**: TailwindCSS + Radix UI
+- **État**: TanStack Query + Zustand
+- **Charts**: Recharts + ApexCharts
 
-### Application Mobile
-- **Framework**: Flutter
-- **Langage**: Dart
+### Application Mobile (`apps/mobile`)
+- **Framework**: Flutter (Dart)
 
 ### Infrastructure
-- **Containerisation**: Docker + Docker Compose
-- **Protocoles VPN**: V2Ray, SSH
+- Docker Compose (PostgreSQL, Redis, Backend, Dashboard, Nginx)
+- Nginx : reverse proxy SSL, rate limiting, WebSocket
 
 ---
 
-## 🗺️ Roadmap
+## 🚀 Démarrage rapide (développement)
 
-### ✅ Phase 1 — Architecture du projet
-> Structure du monorepo, configuration des outils, scaffolding des modules.
+```bash
+# Cloner
+git clone https://github.com/AbakoDolla/stuff-the-vpn.git
+cd stuff-the-vpn
 
-### 🔲 Phase 2 — Base de données
-> Définition des modèles Prisma, migrations, seeders.
+# Variables d'env
+cp .env.example .env
 
-### 🔲 Phase 3 — API Backend
-> Implémentation des endpoints REST : auth, utilisateurs, vouchers, quotas, revendeurs.
+# Installer les dépendances
+npm install
 
-### 🔲 Phase 4 — Dashboard
-> Interface d'administration complète avec Next.js et TailwindCSS.
+# Générer le client Prisma
+cd apps/backend && npx prisma generate
 
-### 🔲 Phase 5 — Application Flutter
-> Application mobile pour les utilisateurs finaux (iOS & Android).
+# Démarrer la base de données (Docker)
+docker compose up postgres redis -d
 
-### 🔲 Phase 6 — Intégration V2Ray & SSH
-> Génération automatique des configurations, distribution sécurisée.
+# Migrer + seeder
+cd apps/backend && npx prisma migrate dev && node -r dotenv/config dist/scripts/seed.js
 
-### 🔲 Phase 7 — Monitoring, quotas & sécurité
-> Système de monitoring, alertes, gestion avancée des quotas, audit de sécurité.
+# Démarrer le backend
+npm run dev          # dans apps/backend/
+
+# Démarrer le dashboard
+npm run dev          # dans apps/dashboard/
+```
+
+---
+
+## 🌐 Déploiement VPS
+
+→ **Voir [DEPLOY.md](./DEPLOY.md)** pour le guide complet.
+
+```bash
+cp .env.example .env    # Configurer les secrets
+docker compose up -d --build
+```
 
 ---
 
@@ -85,40 +113,39 @@
 ```
 stuff-the-vpn/
 ├── apps/
-│   ├── backend/          # API REST (Node.js + Express + TypeScript)
-│   ├── dashboard/        # Interface admin (Next.js + TailwindCSS)
-│   └── mobile/           # Application mobile (Flutter)
-├── packages/
-│   ├── ui/               # Composants UI réutilisables
-│   ├── types/            # Types TypeScript partagés
-│   └── shared/           # Constantes et utilitaires communs
-├── prisma/               # Schéma de base de données
-├── docker/               # Dockerfiles et docker-compose
-├── docs/                 # Documentation technique
-└── .github/              # CI/CD workflows
+│   ├── backend/          # API Express (TypeScript, 0 erreurs TS)
+│   │   ├── src/
+│   │   │   ├── controllers/   # Route handlers
+│   │   │   ├── services/      # Logique métier
+│   │   │   ├── middleware/    # Auth, errors, rate-limit
+│   │   │   ├── lib/           # Crypto, VPN generators, logger
+│   │   │   └── prisma/        # Client Prisma
+│   │   ├── prisma/schema.prisma  # Schéma complet (18 modèles)
+│   │   └── dist/              # Build esbuild
+│   ├── dashboard/         # Next.js 15 admin dashboard
+│   └── mobile/            # Flutter mobile app
+├── nginx/nginx.conf       # Reverse proxy SSL
+├── docker-compose.yml     # Stack complète
+├── DEPLOY.md              # Guide déploiement VPS
+└── .env.example           # Variables requises
 ```
 
 ---
 
-## 🚀 Démarrage rapide
+## 🔌 Protocoles VPN supportés
 
-```bash
-# Cloner le dépôt
-git clone https://github.com/AbakoDolla/stuff-the-vpn.git
-cd stuff-the-vpn
-
-# Installer les dépendances
-npm install
-
-# Configurer les variables d'environnement
-cp .env.example .env
-
-# Démarrer en développement
-docker-compose up -d
-```
+| Protocole | Implémentation |
+|-----------|----------------|
+| VLESS + Reality | ✅ Clés X25519 auto-générées |
+| VMess + WS + TLS | ✅ UUID auto-généré |
+| Trojan / Trojan-Go | ✅ Password auto-généré |
+| Shadowsocks (R) | ✅ Password + cipher auto |
+| WireGuard | ✅ Clés Curve25519 auto-générées |
+| OpenVPN | ✅ Config stockée |
+| SSH / SSH-SSL / SSH-Payload / SSH-SlowDNS | ✅ Credentials stockés |
 
 ---
 
-## 📄 Licence
+## 📜 Schéma base de données (18 modèles)
 
-Propriétaire — © 2025 Stuff The VPN. Tous droits réservés.
+`User` · `Device` · `Plan` · `License` · `Voucher` · `Inbound` · `VpnTemplate` · `VpnUserProfile` · `VpnTemplateAssignment` · `VpnProfile` · `UsageLog` · `AuditLog` · `Reseller` · `Ticket` · `TicketReply` · `Notification` · `Setting` · `ApiKey` · `Payment`
