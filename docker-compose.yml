@@ -58,8 +58,9 @@ services:
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-change_me_32_chars_minimum_here!!}
-    ports:
-      - "4000:4000"
+    # Pas de port exposé : nginx est le seul point d'entrée
+    expose:
+      - "4000"
     volumes:
       - backend_logs:/app/logs
 
@@ -73,13 +74,16 @@ services:
     depends_on:
       - backend
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:4000/api}
+      # URL publique vue par le navigateur (passe par nginx port 80)
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://${VPS_IP:-localhost}/api}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change_me}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-    ports:
-      - "3000:3000"
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://${VPS_IP:-localhost}}
+    # Pas de port exposé : nginx est le seul point d'entrée
+    expose:
+      - "3000"
 
   # ── Nginx reverse proxy ───────────────────────────────────────────
+  # Seul point d'entrée public : port 80 → /api/* = backend, /* = dashboard
   nginx:
     image: nginx:1.26-alpine
     container_name: sxbvpn-nginx
@@ -89,12 +93,8 @@ services:
       - dashboard
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    environment:
-      - DOMAIN=${DOMAIN:-localhost}
 
 volumes:
   postgres_data:
