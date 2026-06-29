@@ -4,9 +4,6 @@
   "outputDirectory": "apps/dashboard/.next",
   "framework": "nextjs",
   "installCommand": "npm install --legacy-peer-deps",
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@next_public_api_url"
-  },
   "headers": [
     {
       "source": "/api/(.*)",

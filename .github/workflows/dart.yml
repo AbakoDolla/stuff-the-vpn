@@ -4,13 +4,13 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'apps/mobile/**'
+      - 'mobile_app_sxb_vpn/**'
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build:
-    name: Flutter (apps/mobile)
+    name: Flutter (mobile_app_sxb_vpn)
     runs-on: ubuntu-latest
 
     steps:
@@ -28,13 +28,13 @@ jobs:
           cache: true
 
       - name: Flutter pub get
-        working-directory: apps/mobile
+        working-directory: mobile_app_sxb_vpn
         run: flutter pub get
 
       - name: Flutter analyze
-        working-directory: apps/mobile
+        working-directory: mobile_app_sxb_vpn
         run: flutter analyze --no-fatal-infos || true
 
       - name: Build APK (debug)
-        working-directory: apps/mobile
+        working-directory: mobile_app_sxb_vpn
         run: flutter build apk --debug --no-tree-shake-icons
