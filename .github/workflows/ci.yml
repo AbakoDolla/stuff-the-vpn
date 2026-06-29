@@ -65,16 +65,18 @@ jobs:
           channel: stable
           cache: true
       - name: Flutter pub get
-        working-directory: mobile_app_sxb_vpn
+        working-directory: apps/mobile
         run: flutter pub get
       - name: Flutter analyze
-        working-directory: mobile_app_sxb_vpn
+        working-directory: apps/mobile
         run: flutter analyze --no-fatal-infos || true
       - name: Build APK
-        working-directory: mobile_app_sxb_vpn
-        run: flutter build apk --release --no-tree-shake-icons
+        working-directory: apps/mobile
+        run: |
+          flutter build apk --release --no-tree-shake-icons \
+            --dart-define=BACKEND_URL=${{ vars.BACKEND_URL || 'https://api.sxbvpn.com/api' }}
       - uses: actions/upload-artifact@v4
         with:
           name: sxb-vpn-apk-ci
-          path: mobile_app_sxb_vpn/build/app/outputs/flutter-apk/app-release.apk
+          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 7
