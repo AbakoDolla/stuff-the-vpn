@@ -11,7 +11,8 @@ FROM base AS builder
 COPY package.json package-lock.json* ./
 RUN npm install --legacy-peer-deps
 COPY . .
-RUN npx prisma generate
+# DATABASE_URL factice uniquement pour la génération du client Prisma (pas de vraie DB nécessaire)
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npx prisma generate
 RUN npm run build
 
 # ── Production ────────────────────────────────────────────────────
