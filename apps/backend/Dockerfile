@@ -4,12 +4,12 @@ WORKDIR /app
 # ── Dependencies ──────────────────────────────────────────────────
 FROM base AS deps
 COPY package.json package-lock.json* ./
-RUN npm install --omit=dev
+RUN npm install --omit=dev --legacy-peer-deps
 
 # ── Build ─────────────────────────────────────────────────────────
 FROM base AS builder
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 COPY . .
 RUN npx prisma generate
 RUN npm run build
