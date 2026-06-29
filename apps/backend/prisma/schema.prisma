@@ -218,8 +218,9 @@ model Device {
   createdAt    DateTime @default(now())
 
   userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  vpnProfiles VpnProfile[]
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vpnProfiles     VpnProfile[]
+  vpnUserProfiles VpnUserProfile[]
 
   @@map("devices")
 }
