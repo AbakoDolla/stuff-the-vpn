@@ -5,8 +5,9 @@ plugins {
 }
 
 android {
-    namespace = "com.sxbvpn.app"
+    namespace = "com.sxbvpn.sst"
     compileSdk = flutter.compileSdkVersion
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -18,8 +19,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.sxbvpn.app"
-        minSdk = 21
+        applicationId = "com.sxbvpn.sst"
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -28,8 +29,6 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = false
-            isShrinkResources = false
         }
     }
 }
@@ -37,4 +36,3 @@ android {
 flutter {
     source = "../.."
 }
-

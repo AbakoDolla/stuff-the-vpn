@@ -1,4 +1,4 @@
-package com.example.sst_vpn
+package com.sxbvpn.sst
 
 import io.flutter.embedding.android.FlutterActivity
 
