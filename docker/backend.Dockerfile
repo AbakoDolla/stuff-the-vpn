@@ -1,37 +1,28 @@
-# ── Stage 1: builder ─────────────────────────────────────────────────────────
-FROM node:22-alpine AS builder
-RUN apk add --no-cache openssl libc6-compat
+# ─── Backend Dockerfile ───────────────────────────────────────────────────────
+# Multi-stage build pour minimiser la taille de l'image de production.
+#
+# TODO (Phase 7): Affiner les optimisations de sécurité (utilisateur non-root, etc.)
 
+# Stage 1: Build
+FROM node:20-alpine AS builder
 WORKDIR /app
-COPY apps/backend/package.json ./
-RUN npm install
 
-COPY apps/backend/ ./
-RUN npx prisma generate
-RUN node ./build.mjs
+COPY package*.json ./
+RUN npm ci
 
-# ── Stage 2: production ───────────────────────────────────────────────────────
-FROM node:22-alpine AS production
-RUN apk add --no-cache openssl libc6-compat postgresql-client
+COPY . .
+RUN npm run build
 
+# Stage 2: Production
+FROM node:20-alpine AS production
 WORKDIR /app
+
 ENV NODE_ENV=production
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/prisma ./prisma
 
-RUN addgroup --system --gid 1001 nodejs \
- && adduser  --system --uid 1001 nodeuser \
- && chown -R nodeuser:nodejs /app
+EXPOSE 3001
 
-COPY --chown=nodeuser:nodejs apps/backend/docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
-
-USER nodeuser
-EXPOSE 5000
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget -qO- http://localhost:5000/api/healthz || exit 1
-
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["node", "dist/index.mjs"]

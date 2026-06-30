@@ -3,15 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "description": "Plateforme SaaS VPN commerciale — V2Ray & SSH",
+  "packageManager": "pnpm@11.7.0",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "lib/*"
   ],
   "scripts": {
     "dev": "echo 'Use docker-compose or run apps individually. See docs/deployment.md'",
-    "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "lint": "pnpm exec eslint --workspace-root --ignore-path .gitignore .",
+    "typecheck": "pnpm exec tsc -b .",
+    "build": "pnpm -r build"
   },
   "devDependencies": {
     "typescript": "^5.1.3",

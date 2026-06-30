@@ -1,4 +1,5 @@
-// schema.prisma — Stuff The VPN — Schéma complet v2
+// schema.prisma
+// Schéma de la base de données — Stuff The VPN
 
 generator client {
   provider = "prisma-client-js"
@@ -6,16 +7,12 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
-
-// ══════════════════════════════════════════════════════════════════
-// ENUMS
-// ══════════════════════════════════════════════════════════════════
 
 enum UserRole {
   SUPER_ADMIN
   ADMIN
-  SUPPORT
   RESELLER
   USER
 }
@@ -34,491 +31,181 @@ enum LicenseStatus {
   SUSPENDED
 }
 
-enum VoucherStatus {
-  ACTIVE
-  USED
-  EXPIRED
-  REVOKED
-}
-
-enum InboundProtocol {
-  SSH
-  SSH_SSL
-  SSH_WS
-  SSH_WS_SSL
-  SSH_SLOWDNS
-  SSH_PAYLOAD
-  SSH_PAYLOAD_SSL
-  VLESS
-  VLESS_REALITY
-  VMESS
-  TROJAN
-  TROJAN_GO
-  SHADOWSOCKS
-  SHADOWSOCKS_R
-  WIREGUARD
-  OPENVPN
-  HYSTERIA2
-  TUIC
-  HTTP_PROXY
-  SOCKS5
-}
-
-enum VpnProfileStatus {
-  ACTIVE
-  SUSPENDED
-  EXPIRED
-  REVOKED
-}
-
-enum TicketStatus {
-  OPEN
-  IN_PROGRESS
-  CLOSED
-  RESOLVED
-}
-
-enum TicketPriority {
-  LOW
-  NORMAL
-  HIGH
-  URGENT
-}
-
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
-  CANCELLED
-}
-
-enum NotificationType {
-  INFO
-  WARNING
-  SUCCESS
-  ERROR
-  PROMO
-}
-
-enum AuditAction {
-  USER_LOGIN
-  USER_LOGOUT
-  USER_REGISTER
-  USER_SUSPEND
-  USER_ACTIVATE
-  USER_UPDATE
-  USER_DELETE
-  VPN_CONNECT
-  VPN_DISCONNECT
-  VPN_CREATE
-  VPN_UPDATE
-  VPN_DELETE
-  TICKET_CREATE
-  TICKET_REPLY
-  TICKET_CLOSE
-  APIKEY_CREATE
-  APIKEY_REVOKE
-  PAYMENT_CREATE
-  PAYMENT_COMPLETE
-  PAYMENT_FAIL
-  VOUCHER_CREATE
-  VOUCHER_REDEEM
-  LICENSE_CREATE
-  LICENSE_REVOKE
-  RESELLER_CREATE
-  RESELLER_UPDATE
-  SERVER_CREATE
-  SERVER_UPDATE
-  SERVER_DELETE
-  ADMIN_ACTION
-  SETTINGS_UPDATE
-}
-
-// ══════════════════════════════════════════════════════════════════
-// MODELS
-// ══════════════════════════════════════════════════════════════════
-
 model User {
-  id               String      @id @default(uuid())
-  email            String?     @unique
-  phone            String?
-  username         String?
-  password         String?
-  role             UserRole    @default(USER)
-  status           UserStatus  @default(ACTIVE)
-  deviceLimit      Int         @default(3)
-  quotaUsedGB      Float       @default(0)
-  quotaRemainingGB Float       @default(0)
-  expireAt         DateTime?
-  createdBy        String?
-  resellerId       String?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-  deletedAt        DateTime?
+  id            String      @id @default(uuid())
+  email         String?     @unique
+  phone         String?
+  username      String?
+  password      String?
+  role          UserRole    @default(USER)
+  status        UserStatus  @default(ACTIVE)
+  deviceLimit   Int         @default(3)
+  quotaUsedGB   Float       @default(0)
+  quotaRemainingGB Float    @default(0)
+  expireAt      DateTime?
+  createdBy     String?
+  resellerId    String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
 
-  reseller         Reseller?           @relation("ResellerClients", fields: [resellerId], references: [id])
-  licenses         License[]
-  devices          Device[]
-  sessions         Session[]
-  usageLogs        UsageLog[]
-  createdVouchers  Voucher[]           @relation("VoucherCreatedBy")
-  redeemedVouchers Voucher[]           @relation("VoucherRedeemedBy")
-  vpnProfiles      VpnProfile[]
-  vpnUserProfiles  VpnUserProfile[]
-  apiKeys          ApiKey[]
-  notifications    Notification[]
-  tickets          Ticket[]            @relation("TicketAuthor")
-  ticketReplies    TicketReply[]       @relation("TicketReplyAuthor")
-  payments         Payment[]
-  auditLogs        AuditLog[]
-  resellerProfile  Reseller?           @relation("ResellerUser")
+  licenses      License[]
+  devices       Device[]
+  sessions      Session[]
+  usageLogs     UsageLog[]
+  vouchers      Voucher[]   @relation("VoucherCreatedBy")
+  reseller      Reseller?   @relation(fields: [resellerId], references: [id])
 }
 
 model License {
-  id          String        @id @default(uuid())
-  token       String        @unique
-  phone       String?
-  deviceId    String?
-  deviceName  String?
-  status      LicenseStatus @default(ACTIVE)
-  dataLimitGB Float         @default(30)
-  dataUsedGB  Float         @default(0)
-  deviceLimit Int           @default(1)
-  expireAt    DateTime?
-  lastUsedAt  DateTime?
-  userId      String?
-  user        User?         @relation(fields: [userId], references: [id])
-  createdBy   String?
-  resellerId  String?
-  reseller    Reseller?     @relation(fields: [resellerId], references: [id])
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id            String        @id @default(uuid())
+  token         String        @unique
+  phone         String?
+  deviceId      String?
+  deviceName    String?
+  status        LicenseStatus @default(ACTIVE)
+  dataLimitGB   Float         @default(30)
+  dataUsedGB    Float         @default(0)
+  deviceLimit   Int           @default(1)
+  expireAt      DateTime?
+  lastUsedAt    DateTime?
+  userId        String?
+  user          User?         @relation(fields: [userId], references: [id])
+  createdBy     String?
+  resellerId    String?
+  reseller      Reseller?     @relation(fields: [resellerId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model Device {
-  id              String         @id @default(uuid())
-  deviceId        String
-  deviceName      String?
-  model           String?
-  platform        String?
-  osVersion       String?
-  appVersion      String?
-  androidId       String?
-  fingerprint     String?
-  lastIp          String?
-  isActive        Boolean        @default(true)
-  lastSeenAt      DateTime?
-  userId          String
-  user            User           @relation(fields: [userId], references: [id])
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  vpnUserProfiles VpnUserProfile[]
+  id            String      @id @default(uuid())
+  deviceId      String
+  deviceName    String?
+  platform      String?
+  lastIp        String?
+  isActive      Boolean     @default(true)
+  lastSeenAt    DateTime?
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@unique([userId, deviceId])
 }
 
 model Session {
-  id         String    @id @default(uuid())
-  token      String    @unique
-  deviceName String?
-  ipAddress  String?
-  isActive   Boolean   @default(true)
-  lastUsedAt DateTime?
-  userId     String
-  user       User      @relation(fields: [userId], references: [id])
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id            String      @id @default(uuid())
+  token         String      @unique
+  deviceName    String?
+  ipAddress     String?
+  isActive      Boolean     @default(true)
+  lastUsedAt    DateTime?
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model Server {
-  id            String    @id @default(uuid())
+  id            String      @id @default(uuid())
   name          String
   host          String
-  ip            String?
-  port          Int       @default(443)
+  port          Int         @default(443)
   country       String
   city          String?
-  flag          String    @default("🏳️")
-  protocol      String    @default("VLESS")
-  ping          Int       @default(0)
-  load          Int       @default(0)
-  isActive      Boolean   @default(true)
-  isRecommended Boolean   @default(false)
-  config        Json?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  vpnProfiles VpnProfile[]
-  usageLogs   UsageLog[]
+  flag          String      @default("🏳️")
+  type          String      @default("VLESS")
+  ping          Int         @default(0)
+  load          Int         @default(0)
+  isActive      Boolean     @default(true)
+  isRecommended Boolean     @default(false)
+  config        String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model Inbound {
-  id           String          @id @default(uuid())
-  protocol     InboundProtocol @default(VLESS)
-  host         String
-  port         Int
-  remark       String?
-  enabled      Boolean         @default(true)
-  isPremium    Boolean         @default(false)
-  sortOrder    Int             @default(0)
-  // Xray API stats
-  xrayApiPort  Int?
-  activeConns  Int             @default(0)
-  totalUpGB    Float           @default(0)
-  totalDownGB  Float           @default(0)
-  // V2Ray / VLESS / VMESS / Trojan
-  uuid         String?
-  path         String?
-  sni          String?
-  network      String?
-  tls          Boolean         @default(false)
-  pbk          String?
-  sid          String?
-  fp           String?
-  // SSH
-  sshUser      String?
-  sshPassword  String?
-  sshPayload   String?
-  // Shadowsocks
-  ssMethod     String?
-  ssPassword   String?
-  // WireGuard
-  wgPrivateKey String?
-  wgPublicKey  String?
-  wgPeerKey    String?
-  wgDns        String?
-  wgPreshared  String?
-  // SlowDNS
-  slowdnsNs    String?
-  // OpenVPN config blob
-  ovpnConfig   String?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id            String      @id @default(uuid())
+  protocol      String
+  host          String
+  port          Int
+  path          String?
+  sni           String?
+  remark        String?
+  enabled       Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model Plan {
-  id           String    @id @default(uuid())
-  name         String
-  description  String?
-  price        Float
-  currency     String    @default("XAF")
-  dataLimitGB  Float
-  deviceLimit  Int       @default(1)
-  durationDays Int
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  vpnProfiles VpnProfile[]
-  payments    Payment[]
+  id            String      @id @default(uuid())
+  name          String
+  description   String?
+  price         Float
+  dataLimitGB   Float
+  deviceLimit   Int         @default(1)
+  durationDays  Int
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model Voucher {
-  id           String        @id @default(uuid())
-  code         String        @unique
-  quotaGB      Float         @default(10)
-  durationDay  Int           @default(30)
-  maxUses      Int           @default(1)
-  usedCount    Int           @default(0)
-  status       VoucherStatus @default(ACTIVE)
-  expireAt     DateTime?
-  usedAt       DateTime?
-  createdBy    String?
-  createdById  String?
-  createdByUser User?        @relation("VoucherCreatedBy", fields: [createdById], references: [id])
-  userId       String?
-  user         User?         @relation("VoucherRedeemedBy", fields: [userId], references: [id])
-  resellerId   String?
-  reseller     Reseller?     @relation(fields: [resellerId], references: [id])
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id            String      @id @default(uuid())
+  code          String      @unique
+  dataLimitGB   Float       @default(10)
+  deviceLimit   Int         @default(1)
+  durationDays  Int         @default(30)
+  maxUses       Int         @default(1)
+  usedCount     Int         @default(0)
+  isActive      Boolean     @default(true)
+  expireAt      DateTime?
+  createdById   String?
+  createdBy     User?       @relation("VoucherCreatedBy", fields: [createdById], references: [id])
+  resellerId    String?
+  reseller      Reseller?   @relation(fields: [resellerId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model Reseller {
-  id          String    @id @default(uuid())
-  name        String
-  email       String?   @unique
-  phone       String?
-  userId      String?   @unique
-  user        User?     @relation("ResellerUser", fields: [userId], references: [id])
-  commission  Float     @default(0)
-  balance     Float     @default(0)
-  isActive    Boolean   @default(true)
-  createdById String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String      @id @default(uuid())
+  name          String
+  email         String?     @unique
+  phone         String?
+  commission    Float       @default(0)
+  balance       Float       @default(0)
+  isActive      Boolean     @default(true)
+  createdById   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  clients  User[]    @relation("ResellerClients")
-  licenses License[]
-  vouchers Voucher[]
-}
-
-// ── VPN Templates (admin-managed, encrypted configs) ─────────────
-model VpnTemplate {
-  id              String    @id @default(uuid())
-  name            String
-  displayName     String?
-  description     String?
-  protocol        String
-  category        String?
-  country         String    @default("CM")
-  city            String?
-  flag            String    @default("🇨🇲")
-  icon            String?
-  color           String?
-  tags            String[]
-  encryptedConfig String
-  isPremium       Boolean   @default(false)
-  isActive        Boolean   @default(true)
-  sortOrder       Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  userProfiles VpnUserProfile[]
-  assignments  VpnTemplateAssignment[]
-}
-
-model VpnTemplateAssignment {
-  id         String      @id @default(uuid())
-  templateId String
-  template   VpnTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  type       String
-  targetId   String
-  createdAt  DateTime    @default(now())
-
-  @@unique([templateId, type, targetId])
-}
-
-model VpnUserProfile {
-  id             String           @id @default(uuid())
-  userId         String
-  user           User             @relation(fields: [userId], references: [id])
-  templateId     String
-  template       VpnTemplate      @relation(fields: [templateId], references: [id])
-  deviceId       String?
-  device         Device?          @relation(fields: [deviceId], references: [id])
-  status         VpnProfileStatus @default(ACTIVE)
-  quotaGB        Float            @default(0)
-  uploadUsedMB   Float            @default(0)
-  downloadUsedMB Float            @default(0)
-  maxSpeedMbps   Int?
-  expireAt       DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-}
-
-model VpnProfile {
-  id              String           @id @default(uuid())
-  userId          String
-  user            User             @relation(fields: [userId], references: [id])
-  serverId        String?
-  server          Server?          @relation(fields: [serverId], references: [id])
-  planId          String?
-  plan            Plan?            @relation(fields: [planId], references: [id])
-  deviceId        String?
-  encryptedConfig String?
-  status          VpnProfileStatus @default(ACTIVE)
-  expireAt        DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-}
-
-model Ticket {
-  id        String         @id @default(uuid())
-  subject   String
-  body      String
-  priority  TicketPriority @default(NORMAL)
-  status    TicketStatus   @default(OPEN)
-  authorId  String
-  author    User           @relation("TicketAuthor", fields: [authorId], references: [id])
-  replies   TicketReply[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-}
-
-model TicketReply {
-  id        String   @id @default(uuid())
-  ticketId  String
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  body      String
-  authorId  String
-  author    User     @relation("TicketReplyAuthor", fields: [authorId], references: [id])
-  isStaff   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Notification {
-  id        String           @id @default(uuid())
-  userId    String
-  user      User             @relation(fields: [userId], references: [id])
-  title     String
-  message   String
-  type      NotificationType @default(INFO)
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
-}
-
-model Setting {
-  id        String   @id @default(uuid())
-  key       String   @unique
-  value     Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model ApiKey {
-  id          String    @id @default(uuid())
-  name        String
-  keyHash     String    @unique
-  keyPrefix   String
-  permissions String[]
-  isActive    Boolean   @default(true)
-  lastUsedAt  DateTime?
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Payment {
-  id        String        @id @default(uuid())
-  userId    String
-  user      User          @relation(fields: [userId], references: [id])
-  planId    String?
-  plan      Plan?         @relation(fields: [planId], references: [id])
-  amount    Float
-  currency  String        @default("XAF")
-  status    PaymentStatus @default(PENDING)
-  method    String?
-  reference String?       @unique
-  metadata  Json?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  clients       User[]
+  licenses      License[]
+  vouchers      Voucher[]
 }
 
 model UsageLog {
-  id         String   @id @default(uuid())
-  uploadGB   Float    @default(0)
-  downloadGB Float    @default(0)
-  totalGB    Float    @default(0)
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  serverId   String?
-  server     Server?  @relation(fields: [serverId], references: [id])
-  createdAt  DateTime @default(now())
+  id            String      @id @default(uuid())
+  uploadGB      Float       @default(0)
+  downloadGB    Float       @default(0)
+  totalGB       Float       @default(0)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  serverId      String?
+  server        Server?     @relation(fields: [serverId], references: [id])
+  createdAt     DateTime    @default(now())
 }
 
 model AuditLog {
-  id        String      @id @default(uuid())
-  action    AuditAction
-  entity    String?
-  entityId  String?
-  details   Json?
-  userId    String?
-  user      User?       @relation(fields: [userId], references: [id])
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime    @default(now())
+  id            String      @id @default(uuid())
+  action        String
+  entity        String
+  entityId      String?
+  metadata      Json?
+  userId        String?
+  ipAddress     String?
+  createdAt     DateTime    @default(now())
 }
+

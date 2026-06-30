@@ -1,3 +1,14 @@
+# ─── Docker Compose ───────────────────────────────────────────────────────────
+# Environnement de développement local complet.
+#
+# Services inclus :
+# - backend    : API Node.js (port 3001)
+# - dashboard  : Interface Next.js (port 3000)
+# - postgres   : Base de données PostgreSQL (port 5432)
+# - redis      : Cache et sessions (port 6379)
+#
+# TODO (Phase 7): Ajouter les services V2Ray et SSH.
+
 version: '3.9'
 
 services:
@@ -7,17 +18,16 @@ services:
     environment:
       POSTGRES_DB: stuff_the_vpn
       POSTGRES_USER: stv_user
-      POSTGRES_PASSWORD: stv_password
+      POSTGRES_PASSWORD: stv_password # TODO: utiliser docker secrets en production
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U stv_user -d stuff_the_vpn"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -27,53 +37,40 @@ services:
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
 
   backend:
     build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
+      context: ../apps/backend
+      dockerfile: ../../docker/backend.Dockerfile
     container_name: stv_backend
     environment:
-      NODE_ENV: production
-      PORT: 5000
+      NODE_ENV: development
+      PORT: 3001
       DATABASE_URL: postgresql://stv_user:stv_password@postgres:5432/stuff_the_vpn
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-changeme_in_production_32chars_min}
-      JWT_EXPIRES_IN: 7d
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
-      SEED_ADMIN: "true"
-      ADMIN_USERNAME: SxBVPN
-      ADMIN_EMAIL: admin@sxbvpn.com
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-SxBvpn2026}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-change_me_32_chars_minimum_here!!}
-      V2RAY_API_ENABLED: "false"
+      JWT_SECRET: change_me_in_production
+      CORS_ORIGIN: http://localhost:3000
     ports:
-      - "5000:5000"
+      - "3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-    restart: unless-stopped
+        condition: service_started
+    volumes:
+      - ../apps/backend/src:/app/src # Hot-reload en développement
 
   dashboard:
     build:
-      context: apps/dashboard
+      context: ../apps/dashboard
       dockerfile: ../../docker/dashboard.Dockerfile
     container_name: stv_dashboard
     environment:
-      NODE_ENV: production
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}
+      NEXT_PUBLIC_API_URL: http://localhost:3001
     ports:
       - "3000:3000"
     depends_on:
       - backend
-    restart: unless-stopped
 
 volumes:
   postgres_data:
