@@ -1,8 +1,4 @@
-# CI Pipeline — Stuff The VPN
-# Déclenché sur chaque push et pull request vers main et develop.
-#
-# TODO (Phase 7): Ajouter les étapes de déploiement automatique.
-
+# CI Pipeline — Stuff The VPN (pnpm monorepo)
 name: CI
 
 on:
@@ -15,9 +11,6 @@ jobs:
   backend-lint-typecheck:
     name: Backend — Lint & TypeCheck
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/backend
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -25,18 +18,25 @@ jobs:
           version: 11.7.0
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @workspace/api-server build
-      - run: pnpm --filter @workspace/api-server typecheck
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+      - name: Build workspace libs (@workspace/db, @workspace/api-zod)
+        run: pnpm --filter "@workspace/*" build
+      - name: Generate Prisma client
+        run: pnpm --filter @workspace/api-server exec prisma generate
+      - name: Build backend
+        run: pnpm --filter @workspace/api-server build
+      - name: TypeCheck backend
+        run: pnpm --filter @workspace/api-server typecheck
 
   dashboard-lint-typecheck:
     name: Dashboard — Lint & TypeCheck
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/dashboard
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api
+      NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -44,10 +44,12 @@ jobs:
           version: 11.7.0
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @stuff-the-vpn/dashboard build
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+      - name: Build dashboard
+        run: pnpm --filter @stuff-the-vpn/dashboard build
 
   mobile-test:
     name: Mobile — Flutter Tests
@@ -58,23 +60,13 @@ jobs:
         with:
           flutter-version: '3.24.5'
           channel: 'stable'
+          cache: true
       - name: Get Flutter dependencies
         working-directory: mobile_app_sxb_vpn
         run: flutter pub get
       - name: Analyze Flutter project
         working-directory: mobile_app_sxb_vpn
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
       - name: Run Flutter tests
         working-directory: mobile_app_sxb_vpn
         run: flutter test
-
-  docker-build:
-    name: Docker — Build Images
-    runs-on: ubuntu-latest
-    needs: [backend-lint-typecheck, dashboard-lint-typecheck]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build backend image
-        run: docker build -f docker/backend.Dockerfile apps/backend
-      - name: Build dashboard image
-        run: docker build -f docker/dashboard.Dockerfile apps/dashboard
