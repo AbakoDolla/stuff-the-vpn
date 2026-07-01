@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 
-export const prisma = new PrismaClient({
-  datasourceUrl: process.env["DATABASE_URL"],
-});
+// Prisma 7: la datasource URL est gérée exclusivement par prisma.config.ts
+// via defineConfig({ datasource: { url } }) — ne jamais la passer ici.
+export const prisma = new PrismaClient();
