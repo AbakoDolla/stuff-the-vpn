@@ -122,6 +122,8 @@ model Server {
   config        String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  usageLogs     UsageLog[]
 }
 
 model Inbound {
