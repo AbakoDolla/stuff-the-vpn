@@ -4,8 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - 'mobile_app_sxb_vpn/**'
+      - 'apps/mobile/**'
   workflow_dispatch:
+    inputs:
+      backend_url:
+        description: 'Backend API URL (e.g. http://185.x.x.x/api)'
+        required: false
+        default: 'http://localhost/api'
 
 jobs:
   build-apk:
@@ -30,31 +35,38 @@ jobs:
           cache: true
 
       - name: Get Flutter dependencies
-        working-directory: mobile_app_sxb_vpn
+        working-directory: apps/mobile
         run: flutter pub get
 
       - name: Analyze Flutter project
-        working-directory: mobile_app_sxb_vpn
+        working-directory: apps/mobile
         run: flutter analyze --no-fatal-infos || true
 
       - name: Build release APK
-        working-directory: mobile_app_sxb_vpn
-        run: flutter build apk --release --no-tree-shake-icons
+        working-directory: apps/mobile
+        run: |
+          BACKEND_URL="${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'http://localhost/api' }}"
+          echo "Building with BACKEND_URL=$BACKEND_URL"
+          flutter build apk --release --no-tree-shake-icons \
+            --dart-define=BACKEND_URL="$BACKEND_URL"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: sxb-vpn-release-apk
-          path: mobile_app_sxb_vpn/build/app/outputs/flutter-apk/app-release.apk
+          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
       - name: Build APK bundle (AAB) for Play Store
-        working-directory: mobile_app_sxb_vpn
-        run: flutter build appbundle --release --no-tree-shake-icons
+        working-directory: apps/mobile
+        run: |
+          BACKEND_URL="${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'http://localhost/api' }}"
+          flutter build appbundle --release --no-tree-shake-icons \
+            --dart-define=BACKEND_URL="$BACKEND_URL"
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: sxb-vpn-release-aab
-          path: mobile_app_sxb_vpn/build/app/outputs/bundle/release/app-release.aab
+          path: apps/mobile/build/app/outputs/bundle/release/app-release.aab
           retention-days: 30

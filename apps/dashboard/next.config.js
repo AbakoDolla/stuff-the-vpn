@@ -4,22 +4,15 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'http',  hostname: 'localhost' },
+      { protocol: 'http',  hostname: '*' },
       { protocol: 'https', hostname: '**' },
     ],
   },
-  // TODO: re-disable once all pages are TypeScript-clean
   typescript: {
     ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
-  },
-  async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
-    if (apiUrl.startsWith('http')) {
-      return [{ source: '/api/:path*', destination: `${apiUrl}/:path*` }];
-    }
-    return [];
   },
 };
 

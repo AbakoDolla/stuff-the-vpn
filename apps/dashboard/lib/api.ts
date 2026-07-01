@@ -2,7 +2,8 @@
 
 import { ApiResponse } from "@stuff-the-vpn/types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+// NEXT_PUBLIC_API_URL = "http://IP/api" — do NOT add /api again
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost/api").replace(/\/+$/, "");
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -10,7 +11,7 @@ function getToken(): string | null {
 }
 
 export async function apiFetch<T = unknown>(path: string, init: RequestInit = {}) {
-  const url = `${BASE}/api${path}`;
+  const url = `${BASE}${path}`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(init.headers as Record<string, string>),

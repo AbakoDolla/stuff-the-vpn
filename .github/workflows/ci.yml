@@ -1,4 +1,4 @@
-# CI Pipeline — Stuff The VPN (pnpm monorepo)
+# CI Pipeline — SxB VPN (monorepo)
 name: CI
 
 on:
@@ -22,34 +22,53 @@ jobs:
           cache: 'pnpm'
       - name: Install workspace deps
         run: pnpm install --frozen-lockfile
-      - name: Build workspace libs (@workspace/db, @workspace/api-zod)
+      - name: Build workspace libs
         run: pnpm --filter "@workspace/*" build
       - name: Generate Prisma client
-        run: pnpm --filter @workspace/api-server exec prisma generate
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+        run: npx prisma generate
       - name: Build backend
-        run: pnpm --filter @workspace/api-server build
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+        run: npm run build
       - name: TypeCheck backend
-        run: pnpm --filter @workspace/api-server typecheck
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+        run: npx tsc -p tsconfig.json --noEmit
 
-  dashboard-lint-typecheck:
-    name: Dashboard — Lint & TypeCheck
+  dashboard-build:
+    name: Dashboard — Build
     runs-on: ubuntu-latest
     env:
-      NEXT_PUBLIC_API_URL: http://localhost:4000/api
+      NEXT_PUBLIC_API_URL: http://localhost/api
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.7.0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'pnpm'
-      - name: Install workspace deps
-        run: pnpm install --frozen-lockfile
+      - name: Install dashboard deps
+        working-directory: apps/dashboard
+        run: npm install --legacy-peer-deps
       - name: Build dashboard
-        run: pnpm --filter @stuff-the-vpn/dashboard build
+        working-directory: apps/dashboard
+        run: npm run build
+
+  docker-build:
+    name: Docker — Build images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -t sxbvpn-backend ./apps/backend
+      - name: Build dashboard image
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost/api
+        run: docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost/api -t sxbvpn-dashboard ./apps/dashboard
 
   mobile-test:
     name: Mobile — Flutter Tests
@@ -62,11 +81,11 @@ jobs:
           channel: 'stable'
           cache: true
       - name: Get Flutter dependencies
-        working-directory: mobile_app_sxb_vpn
+        working-directory: apps/mobile
         run: flutter pub get
       - name: Analyze Flutter project
-        working-directory: mobile_app_sxb_vpn
+        working-directory: apps/mobile
         run: flutter analyze --no-fatal-infos
       - name: Run Flutter tests
-        working-directory: mobile_app_sxb_vpn
+        working-directory: apps/mobile
         run: flutter test

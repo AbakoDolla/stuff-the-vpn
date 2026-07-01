@@ -8,11 +8,18 @@ function required(key: string): string {
 }
 
 export const env = {
-  NODE_ENV: process.env["NODE_ENV"] ?? "development",
-  PORT: process.env["PORT"] ?? "5000",
-  DATABASE_URL: process.env["SUPABASE_DATABASE_URL"] ?? required("DATABASE_URL"),
-  JWT_SECRET: process.env["JWT_SECRET"] ?? "changeme_jwt_secret_32chars_min!!",
-  JWT_EXPIRES_IN: process.env["JWT_EXPIRES_IN"] ?? "7d",
-  BCRYPT_ROUNDS: Number(process.env["BCRYPT_ROUNDS"] ?? "12"),
-  CORS_ORIGIN: process.env["CORS_ORIGIN"] ?? "http://localhost:3000",
+  NODE_ENV:                process.env["NODE_ENV"] ?? "development",
+  PORT:                    process.env["PORT"] ?? "4000",
+  DATABASE_URL:            required("DATABASE_URL"),
+  REDIS_URL:               process.env["REDIS_URL"] ?? "redis://redis:6379",
+  JWT_SECRET:              process.env["JWT_SECRET"] ?? "changeme_jwt_secret_32chars_min!!",
+  JWT_EXPIRES_IN:          process.env["JWT_EXPIRES_IN"] ?? "7d",
+  JWT_REFRESH_EXPIRES_IN:  process.env["JWT_REFRESH_EXPIRES_IN"] ?? "30d",
+  ENCRYPTION_KEY:          process.env["ENCRYPTION_KEY"] ?? "changeme_32_chars_minimum_here!!",
+  BCRYPT_ROUNDS:           Number(process.env["BCRYPT_ROUNDS"] ?? "12"),
+  CORS_ORIGIN:             process.env["CORS_ORIGIN"] ?? "*",
+  SEED_ADMIN:              process.env["SEED_ADMIN"] === "true",
+  ADMIN_EMAIL:             process.env["ADMIN_EMAIL"] ?? "",
+  ADMIN_USERNAME:          process.env["ADMIN_USERNAME"] ?? "superadmin",
+  ADMIN_PASSWORD:          process.env["ADMIN_PASSWORD"] ?? "",
 };

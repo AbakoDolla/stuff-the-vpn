@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/demo_data.dart';
 import '../../models/server_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/servers_provider.dart';
@@ -39,7 +38,8 @@ class _ServersPageState extends ConsumerState<ServersPage>
     if (_tabIndex == 1) {
       return list
           .where((s) =>
-              ['vless', 'vmess', 'trojan', 'shadowsocks'].contains(s.type.toLowerCase()))
+              ['vless', 'vmess', 'trojan', 'shadowsocks']
+                  .contains(s.type.toLowerCase()))
           .toList();
     }
     return list.where((s) => s.type.toLowerCase() == 'ssh').toList();
@@ -53,32 +53,32 @@ class _ServersPageState extends ConsumerState<ServersPage>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-            gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF0B0F1A), Color(0xFF0D1525)])),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0B0F1A), Color(0xFF0D1525)],
+          ),
+        ),
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context),
+              _buildHeader(context, servers),
               _buildTabs(),
               Expanded(
                 child: servers.when(
-                  loading: () => const Center(
-                      child: CircularProgressIndicator(
-                          color: Color(0xFF06B6D4))),
-                  error: (_, __) =>
-                      _buildServerList(context, ref, demoServers, vpnState),
+                  loading: () => _buildLoadingState(context),
+                  error: (err, _) => _buildErrorState(context, ref, err),
                   data: (list) {
                     final filtered = _filterServers(list);
-                    final display = filtered.isNotEmpty
-                        ? filtered
-                        : list.isEmpty
-                            ? demoServers
-                            : <ServerModel>[];
-                    return display.isEmpty
-                        ? _buildEmptyState(context)
-                        : _buildServerList(context, ref, display, vpnState);
+                    if (filtered.isEmpty) {
+                      return _buildEmptyState(
+                        context,
+                        _tabIndex == 0
+                            ? 'Aucun serveur disponible'
+                            : 'Aucun serveur dans cette catégorie',
+                      );
+                    }
+                    return _buildServerList(context, ref, filtered, vpnState);
                   },
                 ),
               ),
@@ -89,40 +89,134 @@ class _ServersPageState extends ConsumerState<ServersPage>
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.dns_outlined, color: Color(0xFF64748B), size: 48),
-        const SizedBox(height: 12),
-        Text('Aucun serveur dans cette catégorie',
-            style: Theme.of(context).textTheme.bodyMedium),
-      ]),
+  Widget _buildLoadingState(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 80),
+      itemCount: 6,
+      itemBuilder: (_, i) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Container(
+          height: 72,
+          decoration: BoxDecoration(
+            color: const Color(0xFF141C2E),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF1E2D45)),
+          ),
+        )
+            .animate(onPlay: (c) => c.repeat())
+            .shimmer(
+              duration: 1200.ms,
+              delay: Duration(milliseconds: i * 80),
+              color: const Color(0xFF1E2D45),
+            ),
+      ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildErrorState(BuildContext context, WidgetRef ref, Object err) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_rounded,
+                color: Color(0xFF64748B), size: 56),
+            const SizedBox(height: 16),
+            Text(
+              'Impossible de charger les serveurs',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(color: const Color(0xFFF1F5F9)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              err.toString().replaceFirst('Exception: ', ''),
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 24),
+            GestureDetector(
+              onTap: () => ref.invalidate(serversProvider),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2563EB), Color(0xFF06B6D4)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Réessayer',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn();
+  }
+
+  Widget _buildEmptyState(BuildContext context, String message) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.dns_outlined, color: Color(0xFF64748B), size: 48),
+          const SizedBox(height: 12),
+          Text(message, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    ).animate().fadeIn();
+  }
+
+  Widget _buildHeader(
+      BuildContext context, AsyncValue<List<ServerModel>> servers) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
         children: [
-          Text('Serveurs', style: Theme.of(context).textTheme.headlineMedium),
+          Text('Serveurs',
+              style: Theme.of(context).textTheme.headlineMedium),
           const Spacer(),
-          Consumer(builder: (_, ref, __) {
-            final servers = ref.watch(serversProvider);
-            final count = servers.valueOrNull?.length ?? 0;
-            return Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F1629),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFF1E2D45)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F1629),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF1E2D45)),
+            ),
+            child: servers.when(
+              loading: () => const SizedBox(
+                width: 40,
+                height: 14,
+                child: LinearProgressIndicator(
+                  backgroundColor: Color(0xFF1E2D45),
+                  valueColor: AlwaysStoppedAnimation(Color(0xFF06B6D4)),
+                ),
               ),
-              child: Text('$count serveur${count > 1 ? "s" : ""}',
-                  style: const TextStyle(
-                      color: Color(0xFF64748B), fontSize: 12)),
-            );
-          }),
+              error: (_, __) => const Text('—',
+                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+              data: (list) {
+                final count = list.length;
+                return Text(
+                  '$count serveur${count > 1 ? "s" : ""}',
+                  style:
+                      const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -140,9 +234,10 @@ class _ServersPageState extends ConsumerState<ServersPage>
         controller: _tabCtrl,
         indicator: BoxDecoration(
           gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF2563EB), Color(0xFF06B6D4)]),
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF2563EB), Color(0xFF06B6D4)],
+          ),
           borderRadius: BorderRadius.circular(10),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
@@ -160,8 +255,8 @@ class _ServersPageState extends ConsumerState<ServersPage>
     if (user != null && user.dataRemaining <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content:
-              Text('Quota épuisé. Activez un voucher pour vous connecter.'),
+          content: Text('Quota épuisé. Activez un voucher pour vous connecter.'),
+          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
@@ -187,6 +282,7 @@ class _ServersPageState extends ConsumerState<ServersPage>
         : s.ping < 100
             ? const Color(0xFFF59E0B)
             : const Color(0xFFEF4444);
+
     return GestureDetector(
       onTap: () => _connect(context, ref, s),
       child: Container(
@@ -197,27 +293,32 @@ class _ServersPageState extends ConsumerState<ServersPage>
               ? const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF141C2E), Color(0xFF0F1629)])
+                  colors: [Color(0xFF141C2E), Color(0xFF0F1629)],
+                )
               : null,
           color: isActive ? null : const Color(0xFF141C2E),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-              color: isActive ? const Color(0xFF2563EB) : const Color(0xFF1E2D45),
-              width: isActive ? 1.5 : 1),
+            color: isActive ? const Color(0xFF2563EB) : const Color(0xFF1E2D45),
+            width: isActive ? 1.5 : 1,
+          ),
         ),
         child: Row(
           children: [
             Text(s.flag, style: const TextStyle(fontSize: 26)),
             const SizedBox(width: 12),
             Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text(s.country,
-                      style: const TextStyle(
-                          color: Color(0xFFF1F5F9),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    s.country,
+                    style: const TextStyle(
+                      color: Color(0xFFF1F5F9),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
                   Row(children: [
                     if (s.city.isNotEmpty)
                       Text('${s.city} · ',
@@ -229,25 +330,35 @@ class _ServersPageState extends ConsumerState<ServersPage>
                         color: const Color(0xFF0F1629),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Text(s.type.toUpperCase(),
-                          style: const TextStyle(
-                              color: Color(0xFF64748B),
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600)),
+                      child: Text(
+                        s.type.toUpperCase(),
+                        style: const TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ]),
-                ])),
-            Text('${s.ping} ms',
-                style: TextStyle(
-                    color: pingColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13)),
+                ],
+              ),
+            ),
+            Text(
+              '${s.ping} ms',
+              style: TextStyle(
+                color: pingColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
             const SizedBox(width: 12),
             if (isActive)
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(
-                    color: Color(0xFF10B981), shape: BoxShape.circle),
+                  color: Color(0xFF10B981),
+                  shape: BoxShape.circle,
+                ),
                 child: const Icon(Icons.check_rounded,
                     size: 14, color: Colors.white),
               )
