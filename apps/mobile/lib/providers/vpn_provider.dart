@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/demo_data.dart';
 import '../models/server_model.dart';
 import '../models/vpn_config_model.dart';
 import '../services/vpn_service.dart';
@@ -58,8 +57,6 @@ class VpnNotifier extends StateNotifier<VpnState> {
   int _generation = 0;
   Timer? _timer;
   DateTime? _connectedAt;
-  int? _rxBytesAtConnect;
-  int? _txBytesAtConnect;
 
   // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -73,7 +70,6 @@ class VpnNotifier extends StateNotifier<VpnState> {
   Future<void> connect({ServerModel? server}) async {
     final generation = ++_generation;
 
-    // Fetch config from backend
     state = state.copyWith(status: VpnStatus.connecting, currentServer: server);
     final result = await _vpnService.getMobileConfig();
 
@@ -81,7 +77,6 @@ class VpnNotifier extends StateNotifier<VpnState> {
 
     final profile = result?.profiles.firstOrNull;
 
-    // Simulate a 600ms handshake
     await Future<void>.delayed(const Duration(milliseconds: 600));
     if (generation != _generation) return;
 
@@ -90,14 +85,13 @@ class VpnNotifier extends StateNotifier<VpnState> {
 
     state = state.copyWith(
       status:            VpnStatus.connected,
-      currentServer:     server ?? (demoServers.isNotEmpty ? demoServers.first : null),
+      currentServer:     server,
       config:            profile,
       availableProfiles: result?.profiles ?? state.availableProfiles,
       downloadSpeed:     0,
       uploadSpeed:       0,
     );
 
-    // Log CONNECT event
     _vpnService.postConnectionLog(
       event:    'CONNECT',
       protocol: profile?.protocolLabel,
@@ -136,7 +130,7 @@ class VpnNotifier extends StateNotifier<VpnState> {
     }
   }
 
-  // ── Timer ─────────────────────────────────────────────────────────────────
+  // ── Timer ──────────────────────────────────────────────────────────────────
 
   void _startTimer() {
     _stopTimer();
@@ -164,4 +158,3 @@ class VpnNotifier extends StateNotifier<VpnState> {
 final vpnProvider = StateNotifierProvider<VpnNotifier, VpnState>((ref) {
   return VpnNotifier(ref.watch(vpnServiceProvider));
 });
-

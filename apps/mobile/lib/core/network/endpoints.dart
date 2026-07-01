@@ -13,7 +13,7 @@ class ApiEndpoints {
 
   // ── Auth ────────────────────────────────────────────────────────────────────
   static const String login         = '/auth/login';
-  static const String loginLicense  = '/mobile/activate';   // token → JWT
+  static const String loginLicense  = '/mobile/activate';
   static const String refresh       = '/auth/refresh';
   static const String register      = '/auth/register';
   static const String me            = '/auth/me';
@@ -28,12 +28,14 @@ class ApiEndpoints {
   static const String myConfig           = '/vpn/my-config';
   static const String servers            = '/vpn/servers';
   static const String recommendedServer  = '/vpn/recommended';
-  static const String vpnStatus         = '/vpn/status';
+  static const String vpnStatus          = '/vpn/status';
 
   // ── Users ───────────────────────────────────────────────────────────────────
-  static String user(String id)      => '/users/$id';
-  static const String userProfile    = '/user/profile';
+  static String user(String id)        => '/users/$id';
+  static const String userProfile      = '/user/profile';
   static const String userSubscription = '/user/subscription';
+  static const String userStatus       = '/user/status';
+  static String usage(String userId)   => '/users/$userId/usage';
 
   // ── Plans & Vouchers ────────────────────────────────────────────────────────
   static const String activePlans   = '/plans/active';
