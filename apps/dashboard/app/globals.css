@@ -23,7 +23,7 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-dark-50 rounded-full hover:bg-dark-hover;
+    @apply bg-dark-50 rounded-full hover:bg-dark-200;
   }
 }
 

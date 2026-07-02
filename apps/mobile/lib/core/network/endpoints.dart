@@ -2,7 +2,8 @@ import 'package:flutter/foundation.dart';
 
 class ApiEndpoints {
   // flutter build apk --dart-define=BACKEND_URL=https://api.sxbvpn.com/api
-  static const String _baseUrlDev  = 'http://10.0.2.2:5000/api';
+  // For Android emulator: http://10.0.2.2:4000/api (10.0.2.2 = host localhost from emulator)
+  static const String _baseUrlDev  = 'http://10.0.2.2:4000/api';
   static const String _baseUrlProd = 'https://api.sxbvpn.com/api';
 
   static String get baseUrl {

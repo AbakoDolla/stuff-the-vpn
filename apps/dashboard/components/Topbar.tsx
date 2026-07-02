@@ -14,7 +14,13 @@ import {
   HelpCircle,
 } from 'lucide-react';
 
-export function Topbar() {
+interface TopbarProps {
+  user?: { username?: string; email?: string; role?: string };
+  onMenuToggle?: () => void;
+  onLogout?: () => void;
+}
+
+export function Topbar({ user, onLogout }: TopbarProps = {}) {
   const [showProfile, setShowProfile] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
 
@@ -75,8 +81,8 @@ export function Topbar() {
                 <User size={16} className="text-white" />
               </div>
               <div className="text-left hidden sm:block">
-                <p className="text-sm font-medium text-gray-200">Admin</p>
-                <p className="text-[10px] text-gray-500">Super Admin</p>
+                <p className="text-sm font-medium text-gray-200">{user?.username || 'Admin'}</p>
+                <p className="text-[10px] text-gray-500">{user?.email || 'admin@stuffvpn.com'}</p>
               </div>
               <ChevronDown
                 size={14}
@@ -108,7 +114,10 @@ export function Topbar() {
                     Aide
                   </button>
                   <hr className="border-surface-light my-1" />
-                  <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all text-sm">
+                  <button 
+                    className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all text-sm"
+                    onClick={onLogout}
+                  >
                     <LogOut size={16} />
                     Déconnexion
                   </button>
