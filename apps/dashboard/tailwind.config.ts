@@ -51,6 +51,7 @@ const config: Config = {
           light: 'rgba(255,255,255,0.08)',
           hover: 'rgba(255,255,255,0.1)',
         },
+        'surface-hover': 'rgba(255,255,255,0.1)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
