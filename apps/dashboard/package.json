@@ -8,7 +8,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@stuff-the-vpn/types": "file:../../packages/types",
     "@tanstack/react-query": "^5.51.1",
     "framer-motion": "^10.16.0",
     "lucide-react": "^0.290.0",

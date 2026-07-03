@@ -20,13 +20,27 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await api.post('/auth/login', { email, password });
-      const { data } = res.data;
-      saveAuth({ id: data.user.id, username: data.user.username, email: data.user.email, role: data.user.role, token: data.token });
+      const res = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: '/auth/login', method: 'POST', body: { email, password } }),
+      });
+      const data = await res.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Identifiants invalides');
+      }
+      
+      saveAuth({ 
+        id: data.data.user.id, 
+        username: data.data.user.username, 
+        email: data.data.user.email, 
+        role: data.data.user.role, 
+        token: data.data.token 
+      });
       router.push('/dashboard');
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || 'Identifiants invalides');
+      setError((err as Error).message || 'Identifiants invalides');
     } finally {
       setLoading(false);
     }

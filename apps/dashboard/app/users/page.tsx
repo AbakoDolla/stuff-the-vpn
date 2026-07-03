@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import DataTable from '@/components/DataTable';
+import { DataTable } from '@/components/DataTable';
 import { api } from '@/lib/api';
 import { formatDate, formatGB } from '@/lib/utils';
 import { UserPlus, RefreshCw, Ban, CheckCircle, Trash2, Eye } from 'lucide-react';

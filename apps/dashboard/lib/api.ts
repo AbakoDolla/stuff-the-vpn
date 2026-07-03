@@ -8,7 +8,6 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-// NEXT_PUBLIC_API_URL = "http://IP/api" — do NOT add /api again
 const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/+$/, "");
 
 function getToken(): string | null {
@@ -16,13 +15,29 @@ function getToken(): string | null {
   return localStorage.getItem("stv_token");
 }
 
+// Use proxy in production, direct API in development
+const USE_PROXY = typeof window !== "undefined" && !window.location.hostname.includes("localhost");
+
+async function proxyFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch("/api/proxy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path, ...init }),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || "API error");
+  }
+  return json.data as T;
+}
+
 // Axios-like API for backward compatibility
 const axiosInstance = {
-  get: async (path: string) => ({ data: await apiFetch(path) }),
-  post: async (path: string, body?: any) => ({ data: await apiFetch(path, { method: "POST", body: JSON.stringify(body) }) }),
-  patch: async (path: string, body?: any) => ({ data: await apiFetch(path, { method: "PATCH", body: JSON.stringify(body) }) }),
-  put: async (path: string, body?: any) => ({ data: await apiFetch(path, { method: "PUT", body: JSON.stringify(body) }) }),
-  delete: async (path: string) => ({ data: await apiFetch(path, { method: "DELETE" }) }),
+  get: async (path: string) => ({ data: USE_PROXY ? await proxyFetch(path) : await apiFetch(path) }),
+  post: async (path: string, body?: any) => ({ data: USE_PROXY ? await proxyFetch(path, { method: "POST", body: JSON.stringify(body) }) : await apiFetch(path, { method: "POST", body: JSON.stringify(body) }) }),
+  patch: async (path: string, body?: any) => ({ data: USE_PROXY ? await proxyFetch(path, { method: "PATCH", body: JSON.stringify(body) }) : await apiFetch(path, { method: "PATCH", body: JSON.stringify(body) }) }),
+  put: async (path: string, body?: any) => ({ data: USE_PROXY ? await proxyFetch(path, { method: "PUT", body: JSON.stringify(body) }) : await apiFetch(path, { method: "PUT", body: JSON.stringify(body) }) }),
+  delete: async (path: string) => ({ data: USE_PROXY ? await proxyFetch(path, { method: "DELETE" }) : await apiFetch(path, { method: "DELETE" }) }),
 };
 
 export const api = axiosInstance;

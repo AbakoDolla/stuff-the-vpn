@@ -18,7 +18,7 @@ import {
   LogOut,
   Shield,
   HardDrive,
-  Token,
+  Hash,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -42,7 +42,7 @@ const navItems: NavItem[] = [
   { label: 'Utilisateurs', icon: <Users size={20} />, href: '/users' },
   { label: 'Revendeurs', icon: <UserPlus size={20} />, href: '/resellers' },
   { label: 'Licences', icon: <Key size={20} />, href: '/licenses' },
-  { label: 'Tokens', icon: <Token size={20} />, href: '/dashboard/tokens' },
+  { label: 'Tokens', icon: <Hash size={20} />, href: '/dashboard/tokens' },
   { label: 'Appareils', icon: <Smartphone size={20} />, href: '/dashboard/devices-list' },
   { label: 'Quotas', icon: <HardDrive size={20} />, href: '/dashboard/quotas' },
   { label: 'Serveurs', icon: <Server size={20} />, href: '/servers' },
