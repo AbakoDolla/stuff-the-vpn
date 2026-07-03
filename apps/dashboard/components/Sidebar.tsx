@@ -31,6 +31,12 @@ interface NavItem {
   badgeColor?: string;
 }
 
+interface SidebarProps {
+  isOpen?: boolean;
+  currentPath?: string;
+  onClose?: () => void;
+}
+
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: <LayoutDashboard size={20} />, href: '/dashboard' },
   { label: 'Utilisateurs', icon: <Users size={20} />, href: '/users' },
@@ -47,9 +53,9 @@ const navItems: NavItem[] = [
   { label: 'Paramètres', icon: <Settings size={20} />, href: '/settings' },
 ];
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(!isOpen);
 
   return (
     <motion.aside

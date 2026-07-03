@@ -1,6 +1,12 @@
 "use client";
 
-import { ApiResponse } from "@stuff-the-vpn/types";
+// Type definitions
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
 
 // NEXT_PUBLIC_API_URL = "http://IP/api" — do NOT add /api again
 const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/+$/, "");
@@ -9,6 +15,39 @@ function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("stv_token");
 }
+
+// Axios-like API for backward compatibility
+const axiosInstance = {
+  get: async (path: string) => ({ data: await apiFetch(path) }),
+  post: async (path: string, body?: any) => ({ data: await apiFetch(path, { method: "POST", body: JSON.stringify(body) }) }),
+  patch: async (path: string, body?: any) => ({ data: await apiFetch(path, { method: "PATCH", body: JSON.stringify(body) }) }),
+  put: async (path: string, body?: any) => ({ data: await apiFetch(path, { method: "PUT", body: JSON.stringify(body) }) }),
+  delete: async (path: string) => ({ data: await apiFetch(path, { method: "DELETE" }) }),
+};
+
+export const api = axiosInstance;
+
+// Endpoint constants
+export const endpoints = {
+  AUTH_ME: "/auth/me",
+  AUTH_LOGIN: "/auth/login",
+  ADMIN_STATS: "/admin/stats",
+  USERS: "/users",
+  USER: (id: string) => `/users/${id}`,
+  DEVICES: "/devices",
+  DEVICE: (id: string) => `/devices/${id}`,
+  TOKENS: "/tokens",
+  TOKEN_GENERATE: "/tokens/generate",
+  QUOTAS: "/quotas",
+  LICENSES: "/licenses",
+  SERVERS: "/servers",
+  INBOUNDS: "/inbounds",
+  VOUCHERS: "/vouchers",
+  AUDIT: "/audit",
+  PAYMENTS: "/payments",
+  VPN_PROFILES: "/vpn-profiles",
+  SETTINGS: "/settings",
+};
 
 export async function apiFetch<T = unknown>(path: string, init: RequestInit = {}) {
   const url = `${BASE}${path}`;
