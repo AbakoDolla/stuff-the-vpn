@@ -41,6 +41,59 @@ export async function authMiddleware(
 }
 
 /**
+ * Middleware d'authentification pour les appareils mobiles.
+ * Vérifie le JWT et valide que l'appareil est toujours actif.
+ */
+export async function deviceAuthMiddleware(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    sendError(res, "No token provided", HTTP_STATUS.UNAUTHORIZED);
+    return;
+  }
+
+  const token = authHeader.slice(7);
+  try {
+    const payload = jwt.verify(token, env.JWT_SECRET) as AuthPayload;
+
+    // Vérifier que c'est un token d'appareil
+    if (payload.type !== "device" || !payload.deviceId) {
+      sendError(res, "Device token required", HTTP_STATUS.UNAUTHORIZED);
+      return;
+    }
+
+    // Vérifier que l'appareil existe et est actif
+    const device = await prisma.device.findUnique({
+      where: { deviceId: payload.deviceId },
+    });
+
+    if (!device) {
+      sendError(res, "Device not found", HTTP_STATUS.NOT_FOUND);
+      return;
+    }
+
+    if (device.status !== "ACTIVE") {
+      sendError(res, `Device ${device.status.toLowerCase()}`, HTTP_STATUS.FORBIDDEN);
+      return;
+    }
+
+    // Mettre à jour lastSeen de façon non-bloquante
+    void prisma.device.update({
+      where: { id: device.id },
+      data: { lastSeenAt: new Date() },
+    }).catch(() => {/* ignore */});
+
+    req.user = payload;
+    next();
+  } catch {
+    sendError(res, "Invalid or expired token", HTTP_STATUS.UNAUTHORIZED);
+  }
+}
+
+/**
  * Vérifie que l'utilisateur a un des rôles requis.
  * Les rôles sont passés en string (UserRole Prisma).
  */
@@ -52,6 +105,40 @@ export function requireRole(...roles: string[]) {
     }
     next();
   };
+}
+
+/**
+ * Middleware d'authentification pour les admins du dashboard.
+ * Ajoute adminId à la requête.
+ */
+export async function authenticateAdmin(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    sendError(res, "No token provided", HTTP_STATUS.UNAUTHORIZED);
+    return;
+  }
+
+  const token = authHeader.slice(7);
+  try {
+    const payload = jwt.verify(token, env.JWT_SECRET) as AuthPayload;
+
+    // Vérifier que c'est un token admin
+    if (payload.type !== "admin") {
+      sendError(res, "Admin token required", HTTP_STATUS.FORBIDDEN);
+      return;
+    }
+
+    // Ajouter adminId à la requête
+    (req as any).adminId = payload.userId;
+    req.user = payload;
+    next();
+  } catch {
+    sendError(res, "Invalid or expired token", HTTP_STATUS.UNAUTHORIZED);
+  }
 }
 
 /** Alias pratiques */

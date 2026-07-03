@@ -1,4 +1,4 @@
-// schema.prisma — Stuff The VPN — Schéma complet v2
+// schema.prisma — SXB VPN — Schéma complet v3
 
 generator client {
   provider = "prisma-client-js"
@@ -25,6 +25,33 @@ enum UserStatus {
   SUSPENDED
   BANNED
   EXPIRED
+}
+
+enum DeviceStatus {
+  ACTIVE
+  DISABLED
+  BLOCKED
+  PENDING
+}
+
+enum TokenStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  REVOKED
+}
+
+enum ActivationStatus {
+  PENDING
+  ACTIVATED
+  SUSPENDED
+  REVOKED
+}
+
+enum QuotaPolicy {
+  SUSPEND
+  THROTTLE
+  NOTIFY
 }
 
 enum LicenseStatus {
@@ -69,6 +96,7 @@ enum VpnProfileStatus {
   SUSPENDED
   EXPIRED
   REVOKED
+  MAINTENANCE
 }
 
 enum TicketStatus {
@@ -102,6 +130,7 @@ enum NotificationType {
 }
 
 enum AuditAction {
+  // Auth
   USER_LOGIN
   USER_LOGOUT
   USER_REGISTER
@@ -109,41 +138,87 @@ enum AuditAction {
   USER_ACTIVATE
   USER_UPDATE
   USER_DELETE
+  // Device
+  DEVICE_REGISTER
+  DEVICE_ACTIVATE
+  DEVICE_SYNC
+  DEVICE_DISABLE
+  DEVICE_BLOCK
+  DEVICE_DELETE
+  DEVICE_COMPROMISED
+  // Token
+  TOKEN_CREATE
+  TOKEN_USE
+  TOKEN_EXPIRE
+  TOKEN_REVOKE
+  // VPN
   VPN_CONNECT
   VPN_DISCONNECT
   VPN_CREATE
   VPN_UPDATE
   VPN_DELETE
+  VPN_PROFILE_PUBLISH
+  // Quota
+  QUOTA_UPDATE
+  QUOTA_EXCEEDED
+  QUOTA_RESET
+  // Ticket
   TICKET_CREATE
   TICKET_REPLY
   TICKET_CLOSE
+  // API & Payment
   APIKEY_CREATE
   APIKEY_REVOKE
   PAYMENT_CREATE
   PAYMENT_COMPLETE
   PAYMENT_FAIL
+  // Voucher/License
   VOUCHER_CREATE
   VOUCHER_REDEEM
   LICENSE_CREATE
   LICENSE_REVOKE
+  // Reseller
   RESELLER_CREATE
   RESELLER_UPDATE
+  // Server
   SERVER_CREATE
   SERVER_UPDATE
   SERVER_DELETE
+  // Admin
   ADMIN_ACTION
   SETTINGS_UPDATE
+  // Fraud
+  FRAUD_ATTEMPT
 }
 
 // ══════════════════════════════════════════════════════════════════
 // MODELS
 // ══════════════════════════════════════════════════════════════════
 
+// ─── Admin (Dashboard) ─────────────────────────────────────────────
+model Admin {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  password     String
+  name         String?
+  role         String    @default("ADMIN")
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  activationTokens ActivationToken[]
+  vpnProfiles      VpnProfile[]
+  auditLogs        AuditLog[]
+}
+
+// ─── User (Application Mobile) ────────────────────────────────────
 model User {
   id               String      @id @default(uuid())
   email            String?     @unique
-  phone            String?
-  username         String?
+  phone            String?     @unique
+  username         String?     @unique
+  name             String?
   password         String?
   role             UserRole    @default(USER)
   status           UserStatus  @default(ACTIVE)
@@ -164,8 +239,6 @@ model User {
   usageLogs        UsageLog[]
   createdVouchers  Voucher[]           @relation("VoucherCreatedBy")
   redeemedVouchers Voucher[]           @relation("VoucherRedeemedBy")
-  vpnProfiles      VpnProfile[]
-  vpnUserProfiles  VpnUserProfile[]
   apiKeys          ApiKey[]
   notifications    Notification[]
   tickets          Ticket[]            @relation("TicketAuthor")
@@ -173,6 +246,9 @@ model User {
   payments         Payment[]
   auditLogs        AuditLog[]
   resellerProfile  Reseller?           @relation("ResellerUser")
+  quotas           Quota[]
+  activations      Activation[]
+  vpnUserProfiles  VpnUserProfile[]
 }
 
 model License {
@@ -196,26 +272,134 @@ model License {
   updatedAt   DateTime      @updatedAt
 }
 
+// ─── Device (Application Mobile) ─────────────────────────────────
 model Device {
-  id              String         @id @default(uuid())
-  deviceId        String
-  deviceName      String?
-  model           String?
-  platform        String?
-  osVersion       String?
-  appVersion      String?
-  androidId       String?
-  fingerprint     String?
-  lastIp          String?
-  isActive        Boolean        @default(true)
-  lastSeenAt      DateTime?
-  userId          String
-  user            User           @relation(fields: [userId], references: [id])
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  vpnUserProfiles VpnUserProfile[]
+  id               String           @id @default(uuid())
+  deviceId         String           @unique  // Identifiant unique appareil
+  deviceName       String?
+  brand            String?          // Samsung, Xiaomi, etc.
+  model            String?          // SM-G998B, etc.
+  platform         String?
+  osVersion        String?          // Android 14, etc.
+  appVersion       String?
+  androidId        String?
+  fingerprint      String?
+  publicIp         String?
+  country          String?
+  status           DeviceStatus     @default(PENDING)
+  firstActivatedAt DateTime?
+  lastSyncAt       DateTime?
+  connectionCount  Int              @default(0)
+  isCompromised    Boolean          @default(false)
+  lastIp           String?
+  lastSeenAt       DateTime?
+  isActive         Boolean          @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  @@unique([userId, deviceId])
+  userId   String
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activations Activation[]
+  syncLogs  SyncLog[]
+  quotas    Quota[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ─── Activation Token (Cryptographique) ──────────────────────────
+model ActivationToken {
+  id           String      @id @default(uuid())
+  token        String      @unique
+  deviceId     String      // Pour quel appareil
+  signature    String      // Signature cryptographique
+  timestamp    BigInt      // Unix timestamp
+  expiresAt    DateTime
+  status       TokenStatus @default(ACTIVE)
+  usedAt       DateTime?
+  usedByDevice String?     // Confirmé après utilisation
+  createdBy    String
+  admin        Admin       @relation(fields: [createdBy], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([deviceId])
+  @@index([token])
+  @@index([status])
+}
+
+// ─── Activation (Enregistrement Permanent) ──────────────────────
+model Activation {
+  id            String            @id @default(uuid())
+  deviceId      String
+  device        Device            @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User              @relation(fields: [userId], references: [id])
+  status        ActivationStatus  @default(PENDING)
+  tokenUsed     String?
+  activatedAt   DateTime?
+  suspendedAt   DateTime?
+  revokedAt     DateTime?
+  reason        String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([deviceId])
+  @@index([userId])
+}
+
+// ─── Quota ────────────────────────────────────────────────────────
+model Quota {
+  id             String      @id @default(uuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId       String?
+  device         Device?     @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  totalGB        Float       @default(0)
+  usedGB         Float       @default(0)
+  remainingGB    Float       @default(0)
+  resetAt        DateTime?
+  policy         QuotaPolicy @default(SUSPEND)
+  lastUpdatedAt  DateTime    @default(now())
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  history QuotaHistory[]
+
+  @@index([userId])
+  @@index([deviceId])
+}
+
+// ─── Quota History ────────────────────────────────────────────────
+model QuotaHistory {
+  id         String   @id @default(uuid())
+  quotaId    String
+  quota      Quota    @relation(fields: [quotaId], references: [id], onDelete: Cascade)
+  usedGB     Float
+  uploadGB   Float
+  downloadGB Float
+  clientIp   String?
+  serverIp   String?
+  timestamp  DateTime @default(now())
+
+  @@index([quotaId])
+}
+
+// ─── Sync Log ────────────────────────────────────────────────────
+model SyncLog {
+  id                  String   @id @default(uuid())
+  deviceId            String
+  device              Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  clientVersion       String?
+  configVersion       Int?
+  newConfigAvailable  Boolean  @default(false)
+  syncStatus          String   // SUCCESS, PARTIAL, FAILED
+  errorMessage        String?
+  clientIp            String?
+  timestamp           DateTime @default(now())
+
+  @@index([deviceId])
+  @@index([timestamp])
 }
 
 model Session {
@@ -249,7 +433,6 @@ model Server {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  vpnProfiles VpnProfile[]
   usageLogs   UsageLog[]
 }
 
@@ -310,7 +493,6 @@ model Plan {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  vpnProfiles VpnProfile[]
   payments    Payment[]
 }
 
@@ -354,74 +536,54 @@ model Reseller {
   vouchers Voucher[]
 }
 
-// ── VPN Templates (admin-managed, encrypted configs) ─────────────
-model VpnTemplate {
-  id              String    @id @default(uuid())
-  name            String
-  displayName     String?
-  description     String?
-  protocol        String
-  category        String?
-  country         String    @default("CM")
-  city            String?
-  flag            String    @default("🇨🇲")
-  icon            String?
-  color           String?
-  tags            String[]
-  encryptedConfig String
-  isPremium       Boolean   @default(false)
-  isActive        Boolean   @default(true)
-  sortOrder       Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  userProfiles VpnUserProfile[]
-  assignments  VpnTemplateAssignment[]
-}
-
-model VpnTemplateAssignment {
-  id         String      @id @default(uuid())
-  templateId String
-  template   VpnTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  type       String
-  targetId   String
-  createdAt  DateTime    @default(now())
-
-  @@unique([templateId, type, targetId])
-}
-
+// ─── VPN User Profile (User's assigned VPN config) ───────────────
 model VpnUserProfile {
-  id             String           @id @default(uuid())
-  userId         String
-  user           User             @relation(fields: [userId], references: [id])
-  templateId     String
-  template       VpnTemplate      @relation(fields: [templateId], references: [id])
-  deviceId       String?
-  device         Device?          @relation(fields: [deviceId], references: [id])
-  status         VpnProfileStatus @default(ACTIVE)
-  quotaGB        Float            @default(0)
-  uploadUsedMB   Float            @default(0)
-  downloadUsedMB Float            @default(0)
-  maxSpeedMbps   Int?
-  expireAt       DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-}
-
-model VpnProfile {
   id              String           @id @default(uuid())
   userId          String
   user            User             @relation(fields: [userId], references: [id])
-  serverId        String?
-  server          Server?          @relation(fields: [serverId], references: [id])
-  planId          String?
-  plan            Plan?            @relation(fields: [planId], references: [id])
+  profileId       String
+  profile         VpnProfile      @relation(fields: [profileId], references: [id])
   deviceId        String?
-  encryptedConfig String?
+  encryptedConfig String           // Config chiffrée pour cet utilisateur
   status          VpnProfileStatus @default(ACTIVE)
-  expireAt        DateTime?
+  uploadMB        Float            @default(0)
+  downloadMB      Float            @default(0)
+  lastUsedAt      DateTime?
+  expiresAt       DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+
+  @@unique([userId, deviceId, profileId])
+  @@index([userId])
+  @@index([deviceId])
+}
+
+// ─── VPN Profile (Admin-managed) ────────────────────────────────
+model VpnProfile {
+  id              String           @id @default(uuid())
+  name            String
+  server          String
+  port            Int
+  protocol        String           // VLESS, VMess, Trojan, WireGuard, etc.
+  dns             String?
+  network         String?
+  certificate     String?          // Certificate data (stored as text, encrypted in app)
+  privateKey      String?          // Private key (stored as text, encrypted in app)
+  publicKey       String?          // WireGuard public key
+  configData      Json?            // Configuration JSON chiffrée
+  priority        Int              @default(0)
+  version         Int              @default(1)
+  status          VpnProfileStatus @default(ACTIVE)
+  publishedAt     DateTime?
+  createdBy       String
+  admin           Admin            @relation(fields: [createdBy], references: [id])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  userProfiles VpnUserProfile[]
+
+  @@index([status])
+  @@index([protocol])
 }
 
 model Ticket {
@@ -516,9 +678,15 @@ model AuditLog {
   entity    String?
   entityId  String?
   details   Json?
+  adminId   String?
+  admin     Admin?      @relation(fields: [adminId], references: [id])
   userId    String?
   user      User?       @relation(fields: [userId], references: [id])
   ipAddress String?
   userAgent String?
   createdAt DateTime    @default(now())
+
+  @@index([adminId])
+  @@index([entityId])
+  @@index([action])
 }

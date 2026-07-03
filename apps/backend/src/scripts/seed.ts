@@ -6,13 +6,28 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Starting seed...");
 
-  // ── Super Admin ──────────────────────────────────────────────────
+  // ── Super Admin (Dashboard) ─────────────────────────────────────
   const adminEmail    = process.env["SEED_ADMIN_EMAIL"]    ?? "admin@sxbvpn.com";
   const adminUsername = process.env["SEED_ADMIN_USERNAME"] ?? "superadmin";
   const adminPassword = process.env["SEED_ADMIN_PASSWORD"] ?? "Admin123!";
 
+  // Create Admin for dashboard authentication
   const hashed = await bcrypt.hash(adminPassword, 12);
-  const admin  = await prisma.user.upsert({
+  const admin  = await prisma.admin.upsert({
+    where:  { email: adminEmail },
+    update: {},
+    create: {
+      email:    adminEmail,
+      name:     adminUsername,
+      password: hashed,
+      role:     "SUPER_ADMIN",
+      isActive: true,
+    },
+  });
+  console.log(`✓ Admin Dashboard: ${admin.email}`);
+
+  // Also create a User for the same person (for backwards compatibility)
+  await prisma.user.upsert({
     where:  { email: adminEmail },
     update: {},
     create: {
@@ -24,7 +39,7 @@ async function main() {
       quotaRemainingGB:999999,
     },
   });
-  console.log(`✓ Super Admin: ${admin.email}`);
+  console.log(`✓ User Account: ${admin.email}`);
 
   // ── Plans ────────────────────────────────────────────────────────
   const plans: Array<{ name: string; durationDays: number; dataLimitGB: number; price: number; deviceLimit: number }> = [

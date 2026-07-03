@@ -17,6 +17,8 @@ import {
   ChevronLeft,
   LogOut,
   Shield,
+  HardDrive,
+  Token,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -33,9 +35,11 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', icon: <LayoutDashboard size={20} />, href: '/dashboard' },
   { label: 'Utilisateurs', icon: <Users size={20} />, href: '/users' },
   { label: 'Revendeurs', icon: <UserPlus size={20} />, href: '/resellers' },
-  { label: 'Licences', icon: <Key size={20} />, href: '/licenses', badge: '24', badgeColor: 'bg-accent' },
-  { label: 'Appareils', icon: <Smartphone size={20} />, href: '/devices' },
-  { label: 'Serveurs', icon: <Server size={20} />, href: '/servers', badge: '12', badgeColor: 'bg-primary' },
+  { label: 'Licences', icon: <Key size={20} />, href: '/licenses' },
+  { label: 'Tokens', icon: <Token size={20} />, href: '/dashboard/tokens' },
+  { label: 'Appareils', icon: <Smartphone size={20} />, href: '/dashboard/devices-list' },
+  { label: 'Quotas', icon: <HardDrive size={20} />, href: '/dashboard/quotas' },
+  { label: 'Serveurs', icon: <Server size={20} />, href: '/servers' },
   { label: 'Traffic', icon: <Activity size={20} />, href: '/traffic' },
   { label: 'Logs', icon: <FileText size={20} />, href: '/logs' },
   { label: 'Revenus', icon: <DollarSign size={20} />, href: '/revenue' },

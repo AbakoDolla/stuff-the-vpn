@@ -3,8 +3,13 @@ import type { UserRole, UserStatus } from "@prisma/client";
 
 export interface AuthPayload {
   userId: string;
-  role: UserRole;
-  sessionId: string;
+  role: string;
+  sessionId?: string;
+  // Device auth
+  type?: "user" | "device" | "admin";
+  deviceId?: string;
+  // License
+  licenseToken?: string;
 }
 
 export interface AuthRequest extends Request {
@@ -27,8 +32,8 @@ export interface UserPublic {
   id: string;
   username: string;
   email: string;
-  role: UserRole;
-  status: UserStatus;
+  role: string;
+  status: string;
   deviceLimit: number;
   quotaUsedGB: number;
   quotaRemainingGB: number;
