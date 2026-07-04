@@ -3,8 +3,8 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getStoredUser, clearAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
-import Sidebar from './Sidebar';
-import Topbar from './Topbar';
+import { Sidebar } from './Sidebar';
+import { Topbar } from './Topbar';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();

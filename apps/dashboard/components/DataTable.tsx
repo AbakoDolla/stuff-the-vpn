@@ -201,3 +201,5 @@ export function DataTable<T extends Record<string, any>>({
     </div>
   );
 }
+// Default export for backward-compatible imports
+export default DataTable;
