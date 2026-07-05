@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bell, Moon, User, ChevronDown, Settings, LogOut, Menu,
+  Bell, User, ChevronDown, Settings, LogOut, Menu, Globe,
 } from 'lucide-react';
+import { useLanguage } from '@/hooks/useLanguage';
 
 interface TopbarProps {
   user?: { username?: string; email?: string; role?: string };
@@ -14,14 +15,15 @@ interface TopbarProps {
 
 export function Topbar({ user, onMenuToggle, onLogout }: TopbarProps = {}) {
   const [showProfile, setShowProfile] = useState(false);
+  const { lang, toggleLang, tr } = useLanguage();
 
   function roleLabel(role?: string) {
-    const map: Record<string, string> = {
-      SUPER_ADMIN: 'Super Admin',
-      ADMIN: 'Administrateur',
-      SUPPORT: 'Support',
+    const map: Record<string, Record<string, string>> = {
+      SUPER_ADMIN: { fr: 'Super Admin', en: 'Super Admin' },
+      ADMIN:       { fr: 'Administrateur', en: 'Administrator' },
+      SUPPORT:     { fr: 'Support', en: 'Support' },
     };
-    return map[role ?? ''] ?? role ?? 'Admin';
+    return map[role ?? '']?.[lang] ?? role ?? 'Admin';
   }
 
   return (
@@ -38,12 +40,24 @@ export function Topbar({ user, onMenuToggle, onLogout }: TopbarProps = {}) {
             <Menu size={20} />
           </button>
           <span className="text-sm font-semibold text-white hidden sm:block truncate">
-            SXB VPN — Dashboard
+            {tr.sxbTitle}
           </span>
         </div>
 
         {/* Right actions */}
         <div className="flex items-center gap-2 shrink-0">
+
+          {/* Language switcher */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={toggleLang}
+            title={lang === 'fr' ? 'Switch to English' : 'Passer en Français'}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all text-xs font-semibold"
+          >
+            <Globe size={14} />
+            <span>{lang === 'fr' ? 'FR' : 'EN'}</span>
+          </motion.button>
+
           {/* Notifications */}
           <motion.button
             whileTap={{ scale: 0.95 }}
@@ -51,14 +65,6 @@ export function Topbar({ user, onMenuToggle, onLogout }: TopbarProps = {}) {
           >
             <Bell size={17} />
             <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center text-[8px] font-bold text-white">3</span>
-          </motion.button>
-
-          {/* Theme — decorative */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            className="hidden sm:flex p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"
-          >
-            <Moon size={17} />
           </motion.button>
 
           {/* Profile dropdown */}
@@ -105,14 +111,14 @@ export function Topbar({ user, onMenuToggle, onLogout }: TopbarProps = {}) {
                       className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
                     >
                       <Settings size={14} />
-                      <span>Paramètres</span>
+                      <span>{tr.settings}</span>
                     </button>
                     <button
                       onClick={() => { setShowProfile(false); onLogout?.(); }}
                       className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
                     >
                       <LogOut size={14} />
-                      <span>Déconnexion</span>
+                      <span>{tr.logout}</span>
                     </button>
                   </div>
                 </motion.div>
