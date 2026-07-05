@@ -13,10 +13,8 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Disable output file tracing to avoid stack overflow in monorepo pnpm builds
+  outputFileTracing: false,
 };
-
-if (process.platform !== 'win32') {
-  nextConfig.output = 'standalone';
-}
 
 module.exports = nextConfig;
