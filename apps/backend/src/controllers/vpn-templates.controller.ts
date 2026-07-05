@@ -86,23 +86,53 @@ function buildLink(protocol: string, cfg: ConfigMap): string | null {
 export async function listTemplates(req: Request, res: Response, next: NextFunction) {
   try {
     const { protocol, isActive, page = 1, limit = 50 } = req.query as Record<string, string>;
-    const templates = await prisma.vpnTemplate.findMany({
+    // Fallback: use VpnProfile model (newer schema) when VpnTemplate model is not present.
+    // Map available fields to the older "template" shape expected by the frontend.
+    const profiles = await prisma.vpnProfile.findMany({
       where: {
-        ...(protocol && { protocol: protocol as "VLESS" }),
-        ...(isActive !== undefined && { isActive: isActive === "true" }),
+        ...(protocol && { protocol: protocol as string }),
+        ...(isActive !== undefined && { status: isActive === "true" ? "ACTIVE" : { not: "ACTIVE" } }),
       },
       select: {
-        id: true, name: true, description: true, protocol: true, category: true,
-        country: true, city: true, flag: true, icon: true, color: true,
-        isPremium: true, isActive: true, sortOrder: true, tags: true,
-        createdAt: true, updatedAt: true,
+        id: true,
+        name: true,
+        protocol: true,
+        server: true,
+        port: true,
+        status: true,
+        priority: true,
+        version: true,
+        createdAt: true,
+        updatedAt: true,
         _count: { select: { userProfiles: true } },
       },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+      orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
       skip: (Number(page) - 1) * Number(limit),
       take: Number(limit),
     });
-    sendSuccess(res, templates, "Templates fetched");
+
+    // Map to legacy template shape used by frontend where possible
+    const templates = profiles.map(p => ({
+      id: p.id,
+      name: p.name,
+      description: null,
+      protocol: p.protocol,
+      category: null,
+      country: null,
+      city: null,
+      flag: null,
+      icon: null,
+      color: null,
+      isPremium: false,
+      isActive: (p.status === "ACTIVE"),
+      sortOrder: p.priority ?? 0,
+      tags: [] as string[],
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      _count: { userProfiles: p._count.userProfiles },
+    }));
+
+    sendSuccess(res, templates, "Templates fetched (from vpn profiles)");
   } catch (err) { next(err); }
 }
 

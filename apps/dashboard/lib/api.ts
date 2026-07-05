@@ -134,6 +134,7 @@ type ServerRecord = Record<string, unknown>;
 type InboundRecord = Record<string, unknown>;
 type VpnTemplateRecord = Record<string, unknown>;
 type VpnProfileRecord = Record<string, unknown>;
+type QuotaRecord = Record<string, unknown>;
 type LicenseRecord = Record<string, unknown>;
 type VoucherRecord = Record<string, unknown>;
 type TicketRecord = Record<string, unknown>;
@@ -171,6 +172,14 @@ export const Api = {
   createInbound:(data: unknown)         => apiFetch<InboundRecord>("/inbounds", { method: "POST", body: JSON.stringify(data) }),
   updateInbound:(id: string, d: unknown)=> apiFetch<InboundRecord>(`/inbounds/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deleteInbound:(id: string)            => apiFetch<void>(`/inbounds/${id}`, { method: "DELETE" }),
+
+  // Quotas
+  getQuotas: (params?: { limit?: number; page?: number; search?: string }) =>
+    apiFetch<QuotaRecord[]>(
+      `/quotas?${new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]))}`,
+    ),
+  createQuota: (data: unknown)          => apiFetch<QuotaRecord>("/quotas", { method: "POST", body: JSON.stringify(data) }),
+  resetQuota:  (id: string, data?: { totalGB?: number }) => apiFetch<QuotaRecord>(`/quotas/${id}/reset`, { method: "POST", body: JSON.stringify(data ?? {}) }),
 
   // VPN Templates
   getVpnTemplates:   ()                 => apiFetch<VpnTemplateRecord[]>("/vpn-templates"),

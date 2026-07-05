@@ -449,8 +449,13 @@ export default function VpnManagerPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { const r = await api.get('/vpn-templates'); setTemplates(r.data.data ?? []); }
-    catch { } finally { setLoading(false); }
+    try {
+      const r = await api.get('/vpn-templates');
+      setTemplates(r.data.data ?? []);
+      setError('');
+    } catch (e: unknown) {
+      setError('Impossible de charger les templates VPN. Le serveur a renvoyé une erreur.');
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -515,6 +520,11 @@ export default function VpnManagerPage() {
     <DashboardLayout>
       <style>{`.section-title{@apply text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3;}`}</style>
       <div className="space-y-6">
+        {error && (
+          <div className="rounded-md bg-amber-900/20 border border-amber-800 p-3 text-amber-200">
+            <strong>Erreur :</strong> {error}
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

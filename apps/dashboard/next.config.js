@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
   images: {
     remotePatterns: [
       { protocol: 'http',  hostname: 'localhost' },
@@ -15,5 +14,9 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
 };
+
+if (process.platform !== 'win32') {
+  nextConfig.output = 'standalone';
+}
 
 module.exports = nextConfig;

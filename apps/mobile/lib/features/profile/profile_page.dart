@@ -10,8 +10,8 @@ import '../../services/user_service.dart';
 
 /// Subscription data cached at profile level
 final _profileSubProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
-  // Use the same provider as home page for consistency and caching
-  return ref.watch(subscriptionProvider.future);
+  final userService = ref.watch(userServiceProvider);
+  return userService.getSubscription();
 });
 
 class ProfilePage extends ConsumerWidget {
@@ -150,9 +150,9 @@ class ProfilePage extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.15),
+                    color: AppColors.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                   ),
                   child: Text(planLabel, style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w600)),
                 ),
