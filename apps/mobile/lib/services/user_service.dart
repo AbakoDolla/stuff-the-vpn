@@ -43,7 +43,6 @@ class UserService {
     }
   }
 
-  /// Get current user profile from /user/profile
   Future<UserModel?> getProfile() async {
     try {
       final response = await _api.get(ApiEndpoints.userProfile);
@@ -55,18 +54,36 @@ class UserService {
     }
   }
 
-  /// Get current user subscription from /user/subscription
+  /// Get subscription from /mobile/subscription.
+  /// Returns a normalized map with flat keys: dataUsed, dataRemaining,
+  /// dataLimit, status, expireAt, daysLeft, plan.
   Future<Map<String, dynamic>?> getSubscription() async {
     try {
-      final response = await _api.get(ApiEndpoints.userSubscription);
+      final response = await _api.get(ApiEndpoints.mobileSubscription);
       final json = response.data as Map<String, dynamic>;
-      return (json["data"] as Map<String, dynamic>?) ?? json;
+      final raw = (json["data"] as Map<String, dynamic>?) ?? json;
+
+      // Normalize: backend may return nested quota OR flat fields
+      final quota = raw["quota"] as Map<String, dynamic>?;
+      final usedGB      = _d(raw["dataUsed"])      ?? _d(quota?["usedGB"])      ?? 0.0;
+      final remainingGB = _d(raw["dataRemaining"]) ?? _d(quota?["remainingGB"]) ?? 0.0;
+      final limitGB     = _d(raw["dataLimit"])     ?? (usedGB + remainingGB);
+
+      return {
+        ...raw,
+        "dataUsed":      usedGB,
+        "dataRemaining": remainingGB,
+        "dataLimit":     limitGB,
+        "status":        raw["status"]?.toString() ?? "ACTIVE",
+        "expireAt":      raw["expireAt"]?.toString(),
+        "daysLeft":      raw["daysLeft"],
+        "plan":          raw["plan"]?.toString(),
+      };
     } catch (_) {
       return null;
     }
   }
 
-  /// Get current user status from /user/status
   Future<Map<String, dynamic>?> getStatus() async {
     try {
       final response = await _api.get(ApiEndpoints.userStatus);
@@ -83,9 +100,8 @@ class UserService {
       final json = response.data as Map<String, dynamic>;
       final data = (json["data"] as Map<String, dynamic>?) ?? json;
 
-      final uploadGb = _toDouble(data["totalUploadGB"]) ?? 0.0;
-      final downloadGb = _toDouble(data["totalDownloadGB"]) ?? 0.0;
-      final totalGb = uploadGb + downloadGb;
+      final uploadGb   = _d(data["totalUploadGB"])   ?? 0.0;
+      final downloadGb = _d(data["totalDownloadGB"]) ?? 0.0;
 
       final logs = data["logs"] as List? ?? [];
       final Map<String, double> dailyMap = {};
@@ -95,7 +111,7 @@ class UserService {
         final dt = DateTime.tryParse(raw);
         if (dt == null) continue;
         final key = "${dt.year}-${dt.month.toString().padLeft(2,"0")}-${dt.day.toString().padLeft(2,"0")}";
-        final gb = (_toDouble(log["uploadGB"]) ?? 0) + (_toDouble(log["downloadGB"]) ?? 0);
+        final gb = (_d(log["uploadGB"]) ?? 0) + (_d(log["downloadGB"]) ?? 0);
         dailyMap[key] = (dailyMap[key] ?? 0) + gb;
       }
 
@@ -107,25 +123,25 @@ class UserService {
       });
 
       return UsageData(
-        totalGb: totalGb > 0 ? totalGb : 0,
-        uploadGb: uploadGb,
+        totalGb:    uploadGb + downloadGb,
+        uploadGb:   uploadGb,
         downloadGb: downloadGb,
-        daily: daily,
-        byApp: {"Upload": uploadGb, "Download": downloadGb},
+        daily:      daily,
+        byApp:      {"Upload": uploadGb, "Download": downloadGb},
       );
     } catch (_) {
-      return _demoUsage();
+      return _emptyUsage();
     }
   }
 
-  static double? _toDouble(dynamic v) {
+  static double? _d(dynamic v) {
     if (v == null) return null;
     if (v is double) return v;
     if (v is int) return v.toDouble();
     return double.tryParse(v.toString());
   }
 
-  UsageData _demoUsage() {
+  UsageData _emptyUsage() {
     final now = DateTime.now();
     return UsageData(
       totalGb: 0,

@@ -14,7 +14,6 @@ export async function registerUser(input: RegisterInput) {
       username: input.username,
       email:    input.email,
       password: hashed,
-      // Défaut: CLIENT (aligné avec l'enum Prisma UserRole)
       role: (input.role as "USER" | "SUPPORT" | "RESELLER" | "ADMIN" | "SUPER_ADMIN") ?? "USER",
     },
   });
@@ -40,17 +39,10 @@ export async function loginUser(
   const valid = await bcrypt.compare(input.password, user.password);
   if (!valid) throw new Error("Invalid credentials");
 
-  const token = jwt.sign(
-    { userId: user.id, role: user.role } satisfies Omit<AuthPayload, "sessionId">,
-    env.JWT_SECRET,
-    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
-  );
-
   const session = await prisma.session.create({
-    data: { token, deviceName, ipAddress, userId: user.id },
+    data: { token: "tmp", deviceName, ipAddress, userId: user.id },
   });
 
-  // Re-sign with sessionId
   const finalToken = jwt.sign(
     { userId: user.id, role: user.role, sessionId: session.id } satisfies AuthPayload,
     env.JWT_SECRET,
@@ -60,6 +52,65 @@ export async function loginUser(
   await prisma.session.update({ where: { id: session.id }, data: { token: finalToken } });
 
   return { token: finalToken, user: omit(user, ["password"]) };
+}
+
+/**
+ * Admin login — vérifie d'abord la table User (rôle ADMIN/SUPER_ADMIN),
+ * puis la table Admin séparée si non trouvé.
+ */
+export async function loginAdmin(
+  email: string,
+  password: string,
+  ipAddress?: string,
+) {
+  // 1. Try User table (admins seeded with SUPER_ADMIN/ADMIN role)
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  if (user && ["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+    if (user.status !== "ACTIVE") throw new Error(`Account is ${user.status.toLowerCase()}`);
+    if (!user.password) throw new Error("Invalid credentials");
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) throw new Error("Invalid credentials");
+
+    const session = await prisma.session.create({
+      data: { token: "tmp", userId: user.id, ipAddress },
+    });
+
+    const finalToken = jwt.sign(
+      { userId: user.id, role: user.role, sessionId: session.id, type: "admin" } satisfies AuthPayload,
+      env.JWT_SECRET,
+      { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
+    );
+    await prisma.session.update({ where: { id: session.id }, data: { token: finalToken } });
+
+    return { token: finalToken, user: omit(user, ["password"]) };
+  }
+
+  // 2. Fallback: check Admin table
+  const admin = await prisma.admin.findUnique({ where: { email } });
+  if (!admin || !admin.isActive) throw new Error("Invalid credentials");
+
+  const valid = await bcrypt.compare(password, admin.password);
+  if (!valid) throw new Error("Invalid credentials");
+
+  await prisma.admin.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } });
+
+  const token = jwt.sign(
+    { userId: admin.id, role: admin.role ?? "ADMIN", type: "admin" } as AuthPayload,
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
+  );
+
+  return {
+    token,
+    user: {
+      id:       admin.id,
+      username: admin.name ?? "Admin",
+      email:    admin.email,
+      role:     admin.role ?? "ADMIN",
+      status:   "ACTIVE",
+    },
+  };
 }
 
 export async function loginWithLicense(
@@ -87,14 +138,14 @@ export async function loginWithLicense(
         quotaUsedGB: 0,
       },
     });
-    // Link license to user
     await licenseService.bindLicenseToUser(license.id, user.id);
   }
 
   if (user.status !== "ACTIVE") throw new Error(`ACCOUNT_${user.status}`);
 
-  // Device binding
-  const existingDevice = await prisma.device.findUnique({ where: { userId_deviceId: { userId: user.id, deviceId } } });
+  const existingDevice = await prisma.device.findUnique({
+    where: { userId_deviceId: { userId: user.id, deviceId } },
+  });
   if (!existingDevice) {
     await prisma.device.create({
       data: { deviceId, userId: user.id, deviceName },
@@ -103,14 +154,8 @@ export async function loginWithLicense(
     throw new Error("DEVICE_BOUND_TO_ANOTHER_ACCOUNT");
   }
 
-  const sessionToken = jwt.sign(
-    { userId: user.id, role: user.role, sessionId: "" } satisfies AuthPayload,
-    env.JWT_SECRET,
-    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
-  );
-
   const session = await prisma.session.create({
-    data: { token: sessionToken, userId: user.id, deviceName, ipAddress },
+    data: { token: "tmp", userId: user.id, deviceName, ipAddress },
   });
 
   const finalToken = jwt.sign(
@@ -135,8 +180,15 @@ export async function refreshToken(userId: string, sessionId: string) {
 }
 
 export async function getMe(userId: string) {
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
-  return omit(user, ["password"]);
+  // Try User table first
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (user) return omit(user, ["password"]);
+
+  // Try Admin table
+  const admin = await prisma.admin.findUnique({ where: { id: userId } });
+  if (admin) return { id: admin.id, username: admin.name ?? "Admin", email: admin.email, role: admin.role, status: "ACTIVE" };
+
+  throw new Error("User not found");
 }
 
 export async function logoutSession(token: string) {

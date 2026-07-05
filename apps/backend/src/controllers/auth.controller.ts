@@ -5,6 +5,13 @@ import { HTTP_STATUS } from "../constants/index.js";
 import type { AuthRequest } from "../types/index.js";
 import { env } from "../config/env.js";
 
+const COOKIE_OPTS = {
+  httpOnly: true,
+  secure: env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const user = await authService.registerUser(req.body);
@@ -17,16 +24,8 @@ export async function register(req: Request, res: Response, next: NextFunction):
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const deviceName = req.headers["x-device-name"] as string | undefined;
-    const ipAddress = req.ip;
-    const result = await authService.loginUser(req.body, deviceName, ipAddress);
-    // Set token as HttpOnly cookie for improved security (also returned in body)
-    const cookieOpts = {
-      httpOnly: true,
-      secure: env.NODE_ENV === "production",
-      sameSite: "lax" as const,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    };
-    res.cookie("stv_token", result.token, cookieOpts);
+    const result = await authService.loginUser(req.body, deviceName, req.ip);
+    res.cookie("stv_token", result.token, COOKIE_OPTS);
     sendSuccess(res, result, "Login successful");
   } catch (err) {
     if (err instanceof Error && err.message.includes("Invalid credentials")) {
@@ -38,10 +37,30 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
 }
 
 /**
- * New license-based login endpoint
- * POST /auth/login
- * Body: { token: "SXB-XXXX-XXXX", phone: "+237XXXXXXXX", deviceId: "ANDROID_DEVICE_ID" }
+ * POST /api/auth/admin/login
+ * Connexion dédiée aux administrateurs du dashboard.
+ * Vérifie User table (ADMIN/SUPER_ADMIN) puis Admin table.
  */
+export async function adminLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { email, password } = req.body as { email?: string; password?: string };
+    if (!email || !password) {
+      sendError(res, "email and password are required", HTTP_STATUS.BAD_REQUEST);
+      return;
+    }
+    const result = await authService.loginAdmin(email, password, req.ip);
+    res.cookie("stv_token", result.token, COOKIE_OPTS);
+    sendSuccess(res, result, "Admin login successful");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    if (msg.includes("Invalid credentials") || msg.includes("Account is")) {
+      sendError(res, "Identifiants invalides ou compte inactif", HTTP_STATUS.UNAUTHORIZED);
+      return;
+    }
+    next(err);
+  }
+}
+
 export async function loginWithLicense(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { token, phone, deviceId, deviceName } = req.body;
@@ -49,15 +68,8 @@ export async function loginWithLicense(req: Request, res: Response, next: NextFu
       sendError(res, "token, phone, and deviceId are required", HTTP_STATUS.BAD_REQUEST);
       return;
     }
-    const ipAddress = req.ip;
-    const result = await authService.loginWithLicense(token, phone, deviceId, deviceName, ipAddress);
-    const cookieOpts = {
-      httpOnly: true,
-      secure: env.NODE_ENV === "production",
-      sameSite: "lax" as const,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    };
-    res.cookie("stv_token", result.token, cookieOpts);
+    const result = await authService.loginWithLicense(token, phone, deviceId, deviceName, req.ip);
+    res.cookie("stv_token", result.token, COOKIE_OPTS);
     sendSuccess(res, result, "Login successful");
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
@@ -72,14 +84,8 @@ export async function loginWithLicense(req: Request, res: Response, next: NextFu
 export async function refreshToken(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const { userId, sessionId } = req.user!;
-    const result = await authService.refreshToken(userId, sessionId);
-    const cookieOpts = {
-      httpOnly: true,
-      secure: env.NODE_ENV === "production",
-      sameSite: "lax" as const,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    };
-    res.cookie("stv_token", result.token, cookieOpts);
+    const result = await authService.refreshToken(userId, sessionId!);
+    res.cookie("stv_token", result.token, COOKIE_OPTS);
     sendSuccess(res, result, "Token refreshed");
   } catch (err) {
     next(err);
@@ -99,6 +105,7 @@ export async function logout(req: AuthRequest, res: Response, next: NextFunction
   try {
     const token = req.headers.authorization?.slice(7) ?? "";
     await authService.logoutSession(token);
+    res.clearCookie("stv_token");
     sendSuccess(res, null, "Logged out successfully");
   } catch (err) {
     next(err);

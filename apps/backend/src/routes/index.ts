@@ -21,6 +21,9 @@ import vpnTemplatesRouter from "./vpn-templates.routes.js";
 import ticketsRouter from "./tickets.routes.js";
 import mobileRouter from "./mobile.routes.js";
 import paymentsRouter from "./payments.routes.js";
+import tokensRouter from "./tokens.routes.js";
+import devicesRouter from "./devices.routes.js";
+import quotasRouter from "./quotas.routes.js";
 
 const router: IRouter = Router();
 
@@ -45,5 +48,9 @@ router.use("/notifications",  notificationsRouter);
 router.use("/settings",       settingsRouter);
 router.use("/tickets",        ticketsRouter);
 router.use("/payments",       paymentsRouter);
+router.use("/mobile",         mobileRouter);
+router.use("/tokens",         tokensRouter);
+router.use("/devices",        devicesRouter);
+router.use("/quotas",         quotasRouter);
 
 export default router;

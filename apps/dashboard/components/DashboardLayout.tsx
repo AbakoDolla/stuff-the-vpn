@@ -11,7 +11,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<{ username: string; email: string; role: string } | null>(null);
   const [checking, setChecking] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const stored = getStoredUser();
@@ -21,12 +21,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Validate the token against the backend on every page load.
-    // If the token is expired or invalid, /auth/me returns 401 → the api.ts
-    // interceptor clears both localStorage and the cookie, then redirects to /login.
     api.get('/auth/me')
       .then((res) => {
-        const u = res.data?.data ?? res.data;
+        const raw = res.data as { data?: { username?: string; email?: string; role?: string }; username?: string; email?: string; role?: string };
+        const u = raw.data ?? raw;
         setUser({
           username: u.username ?? stored.username,
           email:    u.email    ?? stored.email,
@@ -34,8 +32,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         });
       })
       .catch(() => {
-        // 401 is already handled by the interceptor.
-        // Any other error (network, 5xx): clear session and redirect.
         clearAuth();
         router.replace('/login');
       })
@@ -47,23 +43,28 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     router.replace('/login');
   }
 
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
   if (checking || !user) {
     return (
       <div className="min-h-screen bg-[#020817] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#0099FF] border-t-transparent rounded-full animate-spin" />
-          <p className="text-[#64748B] text-xs">Vérification de la session…</p>
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-500 text-xs">Vérification de la session…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-[#020817]">
+    <div className="min-h-screen flex bg-[#020817] overflow-x-hidden">
       <Sidebar isOpen={sidebarOpen} currentPath={pathname} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 w-full overflow-x-hidden">
         <Topbar user={user} onMenuToggle={() => setSidebarOpen(!sidebarOpen)} onLogout={handleLogout} />
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto">
           <div className="max-w-[1600px] mx-auto">
             {children}
           </div>

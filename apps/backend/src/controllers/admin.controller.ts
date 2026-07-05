@@ -5,106 +5,95 @@ import { queryUserTraffic, queryInboundTraffic, isV2RayReachable } from "../serv
 
 export async function getStats(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
     const [
-      totalUsers,
-      activeUsers,
-      suspendedUsers,
-      totalVouchers,
-      activeVouchers,
-      usedVouchers,
-      totalLicenses,
-      activeLicenses,
-      totalInbounds,
-      activeInbounds,
-      totalPlans,
-      activePlans,
-      recentUsers,
-      // Bandwidth totals from DB (accumulated by traffic-sync)
-      bandwidthAgg,
+      totalUsers, activeUsers, suspendedUsers,
+      totalDevices, activeDevices,
+      totalLicenses, activeLicenses,
+      totalInbounds, activeInbounds,
+      totalVouchers, activeVouchers,
+      bandwidthAgg, todayBandwidthAgg,
+      monthlyRevenue,
+      recentActivities,
+      topUsers,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { status: "ACTIVE" } }),
       prisma.user.count({ where: { status: "SUSPENDED" } }),
-      prisma.voucher.count(),
-      prisma.voucher.count({ where: { status: "ACTIVE" } }),
-      prisma.voucher.count({ where: { status: "USED" } }),
+      prisma.device.count(),
+      prisma.device.count({ where: { isActive: true } }),
       prisma.license.count(),
       prisma.license.count({ where: { status: "ACTIVE" } }),
       prisma.inbound.count(),
       prisma.inbound.count({ where: { enabled: true } }),
-      prisma.plan.count(),
-      prisma.plan.count({ where: { isActive: true } }),
+      prisma.voucher.count(),
+      prisma.voucher.count({ where: { status: "ACTIVE" } }),
+      prisma.usageLog.aggregate({ _sum: { uploadGB: true, downloadGB: true } }),
+      prisma.usageLog.aggregate({
+        where: { createdAt: { gte: todayStart } },
+        _sum: { uploadGB: true, downloadGB: true },
+      }),
+      prisma.payment.aggregate({
+        where: { status: "PAID", createdAt: { gte: monthStart } },
+        _sum: { amount: true },
+      }).catch(() => ({ _sum: { amount: 0 } })),
+      prisma.auditLog.findMany({
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        select: { action: true, userId: true, createdAt: true, details: true },
+      }).catch(() => []),
       prisma.user.findMany({
         take: 5,
-        orderBy: { createdAt: "desc" },
-        select: { username: true, email: true, createdAt: true, status: true },
-      }),
-      // Sum all usage logs for total bandwidth consumed
-      prisma.usageLog.aggregate({
-        _sum: { uploadGB: true, downloadGB: true },
+        orderBy: { quotaUsedGB: "desc" },
+        where: { quotaUsedGB: { gt: 0 } },
+        select: { id: true, username: true, email: true, quotaUsedGB: true, quotaRemainingGB: true },
       }),
     ]);
 
-    // Total bandwidth in GB from DB logs
-    const totalUploadMB = bandwidthAgg._sum.uploadGB ?? 0;
-    const totalDownloadMB = bandwidthAgg._sum.downloadGB ?? 0;
-    const totalBandwidthGB = parseFloat(((totalUploadMB + totalDownloadMB) / 1024).toFixed(3));
+    const totalBandwidthGB =
+      (bandwidthAgg._sum.uploadGB ?? 0) + (bandwidthAgg._sum.downloadGB ?? 0);
+    const todayBandwidthGB =
+      (todayBandwidthAgg._sum.uploadGB ?? 0) + (todayBandwidthAgg._sum.downloadGB ?? 0);
 
-    // Live V2Ray data (non-blocking — falls back gracefully if V2Ray is down)
-    let v2rayStatus: {
-      reachable: boolean;
-      activeConnections: number;
-      liveBandwidthGB: number;
-      inbounds: { tag: string; totalGB: number }[];
-    } = { reachable: false, activeConnections: 0, liveBandwidthGB: 0, inbounds: [] };
-
+    let v2rayStatus = { reachable: false, activeConnections: 0, liveBandwidthGB: 0, inbounds: [] as { tag: string; totalGB: number }[] };
     try {
       const [reachable, liveUsers, liveInbounds] = await Promise.all([
         isV2RayReachable(),
-        queryUserTraffic(false),   // snapshot without reset
+        queryUserTraffic(false),
         queryInboundTraffic(false),
       ]);
       v2rayStatus = {
         reachable,
         activeConnections: liveUsers.users.filter((u) => u.totalBytes > 0).length,
-        liveBandwidthGB: parseFloat(
-          liveUsers.users.reduce((s, u) => s + u.totalGB, 0).toFixed(6)
-        ),
+        liveBandwidthGB: parseFloat(liveUsers.users.reduce((s, u) => s + u.totalGB, 0).toFixed(6)),
         inbounds: liveInbounds.map((i) => ({ tag: i.tag, totalGB: i.totalGB })),
       };
-    } catch {
-      // V2Ray unavailable — stats still work, just without live data
-    }
+    } catch { /* V2Ray offline */ }
 
     sendSuccess(res, {
-      // Users
-      totalUsers,
-      activeUsers,
-      suspendedUsers,
-      // Vouchers
-      totalVouchers,
-      activeVouchers,
-      usedVouchers,
-      // Licenses
-      totalLicenses,
-      activeLicenses,
-      // Inbounds
-      totalInbounds,
-      activeInbounds,
-      // Plans
-      totalPlans,
-      activePlans,
-      // Recent activity
-      recentUsers,
-      // Bandwidth (accumulated from UsageLogs)
+      users: { total: totalUsers, active: activeUsers, suspended: suspendedUsers },
+      devices: { total: totalDevices, active: activeDevices },
+      licenses: { total: totalLicenses, active: activeLicenses },
+      inbounds: { total: totalInbounds, active: activeInbounds },
+      vouchers: { total: totalVouchers, active: activeVouchers },
       bandwidth: {
-        totalUploadMB: parseFloat(totalUploadMB.toFixed(3)),
-        totalDownloadMB: parseFloat(totalDownloadMB.toFixed(3)),
-        totalGB: totalBandwidthGB,
+        totalGB: parseFloat(totalBandwidthGB.toFixed(3)),
+        todayGB: parseFloat(todayBandwidthGB.toFixed(3)),
+        uploadGB: parseFloat((bandwidthAgg._sum.uploadGB ?? 0).toFixed(3)),
+        downloadGB: parseFloat((bandwidthAgg._sum.downloadGB ?? 0).toFixed(3)),
       },
-      // Live V2Ray metrics
+      revenue: { monthly: monthlyRevenue._sum.amount ?? 0 },
+      recentActivities,
+      topUsers,
       v2ray: v2rayStatus,
-    }, "Stats fetched successfully");
+      // Legacy fields for compatibility
+      totalUsers, activeUsers, suspendedUsers,
+      totalLicenses, activeLicenses,
+      totalInbounds, activeInbounds,
+    }, "Stats fetched");
   } catch (err) {
     next(err);
   }

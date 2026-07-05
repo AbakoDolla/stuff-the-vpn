@@ -56,6 +56,10 @@ services:
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-change_me_32_chars_minimum_here!!}
+      SEED_ADMIN: ${SEED_ADMIN:-true}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@sxbvpn.com}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-SxBVPN}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     # Pas de port exposé : nginx est le seul point d'entrée
     expose:
       - "4000"
@@ -114,6 +118,7 @@ services:
       timeout: 5s
       retries: 3
 
+  # ── volumes ────────────────────────────────────────────────────────
 volumes:
   postgres_data:
   redis_data:

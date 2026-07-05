@@ -27,6 +27,37 @@ export async function audit(opts: {
   }
 }
 
+/**
+ * Log audit entry with admin context
+ */
+export async function logAudit(opts: {
+  action: string;
+  entity?: string;
+  entityId?: string;
+  details?: Record<string, unknown>;
+  adminId?: string;
+  userId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+}) {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        action: opts.action as AuditAction,
+        entity: opts.entity,
+        entityId: opts.entityId,
+        details: opts.details as object | undefined,
+        adminId: opts.adminId,
+        userId: opts.userId,
+        ipAddress: opts.ipAddress,
+        userAgent: opts.userAgent,
+      },
+    });
+  } catch {
+    // Audit failures must never break the main request
+  }
+}
+
 function getIp(req: Request): string {
   const forwarded = req.headers["x-forwarded-for"];
   if (typeof forwarded === "string") return forwarded.split(",")[0]!.trim();

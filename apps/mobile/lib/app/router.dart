@@ -7,7 +7,6 @@ import '../features/auth/forgot_password_page.dart';
 import '../features/home/home_page.dart';
 import '../features/vpn/vpn_connect_page.dart';
 import '../features/profile/profile_page.dart';
-import '../features/servers/servers_page.dart';
 import '../features/usage/usage_page.dart';
 import '../features/splash/splash_page.dart';
 import '../features/voucher/redeem_page.dart';
@@ -22,23 +21,22 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
-      final isSplash  = state.matchedLocation == '/splash';
+      final isSplash = state.matchedLocation == '/splash';
       if (isSplash) return null;
       final isLoggedIn = authState.valueOrNull?.isAuthenticated ?? false;
       final isAuthRoute = state.matchedLocation.startsWith('/auth');
       if (!isLoggedIn && !isAuthRoute) return '/auth/login';
-      if ( isLoggedIn &&  isAuthRoute) return '/home';
+      if (isLoggedIn && isAuthRoute) return '/home';
       return null;
     },
     routes: [
-      GoRoute(path: '/splash',       builder: (_, __) => const SplashPage()),
-      GoRoute(path: '/auth/login',   builder: (_, __) => const LoginPage()),
-      GoRoute(path: '/auth/register',builder: (_, __) => const RegisterPage()),
-      GoRoute(path: '/auth/forgot',  builder: (_, __) => const ForgotPasswordPage()),
-      GoRoute(path: '/voucher/redeem', builder: (_, __) => const RedeemPage()),
-      // Logs page (modal-like, no bottom nav)
-      GoRoute(path: '/logs',         builder: (_, __) => const LogsPage()),
-      // Main shell with bottom navigation
+      GoRoute(path: '/splash',          builder: (_, __) => const SplashPage()),
+      GoRoute(path: '/auth/login',      builder: (_, __) => const LoginPage()),
+      GoRoute(path: '/auth/register',   builder: (_, __) => const RegisterPage()),
+      GoRoute(path: '/auth/forgot',     builder: (_, __) => const ForgotPasswordPage()),
+      GoRoute(path: '/voucher/redeem',  builder: (_, __) => const RedeemPage()),
+      GoRoute(path: '/logs',            builder: (_, __) => const LogsPage()),
+      // Main shell — 3 tabs: Home, VPN, Profile (no server selection)
       ShellRoute(
         navigatorKey: shellKey,
         builder: (context, state, child) {
@@ -49,8 +47,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               switch (i) {
                 case 0: GoRouter.of(context).go('/home');    break;
                 case 1: GoRouter.of(context).go('/vpn');     break;
-                case 2: GoRouter.of(context).go('/servers'); break;
-                case 3: GoRouter.of(context).go('/profile'); break;
+                case 2: GoRouter.of(context).go('/profile'); break;
               }
             },
           );
@@ -58,7 +55,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: '/home',    builder: (_, __) => const HomePage()),
           GoRoute(path: '/vpn',     builder: (_, __) => const VpnConnectPage()),
-          GoRoute(path: '/servers', builder: (_, __) => const ServersPage()),
           GoRoute(path: '/profile', builder: (_, __) => const ProfilePage()),
           GoRoute(path: '/usage',   builder: (_, __) => const UsagePage()),
         ],
@@ -70,7 +66,6 @@ final routerProvider = Provider<GoRouter>((ref) {
 int _tabIndex(String location) {
   if (location.startsWith('/home'))    return 0;
   if (location.startsWith('/vpn'))     return 1;
-  if (location.startsWith('/servers')) return 2;
-  if (location.startsWith('/profile')) return 3;
+  if (location.startsWith('/profile')) return 2;
   return 0;
 }

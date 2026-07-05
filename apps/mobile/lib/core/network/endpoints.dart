@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 
 class ApiEndpoints {
-  // flutter build apk --dart-define=BACKEND_URL=https://api.sxbvpn.com/api
-  static const String _baseUrlDev  = 'http://10.0.2.2:5000/api';
-  static const String _baseUrlProd = 'https://api.sxbvpn.com/api';
+  // Production: flutter build apk --dart-define=BACKEND_URL=https://vpnsxb.afrihall.com/api
+  // Emulator dev:  http://10.0.2.2:4000/api
+  static const String _baseUrlDev  = 'http://10.0.2.2:4000/api';
+  static const String _baseUrlProd = 'https://vpnsxb.afrihall.com/api';
 
   static String get baseUrl {
     const defined = String.fromEnvironment('BACKEND_URL');
@@ -11,37 +12,37 @@ class ApiEndpoints {
     return kReleaseMode ? _baseUrlProd : _baseUrlDev;
   }
 
-  // ── Auth ────────────────────────────────────────────────────────────────────
-  static const String login         = '/auth/login';
-  static const String loginLicense  = '/mobile/activate';
-  static const String refresh       = '/auth/refresh';
-  static const String register      = '/auth/register';
-  static const String me            = '/auth/me';
-  static const String logout        = '/auth/logout';
+  // ── Auth ─────────────────────────────────────────────────────────────────
+  static const String login        = '/auth/login';
+  static const String loginLicense = '/mobile/activate';
+  static const String refresh      = '/auth/refresh';
+  static const String register     = '/auth/register';
+  static const String me           = '/auth/me';
+  static const String logout       = '/auth/logout';
 
-  // ── Mobile API ──────────────────────────────────────────────────────────────
+  // ── Mobile API ────────────────────────────────────────────────────────────
   static const String mobileConfig       = '/mobile/config';
   static const String mobileSubscription = '/mobile/subscription';
   static const String mobileLogs         = '/mobile/logs';
 
-  // ── Legacy VPN (kept for compatibility) ────────────────────────────────────
-  static const String myConfig           = '/vpn/my-config';
-  static const String servers            = '/vpn/servers';
-  static const String recommendedServer  = '/vpn/recommended';
-  static const String vpnStatus          = '/vpn/status';
+  // ── Legacy VPN ────────────────────────────────────────────────────────────
+  static const String myConfig          = '/vpn/my-config';
+  static const String servers           = '/vpn/servers';
+  static const String recommendedServer = '/vpn/recommended';
+  static const String vpnStatus         = '/vpn/status';
 
-  // ── Users ───────────────────────────────────────────────────────────────────
+  // ── Users ─────────────────────────────────────────────────────────────────
   static String user(String id)        => '/users/$id';
   static const String userProfile      = '/user/profile';
-  static const String userSubscription = '/user/subscription';
+  static const String userSubscription = '/mobile/subscription'; // Use mobile endpoint
   static const String userStatus       = '/user/status';
   static String usage(String userId)   => '/users/$userId/usage';
 
-  // ── Plans & Vouchers ────────────────────────────────────────────────────────
+  // ── Plans & Vouchers ──────────────────────────────────────────────────────
   static const String activePlans   = '/plans/active';
   static const String redeemVoucher = '/vouchers/redeem';
 
-  // ── Licenses ─────────────────────────────────────────────────────────────── 
+  // ── Licenses ──────────────────────────────────────────────────────────────
   static const String validateLicense = '/licenses/validate';
   static const String bindDevice      = '/licenses/bind-device';
 }

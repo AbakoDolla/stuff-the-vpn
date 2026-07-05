@@ -10,14 +10,15 @@
   "dependencies": {
     "@stuff-the-vpn/types": "file:../../packages/types",
     "@tanstack/react-query": "^5.51.1",
+    "date-fns": "^3.6.0",
     "framer-motion": "^10.16.0",
     "lucide-react": "^0.290.0",
     "next": "14.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "recharts": "^2.9.0",
-    "sonner": "^1.5.0",
-    "date-fns": "^3.6.0"
+    "sharp": "^0.35.3",
+    "sonner": "^1.5.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

@@ -6,80 +6,95 @@
 
 @layer base {
   * {
-    @apply border-surface-light;
+    box-sizing: border-box;
   }
-  
+
   body {
     @apply bg-dark text-gray-100 font-sans antialiased;
   }
 
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    @apply bg-dark-400;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-dark-50 rounded-full hover:bg-dark-200;
-  }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { @apply bg-dark-400; }
+  ::-webkit-scrollbar-thumb { @apply bg-dark-50 rounded-full; }
 }
 
 @layer components {
+  /* ── Cards ──────────────────────────────────────────────── */
+  .card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/5 rounded-xl p-4 sm:p-5;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-300 hover:border-blue-500/30;
+  }
+
   .glass-card {
-    @apply bg-surface backdrop-blur-xl border border-surface-light rounded-xl;
+    @apply bg-white/5 backdrop-blur-xl border border-white/5 rounded-xl;
   }
 
   .glass-card-hover {
-    @apply glass-card transition-all duration-300 hover:border-primary/30 hover:shadow-[0_0_30px_rgba(0,212,255,0.1)];
+    @apply glass-card transition-all duration-300 hover:border-primary/30;
   }
 
-  .neon-glow {
-    @apply shadow-[0_0_20px_rgba(0,212,255,0.3)];
+  /* ── Inputs ─────────────────────────────────────────────── */
+  .input {
+    @apply w-full px-3 py-2.5 bg-slate-800 border border-white/10 rounded-xl
+           text-slate-100 placeholder-slate-600 text-sm
+           focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30
+           transition-all duration-200;
   }
 
+  .input-field {
+    @apply w-full px-4 py-2.5 bg-dark-100 border border-white/5 rounded-lg
+           text-gray-100 placeholder-gray-500
+           focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50
+           transition-all duration-200;
+  }
+
+  /* ── Buttons ────────────────────────────────────────────── */
+  .btn-primary {
+    @apply px-4 py-2 bg-gradient-to-r from-primary to-accent text-white rounded-lg font-medium
+           transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg font-medium
+           transition-all duration-200 border border-white/5;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300
+           rounded-lg font-medium transition-all duration-200 border border-red-500/20;
+  }
+
+  /* ── Status ─────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .status-dot { @apply w-2 h-2 rounded-full inline-block; }
+  .status-dot.online    { @apply bg-green-500; }
+  .status-dot.offline   { @apply bg-red-500; }
+  .status-dot.connecting { @apply bg-yellow-500 animate-pulse; }
+
+  /* ── Text ───────────────────────────────────────────────── */
   .gradient-text {
     @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
   }
 
-  .btn-primary {
-    @apply px-4 py-2 bg-gradient-to-r from-primary to-accent text-white rounded-lg font-medium 
-           transition-all duration-300 hover:shadow-[0_0_30px_rgba(0,212,255,0.4)] 
-           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  .neon-glow {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
   }
 
-  .btn-ghost {
-    @apply px-4 py-2 bg-surface hover:bg-surface-hover text-gray-300 rounded-lg font-medium 
-           transition-all duration-200 border border-surface-light;
-  }
-
-  .input-field {
-    @apply w-full px-4 py-2.5 bg-dark-100 border border-surface-light rounded-lg 
-           text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary 
-           focus:ring-1 focus:ring-primary/50 transition-all duration-200;
-  }
-
-  .status-dot {
-    @apply w-2 h-2 rounded-full inline-block;
-  }
-
-  .status-dot.online {
-    @apply bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)];
-  }
-
-  .status-dot.offline {
-    @apply bg-red-500;
-  }
-
-  .status-dot.connecting {
-    @apply bg-yellow-500 animate-pulse;
+  /* ── Surface ────────────────────────────────────────────── */
+  .surface-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    @apply backdrop-blur-xl rounded-xl;
   }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+  .text-balance { text-wrap: balance; }
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
 }

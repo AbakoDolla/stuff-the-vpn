@@ -3,15 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search,
-  Bell,
-  Moon,
-  Sun,
-  User,
-  ChevronDown,
-  Settings,
-  LogOut,
-  HelpCircle,
+  Bell, Moon, User, ChevronDown, Settings, LogOut, Menu,
 } from 'lucide-react';
 
 interface TopbarProps {
@@ -20,107 +12,109 @@ interface TopbarProps {
   onLogout?: () => void;
 }
 
-export function Topbar({ user, onLogout }: TopbarProps = {}) {
+export function Topbar({ user, onMenuToggle, onLogout }: TopbarProps = {}) {
   const [showProfile, setShowProfile] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
+
+  function roleLabel(role?: string) {
+    const map: Record<string, string> = {
+      SUPER_ADMIN: 'Super Admin',
+      ADMIN: 'Administrateur',
+      SUPPORT: 'Support',
+    };
+    return map[role ?? ''] ?? role ?? 'Admin';
+  }
 
   return (
-    <header className="sticky top-0 z-40 bg-dark-200/60 backdrop-blur-xl border-b border-surface-light">
-      <div className="flex items-center justify-between h-16 px-6">
-        {/* Search */}
-        <div className="flex-1 max-w-md">
-          <div className="relative">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-            />
-            <input
-              type="text"
-              placeholder="Rechercher un utilisateur, serveur..."
-              className="w-full pl-10 pr-4 py-2 bg-dark-100 border border-surface-light rounded-lg text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all duration-200"
-            />
-            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 bg-dark-50 px-1.5 py-0.5 rounded border border-surface-light">
-              ⌘K
-            </kbd>
-          </div>
+    <header className="sticky top-0 z-30 bg-[#0A0F1E]/80 backdrop-blur-xl border-b border-white/5">
+      <div className="flex items-center justify-between h-14 px-3 sm:px-5 gap-2">
+
+        {/* Left — hamburger (mobile only) + title */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={onMenuToggle}
+            className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+            aria-label="Menu"
+          >
+            <Menu size={20} />
+          </button>
+          <span className="text-sm font-semibold text-white hidden sm:block truncate">
+            SXB VPN — Dashboard
+          </span>
         </div>
 
-        {/* Right section */}
-        <div className="flex items-center gap-3">
-          {/* Theme toggle */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-2 rounded-lg bg-surface hover:bg-surface-hover text-gray-400 hover:text-white transition-all duration-200"
-          >
-            {darkMode ? <Moon size={18} /> : <Sun size={18} />}
-          </motion.button>
-
+        {/* Right actions */}
+        <div className="flex items-center gap-2 shrink-0">
           {/* Notifications */}
           <motion.button
-            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="relative p-2 rounded-lg bg-surface hover:bg-surface-hover text-gray-400 hover:text-white transition-all duration-200"
+            className="relative p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"
           >
-            <Bell size={18} />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center text-[9px] font-bold text-white">
-              3
-            </span>
+            <Bell size={17} />
+            <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center text-[8px] font-bold text-white">3</span>
           </motion.button>
 
-          {/* Profile */}
+          {/* Theme — decorative */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            className="hidden sm:flex p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"
+          >
+            <Moon size={17} />
+          </motion.button>
+
+          {/* Profile dropdown */}
           <div className="relative">
             <motion.button
-              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowProfile(!showProfile)}
-              className="flex items-center gap-3 p-1.5 pr-3 rounded-lg bg-surface hover:bg-surface-hover transition-all duration-200"
+              className="flex items-center gap-2 p-1.5 pr-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-all"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-                <User size={16} className="text-white" />
+              <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-violet-600 rounded-lg flex items-center justify-center shrink-0">
+                <User size={14} className="text-white" />
               </div>
               <div className="text-left hidden sm:block">
-                <p className="text-sm font-medium text-gray-200">{user?.username || 'Admin'}</p>
-                <p className="text-[10px] text-gray-500">{user?.email || 'admin@stuffvpn.com'}</p>
+                <p className="text-xs font-semibold text-gray-200 leading-tight">{user?.username ?? 'Admin'}</p>
+                <p className="text-[10px] text-gray-500 leading-tight">{roleLabel(user?.role)}</p>
               </div>
               <ChevronDown
-                size={14}
-                className={`text-gray-500 transition-transform duration-200 ${
-                  showProfile ? 'rotate-180' : ''
-                }`}
+                size={13}
+                className={`text-gray-500 transition-transform duration-200 ${showProfile ? 'rotate-180' : ''}`}
               />
             </motion.button>
 
             <AnimatePresence>
               {showProfile && (
                 <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  initial={{ opacity: 0, y: -8, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 mt-2 w-56 glass-card p-2 shadow-2xl"
+                  className="absolute right-0 top-full mt-2 w-52 bg-[#111827] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
                 >
-                  <div className="px-3 py-2 border-b border-surface-light mb-2">
-                    <p className="text-sm font-medium text-gray-200">Administrateur</p>
-                    <p className="text-xs text-gray-500">admin@stuffvpn.com</p>
+                  {/* User info */}
+                  <div className="px-4 py-3 border-b border-white/5">
+                    <p className="text-sm font-semibold text-white truncate">{user?.username ?? 'Admin'}</p>
+                    <p className="text-xs text-gray-500 truncate">{user?.email ?? ''}</p>
+                    <span className="inline-block mt-1.5 text-[10px] px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded-full">
+                      {roleLabel(user?.role)}
+                    </span>
                   </div>
-                  <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-hover transition-all text-sm">
-                    <Settings size={16} />
-                    Paramètres
-                  </button>
-                  <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-hover transition-all text-sm">
-                    <HelpCircle size={16} />
-                    Aide
-                  </button>
-                  <hr className="border-surface-light my-1" />
-                  <button 
-                    className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all text-sm"
-                    onClick={onLogout}
-                  >
-                    <LogOut size={16} />
-                    Déconnexion
-                  </button>
+                  {/* Actions */}
+                  <div className="p-1">
+                    <button
+                      onClick={() => { setShowProfile(false); }}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                    >
+                      <Settings size={14} />
+                      <span>Paramètres</span>
+                    </button>
+                    <button
+                      onClick={() => { setShowProfile(false); onLogout?.(); }}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
+                    >
+                      <LogOut size={14} />
+                      <span>Déconnexion</span>
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

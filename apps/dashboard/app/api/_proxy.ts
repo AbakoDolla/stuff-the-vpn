@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://185.237.15.214/api').replace(/\/+$/, '');
+// Backend runs on localhost:4000 on the same machine
+const BACKEND_BASE = (
+  process.env.BACKEND_URL ?? 'http://localhost:4000/api'
+).replace(/\/+$/, '');
 
 export async function proxyToBackend(request: NextRequest): Promise<NextResponse> {
   try {
     const url = new URL(request.url);
+    // Strip the /api prefix that Next.js routing adds
     const path = url.pathname.replace(/^\/api/, '') || '/';
     const backendUrl = `${BACKEND_BASE}${path}${url.search}`;
 
@@ -15,6 +19,8 @@ export async function proxyToBackend(request: NextRequest): Promise<NextResponse
     if (ct) headers.set('content-type', ct);
     const xfor = request.headers.get('x-forwarded-for');
     if (xfor) headers.set('x-forwarded-for', xfor);
+    const deviceName = request.headers.get('x-device-name');
+    if (deviceName) headers.set('x-device-name', deviceName);
 
     const hasBody = !['GET', 'HEAD', 'OPTIONS'].includes(request.method);
     const body = hasBody ? await request.text() : undefined;
@@ -23,7 +29,7 @@ export async function proxyToBackend(request: NextRequest): Promise<NextResponse
       method: request.method,
       headers,
       body,
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(20000),
     });
 
     const text = await res.text();
@@ -35,6 +41,7 @@ export async function proxyToBackend(request: NextRequest): Promise<NextResponse
       },
     });
   } catch (err) {
+    console.error('[proxy] Backend unreachable:', err);
     return NextResponse.json(
       { success: false, message: 'Backend inaccessible', error: String(err) },
       { status: 503 }
