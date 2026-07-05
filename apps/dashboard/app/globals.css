@@ -98,3 +98,27 @@
   .text-balance { text-wrap: balance; }
   .scrollbar-thin::-webkit-scrollbar { width: 4px; }
 }
+
+/* ── Badge variants ──────────────────────────────────────────────────────── */
+@layer components {
+  .badge-active   { @apply badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/20; }
+  .badge-inactive { @apply badge bg-red-500/10 text-red-400 border border-red-500/20; }
+  .badge-warning  { @apply badge bg-amber-500/10 text-amber-400 border border-amber-500/20; }
+  .badge-green    { @apply badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/20; }
+  .badge-red      { @apply badge bg-red-500/10 text-red-400 border border-red-500/20; }
+  .badge-yellow   { @apply badge bg-amber-500/10 text-amber-400 border border-amber-500/20; }
+  .badge-gray     { @apply badge bg-slate-500/10 text-slate-400 border border-slate-500/20; }
+  .badge-blue     { @apply badge bg-blue-500/10 text-blue-400 border border-blue-500/20; }
+  .badge-purple   { @apply badge bg-purple-500/10 text-purple-400 border border-purple-500/20; }
+
+  /* ── Form label ─────────────────────────────────────────── */
+  .label {
+    @apply block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide;
+  }
+
+  /* ── Surface variants ────────────────────────────────────── */
+  .bg-surface        { background: rgba(255,255,255,0.05); }
+  .bg-surface-hover  { background: rgba(255,255,255,0.10); }
+  .bg-dark-100       { @apply bg-dark-50; }
+  .bg-dark-400       { @apply bg-dark; }
+}

@@ -732,7 +732,7 @@ export async function getSubscriptionStatus(req: AuthRequest, res: Response, nex
       ? Math.max(0, Math.ceil((user.expireAt.getTime() - Date.now()) / 86400000))
       : null;
 
-    const dataLimitGB = activeLicense?.dataLimitGB ?? (user.quotaUsedGB + user.quotaRemainingGB) || 0;
+    const dataLimitGB = activeLicense?.dataLimitGB ?? ((user.quotaUsedGB + user.quotaRemainingGB) || 0);
     const percentUsed = dataLimitGB > 0
       ? Math.min(100, Math.round((user.quotaUsedGB / dataLimitGB) * 100))
       : 0;

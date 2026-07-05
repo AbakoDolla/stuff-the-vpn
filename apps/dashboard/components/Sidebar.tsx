@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Users, Key, Smartphone, Server,
   FileText, Settings, LogOut, HardDrive, Globe,
   Shield, BarChart2, CreditCard, MessageSquare, X,
+  Ticket, Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -15,23 +16,43 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   href: string;
+  section?: string;
 }
 
 const navItems: NavItem[] = [
-  { label: 'Tableau de bord', icon: <LayoutDashboard size={18} />, href: '/dashboard' },
-  { label: 'Utilisateurs',    icon: <Users size={18} />,           href: '/dashboard/users' },
-  { label: 'Appareils',       icon: <Smartphone size={18} />,      href: '/dashboard/devices-list' },
-  { label: 'Tokens / Licences',icon: <Key size={18} />,            href: '/dashboard/tokens' },
-  { label: 'Quotas & Données',icon: <HardDrive size={18} />,       href: '/dashboard/quotas' },
-  { label: 'Inbounds VPN',    icon: <Globe size={18} />,           href: '/dashboard/inbounds' },
-  { label: 'Profils VPN',     icon: <Shield size={18} />,          href: '/dashboard/vpn' },
-  { label: 'Serveurs',        icon: <Server size={18} />,          href: '/dashboard/servers' },
-  { label: 'Journaux',        icon: <FileText size={18} />,        href: '/dashboard/audit' },
-  { label: 'Paiements',       icon: <CreditCard size={18} />,      href: '/dashboard/payments' },
-  { label: 'Tickets',         icon: <MessageSquare size={18} />,   href: '/dashboard/tickets' },
-  { label: 'Statistiques',    icon: <BarChart2 size={18} />,       href: '/dashboard/audit' },
-  { label: 'Paramètres',      icon: <Settings size={18} />,        href: '/dashboard/settings' },
+  // Vue d'ensemble
+  { label: 'Tableau de bord',   icon: <LayoutDashboard size={18} />, href: '/dashboard',              section: 'overview' },
+  { label: 'Statistiques',      icon: <BarChart2 size={18} />,       href: '/analytics',              section: 'overview' },
+
+  // Utilisateurs & Accès
+  { label: 'Utilisateurs',      icon: <Users size={18} />,           href: '/dashboard/users',        section: 'users' },
+  { label: 'Appareils',         icon: <Smartphone size={18} />,      href: '/dashboard/devices-list', section: 'users' },
+  { label: 'Tokens mobiles',    icon: <Key size={18} />,             href: '/dashboard/tokens',       section: 'users' },
+  { label: 'Quotas & Données',  icon: <HardDrive size={18} />,       href: '/dashboard/quotas',       section: 'users' },
+
+  // VPN
+  { label: 'Inbounds VPN',      icon: <Globe size={18} />,           href: '/dashboard/inbounds',     section: 'vpn' },
+  { label: 'Profils VPN',       icon: <Shield size={18} />,          href: '/dashboard/vpn',          section: 'vpn' },
+  { label: 'Serveurs',          icon: <Server size={18} />,          href: '/dashboard/servers',      section: 'vpn' },
+
+  // Commercial
+  { label: 'Licences',          icon: <Key size={18} />,             href: '/licenses',               section: 'commercial' },
+  { label: 'Vouchers',          icon: <Ticket size={18} />,          href: '/vouchers',               section: 'commercial' },
+  { label: 'Paiements',         icon: <CreditCard size={18} />,      href: '/dashboard/payments',     section: 'commercial' },
+
+  // Admin
+  { label: 'Tickets support',   icon: <MessageSquare size={18} />,   href: '/dashboard/tickets',      section: 'admin' },
+  { label: 'Journaux d\'audit', icon: <FileText size={18} />,        href: '/dashboard/audit',        section: 'admin' },
+  { label: 'Paramètres',        icon: <Settings size={18} />,        href: '/dashboard/settings',     section: 'admin' },
 ];
+
+const sectionLabels: Record<string, string> = {
+  overview:   'Vue d\'ensemble',
+  users:      'Utilisateurs',
+  vpn:        'VPN',
+  commercial: 'Commercial',
+  admin:      'Administration',
+};
 
 interface SidebarProps {
   isOpen: boolean;
@@ -48,6 +69,9 @@ export function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
     router.push('/login');
   };
 
+  // Group nav items by section
+  const sections = [...new Set(navItems.map(i => i.section))];
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -61,7 +85,6 @@ export function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
             <p className="text-[10px] text-gray-500 leading-tight">Control Center</p>
           </div>
         </div>
-        {/* Close button — visible on mobile */}
         <button
           onClick={onClose}
           className="lg:hidden p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
@@ -72,44 +95,56 @@ export function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-2 space-y-0.5 scrollbar-thin">
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== '/dashboard' && pathname.startsWith(item.href));
+      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4 scrollbar-thin">
+        {sections.map(section => {
+          const items = navItems.filter(i => i.section === section);
           return (
-            <Link key={item.label} href={item.href} onClick={onClose}>
-              <motion.div
-                whileHover={{ x: 2 }}
-                whileTap={{ scale: 0.98 }}
-                className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-150 cursor-pointer ${
-                  isActive
-                    ? 'bg-blue-500/10 border border-blue-500/20 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
-                }`}
-              >
-                <div className={`shrink-0 ${isActive ? 'text-blue-400' : ''}`}>{item.icon}</div>
-                <span className="text-[13px] font-medium">{item.label}</span>
-                {isActive && (
-                  <motion.div
-                    layoutId="active-indicator"
-                    className="absolute left-0 w-0.5 h-5 bg-gradient-to-b from-blue-400 to-cyan-400 rounded-r-full"
-                  />
-                )}
-              </motion.div>
-            </Link>
+            <div key={section}>
+              <p className="px-2 mb-1 text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
+                {sectionLabels[section!] ?? section}
+              </p>
+              <div className="space-y-0.5">
+                {items.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                  return (
+                    <Link key={item.label} href={item.href} onClick={onClose}>
+                      <motion.div
+                        whileHover={{ x: 2 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-150 cursor-pointer ${
+                          isActive
+                            ? 'bg-blue-500/10 border border-blue-500/20 text-white'
+                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/5 border border-transparent'
+                        }`}
+                      >
+                        <span className={isActive ? 'text-blue-400' : ''}>{item.icon}</span>
+                        <span className="text-sm font-medium">{item.label}</span>
+                        {isActive && (
+                          <motion.div
+                            layoutId="active-indicator"
+                            className="absolute right-2 w-1.5 h-1.5 rounded-full bg-blue-400"
+                          />
+                        )}
+                      </motion.div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="p-2 border-t border-white/5 shrink-0">
+      {/* Logout */}
+      <div className="p-3 border-t border-white/5 shrink-0">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150"
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/5 transition-all duration-150 border border-transparent hover:border-red-500/10"
         >
-          <LogOut size={18} />
-          <span className="text-[13px] font-medium">Déconnexion</span>
+          <LogOut size={16} />
+          <span className="text-sm font-medium">Déconnexion</span>
         </button>
       </div>
     </div>
@@ -117,39 +152,36 @@ export function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* ── Desktop sidebar (always visible ≥ lg) ── */}
-      <aside className="hidden lg:flex flex-col w-[220px] shrink-0 bg-[#0A0F1E]/95 backdrop-blur-xl border-r border-white/5 h-screen sticky top-0">
+      {/* Desktop sidebar */}
+      <div className="hidden lg:flex lg:w-56 xl:w-60 lg:flex-col lg:fixed lg:inset-y-0 lg:z-30 bg-dark-50/80 backdrop-blur-xl border-r border-white/5">
         <SidebarContent />
-      </aside>
+      </div>
 
-      {/* ── Mobile sidebar (drawer + overlay) ── */}
+      {/* Mobile drawer */}
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
-              key="backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
               onClick={onClose}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
             />
-            {/* Drawer */}
-            <motion.aside
-              key="drawer"
+            <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
-              transition={{ type: 'tween', duration: 0.25 }}
-              className="lg:hidden fixed left-0 top-0 h-full w-[260px] bg-[#0A0F1E] border-r border-white/5 z-50"
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed inset-y-0 left-0 w-72 z-50 bg-dark-50 border-r border-white/5 lg:hidden"
             >
               <SidebarContent />
-            </motion.aside>
+            </motion.div>
           </>
         )}
       </AnimatePresence>
     </>
   );
 }
+
+export default Sidebar;

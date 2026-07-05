@@ -215,8 +215,25 @@ export const Api = {
   // Audit
   getAuditLogs:    ()                   => apiFetch<AuditRecord[]>("/audit"),
 
-  // Tokens/Licenses
-  getTokens:       ()                   => apiFetch<TokenRecord[]>("/licenses"),
-  generateToken:   (data: unknown)      => apiFetch<TokenRecord>("/admin/generate-token", { method: "POST", body: JSON.stringify(data) }),
-  revokeToken:     (id: string)         => apiFetch<void>("/admin/revoke-license", { method: "POST", body: JSON.stringify({ licenseId: id }) }),
+  // Tokens (activation tokens for mobile devices)
+  getTokens: (p?: { status?: string; limit?: number }) =>
+    apiFetch<TokenRecord[]>(`/tokens?${new URLSearchParams(Object.entries(p ?? {}).filter(([,v]) => v != null).map(([k,v]) => [k, String(v)]))}`),
+  generateToken: (deviceId: string) =>
+    apiFetch<TokenRecord>("/tokens/generate", { method: "POST", body: JSON.stringify({ deviceId }) }),
+  revokeToken: (id: string) =>
+    apiFetch<void>(`/tokens/${id}/revoke`, { method: "POST" }),
+  deleteToken: (id: string) =>
+    apiFetch<void>(`/tokens/${id}`, { method: "DELETE" }),
+
+  // Devices
+  getDevices: (p?: { status?: string; search?: string; limit?: number }) =>
+    apiFetch<Record<string, unknown>[]>(`/devices?${new URLSearchParams(Object.entries(p ?? {}).filter(([,v]) => v != null).map(([k,v]) => [k, String(v)]))}`),
+  getDevice: (id: string) =>
+    apiFetch<Record<string, unknown>>(`/devices/${id}`),
+  updateDevice: (id: string, data: unknown) =>
+    apiFetch<Record<string, unknown>>(`/devices/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  blockDevice: (id: string, reason?: string) =>
+    apiFetch<Record<string, unknown>>(`/devices/${id}/block`, { method: "POST", body: JSON.stringify({ reason }) }),
+  deleteDevice: (id: string) =>
+    apiFetch<void>(`/devices/${id}`, { method: "DELETE" }),
 };
