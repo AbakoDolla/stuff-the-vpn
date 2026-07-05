@@ -1,10 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "cd apps/dashboard && npm install --legacy-peer-deps && npm run build",
-  "outputDirectory": "apps/dashboard/.next",
-  "framework": "nextjs",
-  "installCommand": "npm install --legacy-peer-deps",
-  "regions": ["iad1"],
   "headers": [
     {
       "source": "/(.*)",
