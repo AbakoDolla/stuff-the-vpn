@@ -10,8 +10,8 @@ import '../../services/user_service.dart';
 
 /// Subscription data cached at profile level
 final _profileSubProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
-  final svc = ref.read(userServiceProvider);
-  return svc.getSubscription();
+  // Use the same provider as home page for consistency and caching
+  return ref.watch(subscriptionProvider.future);
 });
 
 class ProfilePage extends ConsumerWidget {

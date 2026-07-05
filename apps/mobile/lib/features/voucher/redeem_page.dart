@@ -197,7 +197,8 @@ class _RedeemPageState extends ConsumerState<RedeemPage> {
                       const SizedBox(height: 24),
                       GradientButton(
                         text: 'Activer le voucher',
-                        onPressed: _redeem,
+                        isLoading: _loading,
+                        onPressed: _loading ? null : _redeem,
                       ),
                       if (_success != null) ...[
                         const SizedBox(height: 12),

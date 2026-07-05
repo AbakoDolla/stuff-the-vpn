@@ -11,6 +11,20 @@ import '../../models/server_model.dart';
 import '../../widgets/glass_card.dart';
 
 final subscriptionProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+  // Try to use the user from authState if it has quota info
+  final authState = ref.watch(authStateProvider).valueOrNull;
+  if (authState?.user != null && authState!.user!.dataLimit != null && authState.user!.dataLimit! > 0) {
+     // Return a map compatible with what home_page expects
+     final u = authState.user!;
+     return {
+       "plan": u.plan,
+       "dataUsed": u.dataUsed,
+       "dataRemaining": u.dataRemaining,
+       "dataLimit": u.dataLimit,
+       "expireAt": u.planExpiry?.toIso8601String(),
+     };
+  }
+
   final userService = ref.read(userServiceProvider);
   return userService.getSubscription();
 });

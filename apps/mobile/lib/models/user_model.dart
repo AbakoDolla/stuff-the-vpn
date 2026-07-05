@@ -30,9 +30,11 @@ class UserModel {
       : 0;
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    final used = _toDouble(json["dataUsed"] ?? json["used"] ?? json["quotaUsedGB"]) ?? 0.0;
-    final remaining = _toDouble(json["dataRemaining"] ?? json["quotaRemainingGB"]) ?? 0.0;
-    final limit = _toDouble(json["dataLimit"] ?? json["quota"]) ?? (used + remaining);
+    // Handle various backend field names for quotas
+    final used = _toDouble(json["dataUsed"] ?? json["used"] ?? json["quotaUsedGB"] ?? json["usedGB"]) ?? 0.0;
+    final remaining = _toDouble(json["dataRemaining"] ?? json["remaining"] ?? json["quotaRemainingGB"] ?? json["remainingGB"]) ?? 0.0;
+    final limit = _toDouble(json["dataLimit"] ?? json["limit"] ?? json["quota"] ?? json["limitGB"]) ?? (used + remaining);
+
     return UserModel(
       id: json["id"]?.toString() ?? "",
       email: json["email"]?.toString() ?? "",

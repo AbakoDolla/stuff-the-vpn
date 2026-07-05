@@ -42,7 +42,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
     Future<String?> getDeviceId() async =>
         _storage.read(key: _deviceIdKey);
 
-    Future<bool> hasToken() async {
+    Future<bool> isAuthenticated() async {
       final token = await getToken();
       return token != null && token.isNotEmpty;
     }

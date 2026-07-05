@@ -25,14 +25,19 @@ class ApiClient {
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
         final token = await _storage.getToken();
-        if (token != null) {
+        if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }
         return handler.next(options);
       },
       onError: (DioException e, handler) async {
+        // Prevent infinite retry loops on 401
         if (e.response?.statusCode == 401) {
-          await _storage.clearToken();
+          final token = await _storage.getToken();
+          if (token != null && token.isNotEmpty) {
+             await _storage.clearAll();
+             // You might want to trigger a navigation to login here via a provider
+          }
         }
         return handler.next(e);
       },

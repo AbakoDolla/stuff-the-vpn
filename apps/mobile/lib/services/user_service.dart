@@ -65,9 +65,9 @@ class UserService {
 
       // Normalize: backend may return nested quota OR flat fields
       final quota = raw["quota"] as Map<String, dynamic>?;
-      final usedGB      = _d(raw["dataUsed"])      ?? _d(quota?["usedGB"])      ?? 0.0;
-      final remainingGB = _d(raw["dataRemaining"]) ?? _d(quota?["remainingGB"]) ?? 0.0;
-      final limitGB     = _d(raw["dataLimit"])     ?? (usedGB + remainingGB);
+      final usedGB      = _d(raw["dataUsed"])      ?? _d(raw["usedGB"])      ?? _d(quota?["usedGB"])      ?? 0.0;
+      final remainingGB = _d(raw["dataRemaining"]) ?? _d(raw["remainingGB"]) ?? _d(quota?["remainingGB"]) ?? 0.0;
+      final limitGB     = _d(raw["dataLimit"])     ?? _d(raw["limitGB"])     ?? (usedGB + remainingGB);
 
       return {
         ...raw,
@@ -77,7 +77,7 @@ class UserService {
         "status":        raw["status"]?.toString() ?? "ACTIVE",
         "expireAt":      raw["expireAt"]?.toString(),
         "daysLeft":      raw["daysLeft"],
-        "plan":          raw["plan"]?.toString(),
+        "plan":          raw["plan"]?.toString() ?? raw["planName"]?.toString(),
       };
     } catch (_) {
       return null;

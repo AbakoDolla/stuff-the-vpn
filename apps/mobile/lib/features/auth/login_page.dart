@@ -51,14 +51,19 @@ class _LoginPageState extends ConsumerState<LoginPage>
     /// Load or generate a stable device ID that persists across app restarts.
     /// Uses flutter_secure_storage so the ID survives app reinstalls on most devices.
     Future<void> _loadPersistentDeviceId() async {
-      final storage = ref.read(secureStorageProvider);
-      var id = await storage.getDeviceId();
-      if (id == null || id.isEmpty) {
-        id = 'ANDROID_${const Uuid().v4().replaceAll('-', '').toUpperCase()}';
-        await storage.saveDeviceId(id);
-      }
-      if (mounted) {
-        setState(() => _deviceIdController.text = id!);
+      try {
+        final storage = ref.read(secureStorageProvider);
+        var id = await storage.getDeviceId();
+        if (id == null || id.isEmpty) {
+          id = 'ANDROID_${const Uuid().v4().replaceAll('-', '').substring(0, 16).toUpperCase()}';
+          await storage.saveDeviceId(id);
+        }
+        if (mounted) {
+          _deviceIdController.text = id;
+          setState(() {});
+        }
+      } catch (e) {
+        debugPrint('Error loading device ID: $e');
       }
     }
 
