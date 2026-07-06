@@ -24,9 +24,13 @@ jobs:
           cache: 'pnpm'
       - name: Install workspace deps
         run: pnpm install --frozen-lockfile
-      - name: Generate Prisma client
+      - name: Generate Prisma client (backend)
         working-directory: apps/backend
         run: npx prisma generate
+      - name: Generate Prisma client (lib/db)
+        run: npx --yes --package=prisma prisma generate --schema=apps/backend/prisma/schema.prisma
+        env:
+          PRISMA_OUTPUT: lib/db/node_modules/@prisma/client
       - name: Build workspace libs
         run: pnpm --filter "@workspace/*" --filter "!@workspace/api-server" build
       - name: Build backend
@@ -76,7 +80,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.27.4'
           channel: 'stable'
           cache: true
       - name: Get Flutter dependencies
