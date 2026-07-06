@@ -150,7 +150,7 @@ export const Api = {
 
   // Users
   getUsers: (p?: { limit?: number; page?: number; search?: string }) =>
-    apiFetch<{ data: UserRecord[]; total: number; page: number; limit: number }>(
+    apiFetch<UserRecord[]>(
       `/users?${new URLSearchParams(Object.entries(p ?? {}).filter(([,v]) => v != null).map(([k, v]) => [k, String(v)]))}`,
     ),
   getUser:     (id: string)             => apiFetch<UserRecord>(`/users/${id}`),
