@@ -47,8 +47,17 @@ export async function listUsers(req: Request, res: Response, next: NextFunction)
   try {
     const page = Number(req.query["page"] ?? 1);
     const limit = Number(req.query["limit"] ?? 20);
-    const result = await userService.listUsers(page, limit);
-    sendSuccess(res, result, "Users fetched successfully");
+    const search = req.query["search"] ? String(req.query["search"]) : undefined;
+    const result = await userService.listUsers(page, limit, search);
+    res.json({
+      success: true,
+      message: "Users fetched successfully",
+      data: result.users,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      timestamp: new Date().toISOString(),
+    });
   } catch (err) {
     next(err);
   }
