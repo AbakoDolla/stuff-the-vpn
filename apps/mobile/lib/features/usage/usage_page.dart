@@ -10,7 +10,7 @@ final usageProvider = FutureProvider<UsageData>((ref) async {
   final authState = ref.watch(authStateProvider).valueOrNull;
   final userService = ref.watch(userServiceProvider);
   final userId = authState?.user?.id;
-  if (userId == null || userId.isEmpty) return userService.getUsage('demo');
+  if (userId == null || userId.isEmpty) return UsageData(totalGb: 0, daily: [], byApp: {});
   return userService.getUsage(userId);
 });
 
