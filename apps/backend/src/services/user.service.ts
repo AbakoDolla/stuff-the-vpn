@@ -26,15 +26,36 @@ import { omit } from "../utils/crypto.js";
     return omit(user, ["password"]);
   }
 
-  export async function listUsers(page = 1, limit = 20) {
+  export async function listUsers(page = 1, limit = 20, search?: string) {
     const skip = (page - 1) * limit;
-    const data = await prisma.user.findMany({
-      skip,
-      take: limit,
-      orderBy: { createdAt: "desc" },
-      include: { reseller: { select: { id: true, name: true } } },
-    });
-    return data.map((u) => { const { password: _pw, ...rest } = u; return rest; });
+    const where = search
+      ? {
+          OR: [
+            { username: { contains: search, mode: "insensitive" as const } },
+            { email: { contains: search, mode: "insensitive" as const } },
+            { phone: { contains: search, mode: "insensitive" as const } },
+            { name: { contains: search, mode: "insensitive" as const } },
+          ],
+        }
+      : {};
+
+    const [data, total] = await Promise.all([
+      prisma.user.findMany({
+        skip,
+        take: limit,
+        where,
+        orderBy: { createdAt: "desc" },
+        include: { reseller: { select: { id: true, name: true } } },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    return {
+      users: data.map((u) => { const { password: _pw, ...rest } = u; return rest; }),
+      total,
+      page,
+      limit,
+    };
   }
 
   export async function getUserById(id: string) {
@@ -120,4 +141,3 @@ import { omit } from "../utils/crypto.js";
       data: { deletedAt: new Date(), status: "BANNED" },
     });
   }
-  
