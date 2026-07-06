@@ -60,7 +60,7 @@ export default function UsersPage() {
   });
 
   const users: User[] = data?.data ?? [];
-  const total = data?.meta?.total ?? users.length;
+  const total = data?.total ?? users.length;
 
   return (
     <DashboardLayout>
