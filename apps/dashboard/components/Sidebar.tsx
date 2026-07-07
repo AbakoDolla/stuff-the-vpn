@@ -11,47 +11,57 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { clearAuth } from '@/lib/auth';
+import { useLanguage } from '@/hooks/useLanguage';
 
 interface NavItem {
-  label: string;
+  labelKey: string;
   icon: React.ReactNode;
   href: string;
   section?: string;
 }
 
-const navItems: NavItem[] = [
+const getNavItems = (tr: Record<string, string>): NavItem[] => [
   // Vue d'ensemble
-  { label: 'Tableau de bord',   icon: <LayoutDashboard size={18} />, href: '/dashboard',              section: 'overview' },
-  { label: 'Statistiques',      icon: <BarChart2 size={18} />,       href: '/analytics',              section: 'overview' },
+  { labelKey: 'dashboard', icon: <LayoutDashboard size={18} />, href: '/dashboard', section: 'overview' },
+  { labelKey: 'analytics', icon: <BarChart2 size={18} />, href: '/analytics', section: 'overview' },
 
   // Utilisateurs & Accès
-  { label: 'Utilisateurs',      icon: <Users size={18} />,           href: '/dashboard/users',        section: 'users' },
-  { label: 'Appareils',         icon: <Smartphone size={18} />,      href: '/dashboard/devices-list', section: 'users' },
-  { label: 'Tokens mobiles',    icon: <Key size={18} />,             href: '/dashboard/tokens',       section: 'users' },
-  { label: 'Quotas & Données',  icon: <HardDrive size={18} />,       href: '/dashboard/quotas',       section: 'users' },
+  { labelKey: 'users', icon: <Users size={18} />, href: '/dashboard/users', section: 'users' },
+  { labelKey: 'devices', icon: <Smartphone size={18} />, href: '/dashboard/devices-list', section: 'users' },
+  { labelKey: 'tokens', icon: <Key size={18} />, href: '/dashboard/tokens', section: 'users' },
+  { labelKey: 'quotas', icon: <HardDrive size={18} />, href: '/dashboard/quotas', section: 'users' },
 
   // VPN
-  { label: 'Inbounds VPN',      icon: <Globe size={18} />,           href: '/dashboard/inbounds',     section: 'vpn' },
-  { label: 'Profils VPN',       icon: <Shield size={18} />,          href: '/dashboard/vpn',          section: 'vpn' },
-  { label: 'Serveurs',          icon: <Server size={18} />,          href: '/dashboard/servers',      section: 'vpn' },
+  { labelKey: 'inbounds', icon: <Globe size={18} />, href: '/dashboard/inbounds', section: 'vpn' },
+  { labelKey: 'vpnProfiles', icon: <Shield size={18} />, href: '/dashboard/vpn', section: 'vpn' },
+  { labelKey: 'servers', icon: <Server size={18} />, href: '/dashboard/servers', section: 'vpn' },
 
   // Commercial
-  { label: 'Licences',          icon: <Key size={18} />,             href: '/licenses',               section: 'commercial' },
-  { label: 'Vouchers',          icon: <Ticket size={18} />,          href: '/vouchers',               section: 'commercial' },
-  { label: 'Paiements',         icon: <CreditCard size={18} />,      href: '/dashboard/payments',     section: 'commercial' },
+  { labelKey: 'licenses', icon: <Key size={18} />, href: '/licenses', section: 'commercial' },
+  { labelKey: 'vouchers', icon: <Ticket size={18} />, href: '/vouchers', section: 'commercial' },
+  { labelKey: 'payments', icon: <CreditCard size={18} />, href: '/dashboard/payments', section: 'commercial' },
 
   // Admin
-  { label: 'Tickets support',   icon: <MessageSquare size={18} />,   href: '/dashboard/tickets',      section: 'admin' },
-  { label: 'Journaux d\'audit', icon: <FileText size={18} />,        href: '/dashboard/audit',        section: 'admin' },
-  { label: 'Paramètres',        icon: <Settings size={18} />,        href: '/dashboard/settings',     section: 'admin' },
+  { labelKey: 'tickets', icon: <MessageSquare size={18} />, href: '/dashboard/tickets', section: 'admin' },
+  { labelKey: 'audit', icon: <FileText size={18} />, href: '/dashboard/audit', section: 'admin' },
+  { labelKey: 'settings', icon: <Settings size={18} />, href: '/dashboard/settings', section: 'admin' },
 ];
 
-const sectionLabels: Record<string, string> = {
-  overview:   'Vue d\'ensemble',
-  users:      'Utilisateurs',
-  vpn:        'VPN',
-  commercial: 'Commercial',
-  admin:      'Administration',
+const sectionLabels: Record<string, Record<string, string>> = {
+  fr: {
+    overview: 'Vue d\'ensemble',
+    users: 'Utilisateurs',
+    vpn: 'VPN',
+    commercial: 'Commercial',
+    admin: 'Administration',
+  },
+  en: {
+    overview: 'Overview',
+    users: 'Users',
+    vpn: 'VPN',
+    commercial: 'Commercial',
+    admin: 'Administration',
+  },
 };
 
 interface SidebarProps {
@@ -63,6 +73,8 @@ interface SidebarProps {
 export function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
   const pathname = currentPath;
   const router = useRouter();
+  const { lang, tr } = useLanguage();
+  const navItems = getNavItems(tr);
 
   const handleLogout = () => {
     clearAuth();
@@ -101,7 +113,7 @@ export function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
           return (
             <div key={section}>
               <p className="px-2 mb-1 text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
-                {sectionLabels[section!] ?? section}
+                {sectionLabels[lang]?.[section!] ?? section}
               </p>
               <div className="space-y-0.5">
                 {items.map((item) => {
@@ -109,7 +121,7 @@ export function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
                     pathname === item.href ||
                     (item.href !== '/dashboard' && pathname.startsWith(item.href));
                   return (
-                    <Link key={item.label} href={item.href} onClick={onClose}>
+                    <Link key={item.labelKey} href={item.href} onClick={onClose}>
                       <motion.div
                         whileHover={{ x: 2 }}
                         whileTap={{ scale: 0.98 }}
@@ -120,7 +132,7 @@ export function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
                         }`}
                       >
                         <span className={isActive ? 'text-blue-400' : ''}>{item.icon}</span>
-                        <span className="text-sm font-medium">{item.label}</span>
+                        <span className="text-sm font-medium">{tr[item.labelKey] ?? item.labelKey}</span>
                         {isActive && (
                           <motion.div
                             layoutId="active-indicator"
