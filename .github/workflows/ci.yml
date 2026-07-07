@@ -32,7 +32,7 @@ jobs:
         run: npx prisma generate --schema=prisma/schema.prisma
       
       - name: Build workspace libs
-        run: pnpm --filter "@workspace/*" --filter "!@workspace/api-server" build
+        run: pnpm --filter "@workspace/api-zod" build
       - name: Build backend
         working-directory: apps/backend
         run: npm run build
