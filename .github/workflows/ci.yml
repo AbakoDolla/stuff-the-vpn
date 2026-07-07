@@ -27,10 +27,9 @@ jobs:
       - name: Generate Prisma client (backend)
         working-directory: apps/backend
         run: npx prisma generate
-      - name: Generate Prisma client (lib/db)
-        run: npx --yes --package=prisma prisma generate --schema=apps/backend/prisma/schema.prisma
-        env:
-          PRISMA_OUTPUT: lib/db/node_modules/@prisma/client
+      
+      - name: Generate Prisma client (root)
+        run: npx prisma generate --schema=prisma/schema.prisma
       - name: Build workspace libs
         run: pnpm --filter "@workspace/*" --filter "!@workspace/api-server" build
       - name: Build backend
