@@ -119,6 +119,8 @@
   /* ── Surface variants ────────────────────────────────────── */
   .bg-surface        { background: rgba(255,255,255,0.05); }
   .bg-surface-hover  { background: rgba(255,255,255,0.10); }
-  .bg-dark-100       { @apply bg-dark-50; }
-  .bg-dark-400       { @apply bg-dark; }
+  .bg-dark-100       { background-color: #1A1F2E; }
+  .bg-dark-400       { background-color: #0B0F19; }
+  .bg-dark-50        { background-color: #1A1F2E; }
+  .bg-dark           { background-color: #0B0F19; }
 }
