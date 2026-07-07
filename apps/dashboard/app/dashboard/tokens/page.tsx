@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Key, Copy, Check, X, Clock, AlertCircle } from 'lucide-react';
 import { Api } from '@/lib/api';
+import DashboardLayout from '@/components/DashboardLayout';
 
 interface Token {
   id: string;
@@ -121,6 +122,7 @@ export default function TokensPage() {
   };
 
   return (
+    <DashboardLayout>
     <motion.div
       variants={containerVariants}
       initial="hidden"
@@ -348,5 +350,6 @@ export default function TokensPage() {
         )}
       </motion.div>
     </motion.div>
+    </DashboardLayout>
   );
 }

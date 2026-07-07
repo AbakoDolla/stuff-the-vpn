@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Smartphone, Shield, ShieldOff, Trash2, History, AlertCircle, RefreshCw } from 'lucide-react';
 import { Api } from '@/lib/api';
+import DashboardLayout from '@/components/DashboardLayout';
 
 interface Device {
   id: string;
@@ -120,6 +121,7 @@ export default function DevicesPage() {
   };
 
   return (
+    <DashboardLayout>
     <motion.div
       variants={containerVariants}
       initial="hidden"
@@ -320,5 +322,6 @@ export default function DevicesPage() {
         )}
       </motion.div>
     </motion.div>
+    </DashboardLayout>
   );
 }
