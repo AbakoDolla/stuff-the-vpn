@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Backend runs on localhost:4000 on the same machine, or use VPS backend in production
 const BACKEND_BASE = (
-  process.env.BACKEND_URL ?? (
+  process.env.NEXT_PUBLIC_API_URL ??
+  process.env.BACKEND_URL ??
+  (
     process.env.NODE_ENV === 'production'
       ? 'https://vpnsxb.afrihall.com/api'
       : 'http://localhost:4000/api'
