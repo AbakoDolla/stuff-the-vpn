@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Backend runs on localhost:4000 on the same machine
+// Backend runs on localhost:4000 on the same machine, or use VPS backend in production
 const BACKEND_BASE = (
-  process.env.BACKEND_URL ?? 'http://localhost:4000/api'
+  process.env.BACKEND_URL ?? (
+    process.env.NODE_ENV === 'production'
+      ? 'https://vpnsxb.afrihall.com/api'
+      : 'http://localhost:4000/api'
+  )
 ).replace(/\/+$/, '');
 
 export async function proxyToBackend(request: NextRequest): Promise<NextResponse> {

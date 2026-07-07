@@ -56,7 +56,6 @@ export async function createProfile(req: AuthRequest, res: Response, next: NextF
         server: server || "vpnsxb.afrihall.com",
         port: port || 8443,
         protocol: protocol || "VLESS",
-        createdBy: req.user!.userId,
         admin: { connect: { id: req.user!.userId } },
         encryptedConfig,
         ...rest,
