@@ -244,7 +244,7 @@ class _SplashScreenState extends State<SplashScreen>
                     gradient: AppColors.primaryGradient,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.4),
+                        color: AppColors.primary.withOpacity(0.4),
                         blurRadius: 40,
                         spreadRadius: 10,
                       ),

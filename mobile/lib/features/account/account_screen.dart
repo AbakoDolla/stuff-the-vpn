@@ -270,7 +270,7 @@ class _AccountScreenState extends State<AccountScreen> {
     return Divider(
       height: 1,
       indent: AppSpacing.lg + AppSpacing.md + AppSpacing.iconMd,
-      color: AppColors.divider.withValues(alpha: 0.5),
+      color: AppColors.divider.withOpacity(0.5),
     );
   }
 

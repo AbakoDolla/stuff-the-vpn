@@ -4,13 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/mobile/**'
+      - 'mobile/**'
   workflow_dispatch:
     inputs:
       backend_url:
-        description: 'Backend API URL (e.g. http://185.x.x.x/api)'
+        description: 'Backend API URL (e.g. https://vpnsxb.afrihall.com/api)'
         required: false
-        default: 'http://localhost/api'
+        default: 'https://vpnsxb.afrihall.com/api'
 
 jobs:
   build-apk:
@@ -35,17 +35,17 @@ jobs:
           cache: true
 
       - name: Get Flutter dependencies
-        working-directory: apps/mobile
+        working-directory: mobile
         run: flutter pub get
 
       - name: Analyze Flutter project
-        working-directory: apps/mobile
+        working-directory: mobile
         run: flutter analyze --no-fatal-infos || true
 
       - name: Build release APK
-        working-directory: apps/mobile
+        working-directory: mobile
         run: |
-          BACKEND_URL="${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'http://localhost/api' }}"
+          BACKEND_URL="${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'https://vpnsxb.afrihall.com/api' }}"
           echo "Building with BACKEND_URL=$BACKEND_URL"
           flutter build apk --release --no-tree-shake-icons \
             --dart-define=BACKEND_URL="$BACKEND_URL"
@@ -54,13 +54,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sxb-vpn-release-apk
-          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
       - name: Build APK bundle (AAB) for Play Store
-        working-directory: apps/mobile
+        working-directory: mobile
         run: |
-          BACKEND_URL="${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'http://localhost/api' }}"
+          BACKEND_URL="${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'https://vpnsxb.afrihall.com/api' }}"
           flutter build appbundle --release --no-tree-shake-icons \
             --dart-define=BACKEND_URL="$BACKEND_URL"
 
@@ -68,5 +68,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sxb-vpn-release-aab
-          path: apps/mobile/build/app/outputs/bundle/release/app-release.aab
+          path: mobile/build/app/outputs/bundle/release/app-release.aab
           retention-days: 30

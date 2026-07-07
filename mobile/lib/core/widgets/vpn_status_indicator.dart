@@ -147,8 +147,8 @@ class _VpnStatusIndicatorState extends State<VpnStatusIndicator>
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  _statusColor.withValues(alpha: 0.15),
-                  _statusColor.withValues(alpha: 0.05),
+                  _statusColor.withOpacity(0.15),
+                  _statusColor.withOpacity(0.05),
                   Colors.transparent,
                 ],
                 stops: const [0.0, 0.5, 1.0],
@@ -163,12 +163,12 @@ class _VpnStatusIndicatorState extends State<VpnStatusIndicator>
                   shape: BoxShape.circle,
                   color: AppColors.surface,
                   border: Border.all(
-                    color: _statusColor.withValues(alpha: 0.3),
+                    color: _statusColor.withOpacity(0.3),
                     width: 3,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: _statusColor.withValues(alpha: 0.2),
+                      color: _statusColor.withOpacity(0.2),
                       blurRadius: 30,
                       spreadRadius: 5,
                     ),
@@ -351,10 +351,10 @@ class StatusBadge extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
         border: Border.all(
-          color: color.withValues(alpha: 0.3),
+          color: color.withOpacity(0.3),
           width: 1,
         ),
       ),

@@ -176,7 +176,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                       gradient: AppColors.primaryGradient,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.3),
+                          color: AppColors.primary.withOpacity(0.3),
                           blurRadius: 30,
                           spreadRadius: 5,
                         ),
@@ -226,7 +226,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                             Container(
                               padding: const EdgeInsets.all(AppSpacing.sm),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.15),
+                                color: AppColors.primary.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(
                                   AppSpacing.radiusSm,
                                 ),
@@ -261,7 +261,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                                     AppSpacing.radiusSm,
                                   ),
                                   border: Border.all(
-                                    color: AppColors.border.withValues(alpha: 0.5),
+                                    color: AppColors.border.withOpacity(0.5),
                                   ),
                                 ),
                                 child: Text(
@@ -284,7 +284,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                                     AppSpacing.radiusSm,
                                   ),
                                   border: Border.all(
-                                    color: AppColors.border.withValues(alpha: 0.5),
+                                    color: AppColors.border.withOpacity(0.5),
                                   ),
                                 ),
                                 child: const Icon(
@@ -332,12 +332,12 @@ class _ActivationScreenState extends State<ActivationScreen>
                           Container(
                             padding: const EdgeInsets.all(AppSpacing.md),
                             decoration: BoxDecoration(
-                              color: AppColors.error.withValues(alpha: 0.1),
+                              color: AppColors.error.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(
                                 AppSpacing.radiusMd,
                               ),
                               border: Border.all(
-                                color: AppColors.error.withValues(alpha: 0.3),
+                                color: AppColors.error.withOpacity(0.3),
                               ),
                             ),
                             child: Row(

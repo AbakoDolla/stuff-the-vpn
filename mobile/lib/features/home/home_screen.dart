@@ -186,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen>
           color: AppColors.surface,
           border: Border(
             top: BorderSide(
-              color: AppColors.border.withValues(alpha: 0.5),
+              color: AppColors.border.withOpacity(0.5),
               width: 1,
             ),
           ),
@@ -225,7 +225,7 @@ class _HomeScreenState extends State<HomeScreen>
         ),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.15)
+              ? AppColors.primary.withOpacity(0.15)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
@@ -347,7 +347,7 @@ class _HomeContentState extends State<_HomeContent>
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                       border: Border.all(
-                        color: AppColors.border.withValues(alpha: 0.5),
+                        color: AppColors.border.withOpacity(0.5),
                       ),
                     ),
                     child: const Icon(
@@ -381,8 +381,8 @@ class _HomeContentState extends State<_HomeContent>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        _getStatusColor(vpnStatus).withValues(alpha: 0.2),
-                        _getStatusColor(vpnStatus).withValues(alpha: 0.05),
+                        _getStatusColor(vpnStatus).withOpacity(0.2),
+                        _getStatusColor(vpnStatus).withOpacity(0.05),
                         Colors.transparent,
                       ],
                       stops: const [0.0, 0.5, 1.0],
@@ -396,12 +396,12 @@ class _HomeContentState extends State<_HomeContent>
                         shape: BoxShape.circle,
                         color: AppColors.surface,
                         border: Border.all(
-                          color: _getStatusColor(vpnStatus).withValues(alpha: 0.4),
+                          color: _getStatusColor(vpnStatus).withOpacity(0.4),
                           width: 3,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: _getStatusColor(vpnStatus).withValues(alpha: 0.2),
+                            color: _getStatusColor(vpnStatus).withOpacity(0.2),
                             blurRadius: 30,
                             spreadRadius: 5,
                           ),
@@ -547,7 +547,7 @@ class _HomeContentState extends State<_HomeContent>
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(
-          color: AppColors.border.withValues(alpha: 0.5),
+          color: AppColors.border.withOpacity(0.5),
         ),
       ),
       child: Row(

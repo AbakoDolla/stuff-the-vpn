@@ -104,8 +104,8 @@ class _SxbButtonState extends State<SxbButton>
                     : (isDisabled
                         ? LinearGradient(
                             colors: [
-                              AppColors.textTertiary.withValues(alpha: 0.3),
-                              AppColors.textTertiary.withValues(alpha: 0.3),
+                              AppColors.textTertiary.withOpacity(0.3),
+                              AppColors.textTertiary.withOpacity(0.3),
                             ],
                           )
                         : AppColors.primaryGradient)),
@@ -118,7 +118,7 @@ class _SxbButtonState extends State<SxbButton>
             border: widget.isOutlined
                 ? Border.all(
                     color: isDisabled
-                        ? AppColors.textTertiary.withValues(alpha: 0.3)
+                        ? AppColors.textTertiary.withOpacity(0.3)
                         : AppColors.border,
                     width: 1.5,
                   )
@@ -127,7 +127,7 @@ class _SxbButtonState extends State<SxbButton>
                 ? [
                     BoxShadow(
                       color: (_isPressed ? AppColors.primary : AppColors.primary)
-                          .withValues(alpha: _isPressed ? 0.4 : 0.3),
+                          .withOpacity(_isPressed ? 0.4 : 0.3),
                       blurRadius: _isPressed ? 8 : 16,
                       offset: Offset(0, _isPressed ? 2 : 6),
                     ),
@@ -258,7 +258,7 @@ class _SxbIconButtonState extends State<SxbIconButton>
             color: widget.backgroundColor ?? AppColors.surface,
             shape: BoxShape.circle,
             border: Border.all(
-              color: AppColors.border.withValues(alpha: 0.5),
+              color: AppColors.border.withOpacity(0.5),
               width: 1,
             ),
           ),

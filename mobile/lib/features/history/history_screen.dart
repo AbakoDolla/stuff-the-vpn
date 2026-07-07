@@ -79,7 +79,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           color: AppColors.surface,
                           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                           border: Border.all(
-                            color: AppColors.border.withValues(alpha: 0.5),
+                            color: AppColors.border.withOpacity(0.5),
                           ),
                         ),
                         child: Icon(
@@ -252,7 +252,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(
-          color: AppColors.border.withValues(alpha: 0.5),
+          color: AppColors.border.withOpacity(0.5),
         ),
       ),
       child: Row(
@@ -260,7 +260,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.15),
+              color: iconColor.withOpacity(0.15),
               borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
             ),
             child: Icon(

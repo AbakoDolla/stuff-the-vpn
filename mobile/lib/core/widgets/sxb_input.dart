@@ -121,7 +121,7 @@ class _SxbInputState extends State<SxbInput> with SingleTickerProviderStateMixin
                       ? [
                           BoxShadow(
                             color: (hasError ? AppColors.error : AppColors.primary)
-                                .withValues(alpha: 0.15),
+                                .withOpacity(0.15),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -208,7 +208,7 @@ class _SxbInputState extends State<SxbInput> with SingleTickerProviderStateMixin
                     disabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                       borderSide: BorderSide(
-                        color: AppColors.border.withValues(alpha: 0.5),
+                        color: AppColors.border.withOpacity(0.5),
                       ),
                     ),
                     counterText: '',
@@ -255,7 +255,7 @@ class SxbSearchInput extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+        border: Border.all(color: AppColors.border.withOpacity(0.5)),
       ),
       child: Row(
         children: [

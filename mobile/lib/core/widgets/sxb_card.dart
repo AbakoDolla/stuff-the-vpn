@@ -35,14 +35,14 @@ class SxbCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius ?? AppSpacing.radiusLg),
         border: hasBorder
             ? Border.all(
-                color: AppColors.border.withValues(alpha: 0.5),
+                color: AppColors.border.withOpacity(0.5),
                 width: 1,
               )
             : null,
         boxShadow: hasShadow
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
+                  color: Colors.black.withOpacity(0.2),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -96,10 +96,10 @@ class GlassContainer extends StatelessWidget {
       padding: padding ?? const EdgeInsets.all(AppSpacing.md),
       margin: margin,
       decoration: BoxDecoration(
-        color: backgroundColor ?? AppColors.surface.withValues(alpha: 0.6),
+        color: backgroundColor ?? AppColors.surface.withOpacity(0.6),
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
-          color: AppColors.border.withValues(alpha: 0.3),
+          color: AppColors.border.withOpacity(0.3),
           width: 1,
         ),
       ),
