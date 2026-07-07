@@ -155,21 +155,29 @@ export default function UsersPage() {
                     </td>
                     <td>
                       <div className="flex items-center gap-1.5">
-                        {u.status === 'ACTIVE' ? (
-                          <button onClick={() => statusMut.mutate({id:u.id, status:'SUSPENDED'})}
-                            className="text-yellow-400 hover:text-yellow-300" title="Suspendre">
-                            <Ban className="w-4 h-4"/>
-                          </button>
+                        {u.role === 'SUPER_ADMIN' ? (
+                          <span className="text-gray-500 text-xs px-2 py-1 bg-gray-800 rounded" title="Super Admin protégé">
+                            Protégé
+                          </span>
                         ) : (
-                          <button onClick={() => statusMut.mutate({id:u.id, status:'ACTIVE'})}
-                            className="text-emerald-400 hover:text-emerald-300" title="Activer">
-                            <CheckCircle className="w-4 h-4"/>
-                          </button>
+                          <>
+                            {u.status === 'ACTIVE' ? (
+                              <button onClick={() => statusMut.mutate({id:u.id, status:'SUSPENDED'})}
+                                className="text-yellow-400 hover:text-yellow-300" title="Suspendre">
+                                <Ban className="w-4 h-4"/>
+                              </button>
+                            ) : (
+                              <button onClick={() => statusMut.mutate({id:u.id, status:'ACTIVE'})}
+                                className="text-emerald-400 hover:text-emerald-300" title="Activer">
+                                <CheckCircle className="w-4 h-4"/>
+                              </button>
+                            )}
+                            <button onClick={() => {if(confirm('Supprimer cet utilisateur ?')) deleteMut.mutate(u.id);}}
+                              className="text-red-400 hover:text-red-300" title="Supprimer">
+                              <Trash2 className="w-4 h-4"/>
+                            </button>
+                          </>
                         )}
-                        <button onClick={() => {if(confirm('Supprimer cet utilisateur ?')) deleteMut.mutate(u.id);}}
-                          className="text-red-400 hover:text-red-300" title="Supprimer">
-                          <Trash2 className="w-4 h-4"/>
-                        </button>
                       </div>
                     </td>
                   </tr>

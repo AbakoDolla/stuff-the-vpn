@@ -107,11 +107,22 @@ import { omit } from "../utils/crypto.js";
   }
 
   export async function updateUser(id: string, data: Record<string, unknown>) {
+    const existingUser = await prisma.user.findUniqueOrThrow({ where: { id } });
+    if (existingUser.role === "SUPER_ADMIN" && data["role"] && data["role"] !== "SUPER_ADMIN") {
+      throw new Error("Cannot change role of SUPER_ADMIN users");
+    }
+    if (existingUser.role === "SUPER_ADMIN") {
+      delete data["role"];
+    }
     const user = await prisma.user.update({ where: { id }, data });
     return omit(user, ["password"]);
   }
 
   export async function setUserStatus(id: string, status: string) {
+    const existingUser = await prisma.user.findUniqueOrThrow({ where: { id } });
+    if (existingUser.role === "SUPER_ADMIN") {
+      throw new Error("Cannot change status of SUPER_ADMIN users");
+    }
     const user = await prisma.user.update({
       where: { id },
       data: { status: status as "ACTIVE" | "SUSPENDED" | "BANNED" },
@@ -136,6 +147,10 @@ import { omit } from "../utils/crypto.js";
   }
 
   export async function deleteUser(id: string) {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id } });
+    if (user.role === "SUPER_ADMIN") {
+      throw new Error("Cannot delete SUPER_ADMIN users");
+    }
     await prisma.user.update({
       where: { id },
       data: { deletedAt: new Date(), status: "BANNED" },
