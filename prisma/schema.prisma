@@ -1,6 +1,7 @@
 // schema.prisma — SXB VPN — Schéma complet v3
 
 generator client {
+  output   = "../../lib/db/node_modules/@prisma/client/.prisma/client"
   provider = "prisma-client-js"
 }
 

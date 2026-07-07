@@ -31,11 +31,6 @@ jobs:
       - name: Generate Prisma client (root)
         run: npx prisma generate --schema=prisma/schema.prisma
       
-      - name: Setup Prisma client for lib/db
-        run: |
-          mkdir -p lib/db/node_modules/.prisma/client
-          cp -r node_modules/.prisma/client/* lib/db/node_modules/.prisma/client/
-      
       - name: Build workspace libs
         run: pnpm --filter "@workspace/*" --filter "!@workspace/api-server" build
       - name: Build backend
