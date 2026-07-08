@@ -282,7 +282,7 @@ export default function TokensPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-surface-light">
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Token</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.tokens}</th>
                   <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.deviceId}</th>
                   <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.status}</th>
                   <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.expiresAt}</th>

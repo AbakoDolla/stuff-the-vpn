@@ -195,7 +195,7 @@ export default function DevicesPage() {
                   : 'bg-dark-200 text-gray-400 hover:bg-dark-300'
               }`}
             >
-              {status === 'ALL' ? 'Tous' : status.charAt(0) + status.slice(1).toLowerCase()}
+              {status === 'ALL' ? tr.allTokens : status.charAt(0) + status.slice(1).toLowerCase()}
             </button>
           ))}
         </div>
@@ -218,19 +218,19 @@ export default function DevicesPage() {
         ) : devices.length === 0 ? (
           <div className="bg-dark-200 rounded-xl p-12 text-center">
             <Smartphone size={48} className="mx-auto text-gray-600 mb-4" />
-            <p className="text-gray-400">Aucun appareil trouvé</p>
+            <p className="text-gray-400">{tr.noDevicesFound}</p>
           </div>
         ) : (
           <div className="bg-dark-200 rounded-xl border border-surface-light overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-surface-light">
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Appareil</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Utilisateur</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Statut</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Dernière Synchro</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Connexions</th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-gray-400">Actions</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.devices}</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.users}</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.status}</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.lastSync}</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.connections}</th>
+                  <th className="text-right px-6 py-4 text-sm font-medium text-gray-400">{tr.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -285,14 +285,14 @@ export default function DevicesPage() {
                             <button
                               onClick={() => updateDeviceStatus(device.id, 'DISABLED')}
                               className="p-2 hover:bg-yellow-500/10 rounded-lg transition-colors"
-                              title="Désactiver"
+                              title={tr.disable}
                             >
                               <Shield size={16} className="text-yellow-400" />
                             </button>
                             <button
                               onClick={() => blockDevice(device.id)}
                               className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
-                              title="Bloquer"
+                              title={tr.block}
                             >
                               <ShieldOff size={16} className="text-red-400" />
                             </button>
@@ -302,7 +302,7 @@ export default function DevicesPage() {
                           <button
                             onClick={() => updateDeviceStatus(device.id, 'ACTIVE')}
                             className="p-2 hover:bg-green-500/10 rounded-lg transition-colors"
-                            title="Réactiver"
+                            title={tr.enable}
                           >
                             <Shield size={16} className="text-green-400" />
                           </button>
@@ -310,7 +310,7 @@ export default function DevicesPage() {
                         <button
                           onClick={() => deleteDevice(device.id)}
                           className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
-                          title="Supprimer"
+                          title={tr.delete}
                         >
                           <Trash2 size={16} className="text-red-400" />
                         </button>
