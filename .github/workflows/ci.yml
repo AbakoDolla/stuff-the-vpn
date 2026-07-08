@@ -23,7 +23,7 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
       - name: Install workspace deps
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
       - name: Generate Prisma client (backend)
         working-directory: apps/backend
         run: npx prisma generate
