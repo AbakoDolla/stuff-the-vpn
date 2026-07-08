@@ -308,23 +308,16 @@ class _ActivationScreenState extends State<ActivationScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SxbInput(
-                          label: 'Token d\'activation',
-                          hint: 'Entrez votre token',
+                        TextFormField(
                           controller: _tokenController,
-                          prefixIcon: Icons.vpn_key_outlined,
+                          decoration: InputDecoration(
+                            labelText: "Token d'activation",
+                            hintText: 'Entrez votre token',
+                            prefixIcon: Icon(Icons.vpn_key_outlined),
+                          ),
                           enabled: !_isLoading,
                           textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _activateDevice(),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Veuillez entrer un token';
-                            }
-                            if (value.length < 8) {
-                              return 'Token invalide';
-                            }
-                            return null;
-                          },
+                          onFieldSubmitted: (_) => _activateDevice(),
                         ),
                         
                         if (_error != null) ...[

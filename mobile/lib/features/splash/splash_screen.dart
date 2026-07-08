@@ -4,7 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../services/services.dart';
-import 'activation_screen.dart';
+import '../activation/activation_screen.dart';
 import '../home/home_screen.dart';
 
 /// SXB VPN Splash Screen
@@ -27,6 +27,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   String _statusText = 'Initialisation...';
   double _progress = 0.0;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -40,7 +41,7 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    
+
     _textController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -79,32 +80,40 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _initialize() async {
-    // Lock orientation to portrait
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
+    try {
+      // Lock orientation to portrait
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
 
-    // Set status bar style
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ));
+      // Set status bar style
+      SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+      ));
 
-    // Start animations
-    _logoController.forward();
+      // Start animations
+      _logoController.forward();
 
-    // Simulate initialization steps
-    await _checkIntegrity();
-    await _checkDevice();
-    await _checkSession();
-    await _loadData();
+      // Simulate initialization steps
+      await _checkIntegrity();
+      await _checkDevice();
+      await _checkSession();
+      await _loadData();
 
-    // Show text
-    _textController.forward();
+      // Show text
+      _textController.forward();
 
-    // Navigate to appropriate screen
-    await _navigateToNextScreen();
+      // Navigate to appropriate screen
+      await _navigateToNextScreen();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+        });
+      }
+    }
   }
 
   Future<void> _checkIntegrity() async {
@@ -119,29 +128,33 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _checkSession() async {
     _updateStatus('Vérification de la session...', 0.55);
-    
-    // Check if device is already authorized
-    final deviceId = await StorageService.instance.getDeviceId();
-    final deviceToken = await StorageService.instance.getDeviceToken();
-    
-    if (deviceId != null && deviceToken != null) {
-      // Device is registered, check authorization
-      try {
-        final device = await ApiService.instance.checkDeviceAuthorization(deviceId);
-        if (device != null && device.isActive) {
-          await StorageService.instance.saveDevice(device);
-          ApiService.instance.setAuthToken(deviceToken);
+
+    try {
+      // Check if device is already authorized
+      final deviceId = await StorageService.instance.getDeviceId();
+      final deviceToken = await StorageService.instance.getDeviceToken();
+
+      if (deviceId != null && deviceToken != null) {
+        // Device is registered, check authorization
+        try {
+          final device = await ApiService.instance.checkDeviceAuthorization(deviceId);
+          if (device != null && device.isActive) {
+            await StorageService.instance.saveDevice(device);
+            ApiService.instance.setAuthToken(deviceToken);
+          }
+        } catch (e) {
+          // Continue with stored data
         }
-      } catch (e) {
-        // Continue with stored data
       }
+    } catch (e) {
+      // Continue without session check
     }
   }
 
   Future<void> _loadData() async {
     _updateStatus('Chargement des données...', 0.75);
     await Future.delayed(const Duration(milliseconds: 300));
-    
+
     // Load cached data if available
     try {
       await StorageService.instance.getUser();
@@ -168,28 +181,34 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     // Check if device is authorized
-    final deviceId = await StorageService.instance.getDeviceId();
-    final deviceToken = await StorageService.instance.getDeviceToken();
+    try {
+      final deviceId = await StorageService.instance.getDeviceId();
+      final deviceToken = await StorageService.instance.getDeviceToken();
 
-    if (deviceId != null && deviceToken != null) {
-      final device = await StorageService.instance.getDevice();
-      if (device != null && device.isActive) {
-        // Device is authorized, go to home
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const HomeScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
-        return;
+      if (deviceId != null && deviceToken != null) {
+        final device = await StorageService.instance.getDevice();
+        if (device != null && device.isActive) {
+          // Device is authorized, go to home
+          if (!mounted) return;
+          Navigator.of(context).pushReplacement(
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  const HomeScreen(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              transitionDuration: const Duration(milliseconds: 500),
+            ),
+          );
+          return;
+        }
       }
+    } catch (e) {
+      // Continue to activation
     }
 
     // Device not authorized, go to activation
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
@@ -223,7 +242,7 @@ class _SplashScreenState extends State<SplashScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(flex: 2),
-              
+
               // Logo
               AnimatedBuilder(
                 animation: _logoController,
@@ -241,7 +260,7 @@ class _SplashScreenState extends State<SplashScreen>
                   height: 120,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: AppColors.primaryGradient,
+                    color: Colors.white,
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.primary.withOpacity(0.4),
@@ -250,18 +269,28 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.shield_outlined,
-                      size: 60,
-                      color: AppColors.textPrimary,
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      fit: BoxFit.cover,
+                      width: 120,
+                      height: 120,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Icon(
+                            Icons.shield_outlined,
+                            size: 60,
+                            color: AppColors.primary,
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: AppSpacing.xl),
-              
+
               // App Name
               SlideTransition(
                 position: _textSlideAnimation,
@@ -288,9 +317,9 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
-              
+
               const Spacer(flex: 2),
-              
+
               // Progress indicator
               FadeTransition(
                 opacity: _textOpacityAnimation,
@@ -324,11 +353,21 @@ class _SplashScreenState extends State<SplashScreen>
                           color: AppColors.textTertiary,
                         ),
                       ),
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          _errorMessage!,
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.error,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ],
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: AppSpacing.giant),
             ],
           ),

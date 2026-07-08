@@ -67,7 +67,7 @@ class SxbCard extends StatelessWidget {
     }
 
     return margin != null
-        ? Padding(padding: margin, child: card)
+        ? Padding(padding: margin!, child: card)
         : card;
   }
 }

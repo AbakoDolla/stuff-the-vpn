@@ -49,6 +49,17 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
+// APK download
+app.get("/api/apk/download", (req, res) => {
+  const apkPath = "/home/ubuntu/sxbvpn-debug.apk";
+  res.download(apkPath, "sxbvpn-debug.apk", (err) => {
+    if (err) {
+      console.error("APK download error:", err);
+      res.status(500).json({ success: false, message: "APK not available" });
+    }
+  });
+});
+
 app.use("/api", router);
 
 // ─── 404 ─────────────────────────────────────────────────────────────────────

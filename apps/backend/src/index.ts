@@ -72,3 +72,14 @@ function shutdown(signal: string) {
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
+
+// APK download route
+app.get('/api/apk/download', (req, res) => {
+  const apkPath = '/home/ubuntu/sxbvpn-debug.apk';
+  res.download(apkPath, 'sxbvpn-debug.apk', (err) => {
+    if (err) {
+      console.error('APK download error:', err);
+      res.status(500).json({ success: false, message: 'APK not available' });
+    }
+  });
+});
