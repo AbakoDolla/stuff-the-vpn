@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       backend_url:
-        description: 'Backend API URL (e.g. https://vpnsxb.afrihall.com/api)'
+        description: 'Backend API URL'
         required: false
         default: 'https://vpnsxb.afrihall.com/api'
 
@@ -33,6 +33,7 @@ jobs:
           flutter-version: '3.24.5'
           channel: 'stable'
           cache: true
+          cache-dependency-path: 'mobile/pubspec.lock'
 
       - name: Get Flutter dependencies
         working-directory: mobile
@@ -44,29 +45,31 @@ jobs:
 
       - name: Build release APK
         working-directory: mobile
+        env:
+          BACKEND_URL: ${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'https://vpnsxb.afrihall.com/api' }}
         run: |
-          BACKEND_URL="${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'https://vpnsxb.afrihall.com/api' }}"
-          echo "Building with BACKEND_URL=$BACKEND_URL"
-          flutter build apk --release --no-tree-shake-icons \
+          echo "Building SXB VPN APK with BACKEND_URL=$BACKEND_URL"
+          flutter build apk --release \
             --dart-define=BACKEND_URL="$BACKEND_URL"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sxb-vpn-release-apk
+          name: sxb-vpn-release-apk-${{ github.run_number }}
           path: mobile/build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
+          retention-days: 7
 
-      - name: Build APK bundle (AAB) for Play Store
+      - name: Build APK bundle (AAB)
         working-directory: mobile
+        env:
+          BACKEND_URL: ${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'https://vpnsxb.afrihall.com/api' }}
         run: |
-          BACKEND_URL="${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'https://vpnsxb.afrihall.com/api' }}"
-          flutter build appbundle --release --no-tree-shake-icons \
+          flutter build appbundle --release \
             --dart-define=BACKEND_URL="$BACKEND_URL"
-
+	
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sxb-vpn-release-aab
+          name: sxb-vpn-release-aab-${{ github.run_number }}
           path: mobile/build/app/outputs/bundle/release/app-release.aab
-          retention-days: 30
+          retention-days: 7
