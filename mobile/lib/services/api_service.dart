@@ -4,23 +4,19 @@ import 'package:http/http.dart' as http;
 import '../models/models.dart';
 
 /// API Service for communicating with the SXB VPN backend
+/// Uses /api/mobile/* routes for mobile-specific endpoints
 class ApiService {
   // Use environment variable for security - this is obfuscated in release builds
   static String get _baseUrl {
-    // In debug mode, use localhost or env var
-    // In release, use the build-time injected URL
-    if (kDebugMode) {
-      return const String.fromEnvironment(
-        'BACKEND_URL',
-        defaultValue: 'https://vpnsxb.afrihall.com/api',
-      );
-    }
-    // In release, the URL is injected at build time
-    return const String.fromEnvironment(
+    final url = const String.fromEnvironment(
       'BACKEND_URL',
       defaultValue: 'https://vpnsxb.afrihall.com/api',
     );
+    return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
+
+  // Mobile API base URL
+  String get _mobileBase => '$_baseUrl/mobile';
   
   String? _authToken;
   static ApiService? _instance;
@@ -60,7 +56,7 @@ class ApiService {
 
   // ============ AUTHENTICATION ============
 
-  /// Activate a device with a token
+  /// Activate a device with a token (new cryptographic system)
   Future<Device> activateDevice({
     required String deviceId,
     required String token,
@@ -68,9 +64,12 @@ class ApiService {
     String? brand,
     String? model,
     String? osVersion,
+    String? appVersion,
+    String? phone,
+    String? email,
   }) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/devices/activate'),
+      Uri.parse('$_mobileBase/device/activate'),
       headers: _headers,
       body: jsonEncode({
         'deviceId': deviceId,
@@ -79,6 +78,31 @@ class ApiService {
         'brand': brand,
         'model': model,
         'osVersion': osVersion,
+        'appVersion': appVersion,
+        'phone': phone,
+        'email': email,
+      }),
+    );
+    
+    final data = await _handleResponse(response);
+    return Device.fromJson(data['data'] ?? data);
+  }
+
+  /// Activate with license token (legacy system)
+  Future<Device> activateLicense({
+    required String token,
+    required String deviceId,
+    String? deviceName,
+    String? phone,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_mobileBase/activate'),
+      headers: _headers,
+      body: jsonEncode({
+        'token': token,
+        'deviceId': deviceId,
+        'deviceName': deviceName,
+        'phone': phone,
       }),
     );
     
@@ -90,16 +114,28 @@ class ApiService {
   Future<Device?> checkDeviceAuthorization(String deviceId) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/devices/$deviceId/status'),
+        Uri.parse('$_mobileBase/subscription'),
         headers: _headers,
       );
       
-      if (response.statusCode == 404) {
+      if (response.statusCode == 401 || response.statusCode == 403) {
         return null;
       }
       
-      final data = await _handleResponse(response);
-      return Device.fromJson(data['data'] ?? data);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return Device.fromJson({
+          'id': deviceId,
+          'deviceId': deviceId,
+          'status': 'ACTIVE',
+          'connectionCount': 0,
+          'isCompromised': false,
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        });
+      }
+      
+      return null;
     } catch (e) {
       return null;
     }
@@ -109,38 +145,45 @@ class ApiService {
 
   /// Sync device data with backend
   Future<Map<String, dynamic>> syncDevice(String deviceId) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/devices/$deviceId/sync'),
+    final response = await http.get(
+      Uri.parse('$_mobileBase/sync'),
       headers: _headers,
     );
     
     return await _handleResponse(response);
   }
 
-  /// Get user quota information
-  Future<Quota> getQuota() async {
+  /// Get subscription status (combines user + quota info)
+  Future<Map<String, dynamic>> getSubscriptionStatus() async {
     final response = await http.get(
-      Uri.parse('$_baseUrl/quotas'),
+      Uri.parse('$_mobileBase/subscription'),
       headers: _headers,
     );
     
-    final data = await _handleResponse(response);
-    final quotas = data['data'] as List<dynamic>?;
-    if (quotas != null && quotas.isNotEmpty) {
-      return Quota.fromJson(quotas.first as Map<String, dynamic>);
-    }
-    throw ApiException('No quota data found', 404);
+    return await _handleResponse(response);
   }
 
   /// Get user profile
   Future<User> getUserProfile() async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/users/me'),
-      headers: _headers,
-    );
-    
-    final data = await _handleResponse(response);
-    return User.fromJson(data['data'] ?? data);
+    final sub = await getSubscriptionStatus();
+    return User.fromJson({
+      'id': sub['id'] ?? '',
+      'status': sub['status'] ?? 'ACTIVE',
+      'email': sub['email'],
+      'quotaTotalGB': sub['dataLimit'] ?? 0,
+      'quotaUsedGB': sub['dataUsed'] ?? 0,
+    });
+  }
+
+  /// Get user quota information
+  Future<Quota> getQuota() async {
+    final sub = await getSubscriptionStatus();
+    return Quota.fromJson({
+      'id': 'quota',
+      'totalGB': sub['dataLimit'] ?? 0,
+      'usedGB': sub['dataUsed'] ?? 0,
+      'status': sub['status'],
+    });
   }
 
   /// Get notifications
@@ -179,7 +222,7 @@ class ApiService {
   Future<VpnConfig?> getVpnConfig() async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/vpn/config'),
+        Uri.parse('$_mobileBase/config'),
         headers: _headers,
       );
       
@@ -188,7 +231,20 @@ class ApiService {
       }
       
       final data = await _handleResponse(response);
-      return VpnConfig.fromJson(data['data'] ?? data);
+      final profiles = data['data']?['profiles'] as List<dynamic>?;
+      if (profiles != null && profiles.isNotEmpty) {
+        final profile = profiles.first as Map<String, dynamic>;
+        return VpnConfig.fromJson({
+          'id': profile['id'] ?? '',
+          'protocol': profile['protocol'],
+          'serverAddress': profile['host'],
+          'serverPort': profile['port'],
+          'config': profile,
+          'remark': profile['remark'],
+          'isActive': true,
+        });
+      }
+      return null;
     } catch (e) {
       return null;
     }
@@ -210,13 +266,13 @@ class ApiService {
     }
     return 'Unknown';
   }
-
+	
   // ============ CONNECTION HISTORY ============
 
   /// Get connection history
   Future<List<ConnectionHistory>> getConnectionHistory({int limit = 50}) async {
     final response = await http.get(
-      Uri.parse('$_baseUrl/devices/history?limit=$limit'),
+      Uri.parse('$_mobileBase/logs?limit=$limit'),
       headers: _headers,
     );
     
@@ -227,12 +283,31 @@ class ApiService {
         .toList() ?? [];
   }
 
+  // ============ USAGE REPORTING ============
+
+  /// Report device usage
+  Future<void> reportUsage({
+    double? uploadMB,
+    double? downloadMB,
+    int? sessionDuration,
+    String? serverIp,
+  }) async {
+    await http.post(
+      Uri.parse('$_mobileBase/usage'),
+      headers: _headers,
+      body: jsonEncode({
+        if (uploadMB != null) 'uploadMB': uploadMB,
+        if (downloadMB != null) 'downloadMB': downloadMB,
+        if (sessionDuration != null) 'sessionDuration': sessionDuration,
+        if (serverIp != null) 'serverIp': serverIp,
+      }),
+    );
+  }
+
   // ============ APP INFO ============
 
   /// Get app version info
   Future<Map<String, dynamic>> getAppVersion() async {
-    // This would typically fetch from backend
-    // For now, return current version
     return {
       'version': '1.0.0',
       'buildNumber': 1,
