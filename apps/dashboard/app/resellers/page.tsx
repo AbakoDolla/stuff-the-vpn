@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
-import { api } from '@/lib/api';
+import { api, Api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { UserPlus, RefreshCw, DollarSign, TrendingUp } from 'lucide-react';
 
@@ -17,7 +17,7 @@ import { UserPlus, RefreshCw, DollarSign, TrendingUp } from 'lucide-react';
 
     const load = useCallback(async()=>{
       setLoading(true);
-      try { const r=await api.get('/resellers'); const arr=Array.isArray(r.data.data)?r.data.data:r.data.data?.items||r.data||[]; setResellers(arr); }
+      try { const r = await Api.getUsers({ limit: 100 }); setResellers((r.data as Reseller[]) ?? []);
       catch { setResellers([]); } finally { setLoading(false); }
     },[]);
     useEffect(()=>{load();},[load]);

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
-import { api } from '@/lib/api';
+import { api, Api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { Plus, RefreshCw, Trash2, Download, Copy, Check } from 'lucide-react';
 

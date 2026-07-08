@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
-import { api } from '@/lib/api';
+import { api, Api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { Plus, RefreshCw, Trash2, ToggleLeft, ToggleRight, Server, Eye, X } from 'lucide-react';
 
@@ -28,9 +28,8 @@ export default function ServersPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await api.get('/inbounds');
-      const arr = Array.isArray(r.data.data) ? r.data.data : r.data.data?.items || r.data || [];
-      setInbounds(arr);
+      const r = await Api.getInbounds();
+      setInbounds((r.data as Inbound[]) ?? []);
     } catch { setInbounds([]); } finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -47,8 +46,8 @@ export default function ServersPage() {
   async function testVpnConfig() {
     setTestLoading(true); setTestConfig(null);
     try {
-      const r = await api.get('/vpn/my-config');
-      const cfg = r.data.data;
+      const r = await Api.getVpnProfiles();
+      const cfg = (r.data as any);
       const text = typeof cfg === 'string' ? cfg : JSON.stringify(cfg, null, 2);
       setTestConfig(text);
     } catch (err: unknown) {

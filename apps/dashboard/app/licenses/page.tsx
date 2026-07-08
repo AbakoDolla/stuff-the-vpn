@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
-import { api } from '@/lib/api';
+import { api, Api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { Plus, RefreshCw, Copy, Check, ShieldOff, Key } from 'lucide-react';
 
@@ -29,9 +29,8 @@ export default function LicensesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await api.get('/licenses');
-      const arr = Array.isArray(r.data.data) ? r.data.data : r.data.data?.items || r.data || [];
-      setLicenses(arr);
+      const r = await Api.getLicenses();
+      setLicenses((r.data as License[]) ?? []);
     } catch { setLicenses([]); }
     finally { setLoading(false); }
   }, []);
