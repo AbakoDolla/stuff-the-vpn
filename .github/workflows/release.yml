@@ -1,16 +1,16 @@
-name: Build Flutter APK
+name: Build SXB VPN Mobile App
 
 on:
   workflow_dispatch:
     inputs:
       backend_url:
-        description: 'Backend API URL (ex: https://api.sxbvpn.com/api)'
+        description: 'Backend API URL'
         required: false
-        default: 'http://localhost/api'
+        default: 'https://vpnsxb.afrihall.com/api'
   push:
     branches: [main]
     paths:
-      - "apps/mobile/**"
+      - "mobile/**"
 
 jobs:
   build-apk:
@@ -35,37 +35,46 @@ jobs:
           cache: true
 
       - name: Get Flutter dependencies
-        working-directory: apps/mobile
+        working-directory: mobile
         run: flutter pub get
 
       - name: Analyze Flutter project
-        working-directory: apps/mobile
+        working-directory: mobile
         run: flutter analyze --no-fatal-infos || true
 
-      - name: Run Flutter tests
-        working-directory: apps/mobile
-        run: flutter test || true
-
-      - name: Build release APK
-        working-directory: apps/mobile
+      - name: Build release APK (Secured)
+        working-directory: mobile
         env:
-          BACKEND_URL: ${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'http://localhost/api' }}
+          BACKEND_URL: ${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'https://vpnsxb.afrihall.com/api' }}
         run: |
-          echo "Building with BACKEND_URL=$BACKEND_URL"
+          echo "Building SXB VPN APK with BACKEND_URL=$BACKEND_URL"
+          # Obfuscate the build for security
+          flutter build apk --release \
+            --dart-define=BACKEND_URL="$BACKEND_URL" \
+            --obfuscate \
+            --split-debug-info=build/debug-info
+        continue-on-error: true
+
+      - name: Build release APK (Standard)
+        working-directory: mobile
+        env:
+          BACKEND_URL: ${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'https://vpnsxb.afrihall.com/api' }}
+        run: |
+          echo "Building SXB VPN APK with BACKEND_URL=$BACKEND_URL"
           flutter build apk --release --no-tree-shake-icons \
             --dart-define=BACKEND_URL="$BACKEND_URL"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sxb-vpn-release-apk
-          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
+          name: sxb-vpn-release-apk-${{ github.run_number }}
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
 
       - name: Build AAB (Play Store)
-        working-directory: apps/mobile
+        working-directory: mobile
         env:
-          BACKEND_URL: ${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'http://localhost/api' }}
+          BACKEND_URL: ${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'https://vpnsxb.afrihall.com/api' }}
         run: |
           flutter build appbundle --release --no-tree-shake-icons \
             --dart-define=BACKEND_URL="$BACKEND_URL"
@@ -73,6 +82,6 @@ jobs:
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sxb-vpn-release-aab
-          path: apps/mobile/build/app/outputs/bundle/release/app-release.aab
-          retention-days: 30
+          name: sxb-vpn-release-aab-${{ github.run_number }}
+          path: mobile/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 7

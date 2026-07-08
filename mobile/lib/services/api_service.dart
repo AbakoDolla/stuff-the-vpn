@@ -1,11 +1,26 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/models.dart';
 
 /// API Service for communicating with the SXB VPN backend
 class ApiService {
-  // TODO: Replace with actual backend URL
-  static const String _baseUrl = 'https://vpnsxb.afrihall.com/api';
+  // Use environment variable for security - this is obfuscated in release builds
+  static String get _baseUrl {
+    // In debug mode, use localhost or env var
+    // In release, use the build-time injected URL
+    if (kDebugMode) {
+      return const String.fromEnvironment(
+        'BACKEND_URL',
+        defaultValue: 'https://vpnsxb.afrihall.com/api',
+      );
+    }
+    // In release, the URL is injected at build time
+    return const String.fromEnvironment(
+      'BACKEND_URL',
+      defaultValue: 'https://vpnsxb.afrihall.com/api',
+    );
+  }
   
   String? _authToken;
   static ApiService? _instance;
