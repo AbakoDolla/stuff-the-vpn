@@ -49,7 +49,7 @@ jobs:
           BACKEND_URL: ${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'https://vpnsxb.afrihall.com/api' }}
         run: |
           echo "Building SXB VPN APK with BACKEND_URL=$BACKEND_URL"
-          flutter build apk --release \
+          flutter build apk --release --no-tree-shake-icons \
             --dart-define=BACKEND_URL="$BACKEND_URL"
 
       - name: Upload APK artifact
@@ -64,7 +64,7 @@ jobs:
         env:
           BACKEND_URL: ${{ github.event.inputs.backend_url || vars.BACKEND_URL || 'https://vpnsxb.afrihall.com/api' }}
         run: |
-          flutter build appbundle --release \
+          flutter build appbundle --release --no-tree-shake-icons \
             --dart-define=BACKEND_URL="$BACKEND_URL"
 	
       - name: Upload AAB artifact
