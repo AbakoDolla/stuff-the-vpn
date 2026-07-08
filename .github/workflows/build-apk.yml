@@ -47,6 +47,7 @@ jobs:
         run: |
           mkdir -p mobile/assets/images
           cp apps/dashboard/public/logo.png mobile/assets/images/logo.png || echo "Logo not found"
+          ls -la mobile/assets/images/
 
       - name: Update pubspec.yaml
         run: |
@@ -55,19 +56,21 @@ jobs:
             echo '  assets:' >> mobile/pubspec.yaml
             echo '    - assets/images/' >> mobile/pubspec.yaml
           fi
-          cat mobile/pubspec.yaml | grep -A2 "flutter:"
+          cat mobile/pubspec.yaml | grep -A5 "flutter:"
 
       - name: Build APK
         run: |
           cd mobile
-          flutter build apk --debug
+          flutter build apk --debug 2>&1 | tee build.log
+          cat build.log
 
       - name: Verify build output
         run: |
-          ls -la mobile/build/app/outputs/flutter-apk/
+          ls -la mobile/build/app/outputs/flutter-apk/ || echo "Build output not found"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: sxbvpn-debug-apk
           path: mobile/build/app/outputs/flutter-apk/app-debug.apk
