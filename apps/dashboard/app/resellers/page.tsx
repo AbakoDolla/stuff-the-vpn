@@ -6,48 +6,88 @@ import { api, Api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { UserPlus, RefreshCw, DollarSign, TrendingUp } from 'lucide-react';
 
-  interface Reseller { id:string;name:string;balance:number;commission:number;createdAt:string;user?:{username:string;email:string}; }
+interface Reseller {
+  id: string;
+  name: string;
+  balance: number;
+  commission: number;
+  createdAt: string;
+  user?: { username: string; email: string };
+}
 
-  export default function ResellersPage() {
-    const [resellers, setResellers] = useState<Reseller[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [showCreate, setShowCreate] = useState(false);
-    const [creating, setCreating] = useState(false);
-    const [form, setForm] = useState({ username:'',email:'',password:'',name:'',commission:10 });
+export default function ResellersPage() {
+  const [resellers, setResellers] = useState<Reseller[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({ username: '', email: '', password: '', name: '', commission: 10 });
 
-    const load = useCallback(async()=>{
-      setLoading(true);
-      try { const r = await Api.getUsers({ limit: 100 }); setResellers((r.data as Reseller[]) ?? []);
-      catch { setResellers([]); } finally { setLoading(false); }
-    },[]);
-    useEffect(()=>{load();},[load]);
-
-    async function handleCreate(e:React.FormEvent){ e.preventDefault();setCreating(true);
-      try{await api.post('/resellers',form);setShowCreate(false);await load();}
-      catch(err:unknown){alert((err as {response?:{data?:{message?:string}}})?.response?.data?.message||'Erreur');}
-      finally{setCreating(false);}
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await Api.getUsers({ limit: 100 });
+      setResellers((r.data as Reseller[]) ?? []);
+    } catch {
+      setResellers([]);
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    const totalBalance = resellers.reduce((s,r)=>s+r.balance,0);
-    const avgCommission = resellers.length ? resellers.reduce((s,r)=>s+r.commission,0)/resellers.length : 0;
+  useEffect(() => {
+    load();
+  }, [load]);
 
-    const cols = [
-      {key:'name',label:'Revendeur',render:(r:Reseller)=>(
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      await api.post('/resellers', form);
+      setShowCreate(false);
+      await load();
+    } catch (err: unknown) {
+      alert((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  const totalBalance = resellers.reduce((s, r) => s + r.balance, 0);
+  const avgCommission = resellers.length ? resellers.reduce((s, r) => s + r.commission, 0) / resellers.length : 0;
+
+  const cols = [
+    {
+      key: 'name',
+      label: 'Revendeur',
+      render: (r: Reseller) => (
         <div>
           <div className="font-medium text-[#F1F5F9]">{r.name}</div>
-          <div className="text-xs text-[#64748B]">{r.user?.email||'—'}</div>
+          <div className="text-xs text-[#64748B]">{r.user?.email || '—'}</div>
         </div>
-      )},
-      {key:'balance',label:'Solde',render:(r:Reseller)=>(
+      ),
+    },
+    {
+      key: 'balance',
+      label: 'Solde',
+      render: (r: Reseller) => (
         <span className="font-mono text-emerald-400 font-medium">{r.balance.toFixed(2)} €</span>
-      )},
-      {key:'commission',label:'Commission',render:(r:Reseller)=>(
+      ),
+    },
+    {
+      key: 'commission',
+      label: 'Commission',
+      render: (r: Reseller) => (
         <span className="badge-info">{r.commission}%</span>
-      )},
-      {key:'createdAt',label:'Inscrit le',render:(r:Reseller)=><span className="text-xs text-[#64748B]">{formatDate(r.createdAt)}</span>},
-    ];
+      ),
+    },
+    {
+      key: 'createdAt',
+      label: 'Inscrit le',
+      render: (r: Reseller) => <span className="text-xs text-[#64748B]">{formatDate(r.createdAt)}</span>,
+    },
+  ];
 
-    return (
+  return (
       <DashboardLayout>
         <div className="space-y-6">
           <div className="flex items-center justify-between">
