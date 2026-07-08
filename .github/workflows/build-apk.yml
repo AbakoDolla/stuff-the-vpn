@@ -1,4 +1,4 @@
-name: Build APK
+name: Build & Download APK
 
 on:
   push:
@@ -11,18 +11,18 @@ on:
       - 'mobile/**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
-  build-debug-apk:
-    name: Build Debug APK
+  build-apk:
+    name: Build APK
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Clone submodules
-        run: |
-          git submodule update --init --recursive
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -38,107 +38,37 @@ jobs:
           cache: true
           cache-dependency-path: mobile/pubspec.lock
 
-      - name: Get dependencies
-        working-directory: ./mobile
-        run: flutter pub get
-
-      - name: Create assets directory
-        run: mkdir -p mobile/assets/images
-
-      - name: Copy logo
+      - name: Install dependencies
         run: |
-          if [ -f apps/dashboard/public/logo.png ]; then
-            cp apps/dashboard/public/logo.png mobile/assets/images/logo.png
-          else
-            echo Logo not found, creating placeholder
-          fi
+          cd mobile
+          flutter pub get
+
+      - name: Create assets directory and copy logo
+        run: |
+          mkdir -p mobile/assets/images
+          cp apps/dashboard/public/logo.png mobile/assets/images/logo.png || echo "Logo not found"
 
       - name: Update pubspec.yaml
         run: |
-          if ! grep -q assets: mobile/pubspec.yaml; then
-            cat >> mobile/pubspec.yaml << 'PUBSPEC'
-  assets:
-    - assets/images/
-PUBSPEC
+          if ! grep -q "assets:" mobile/pubspec.yaml; then
+            echo '' >> mobile/pubspec.yaml
+            echo '  assets:' >> mobile/pubspec.yaml
+            echo '    - assets/images/' >> mobile/pubspec.yaml
           fi
+          cat mobile/pubspec.yaml | grep -A2 "flutter:"
 
-      - name: Build debug APK
-        working-directory: ./mobile
-        run: flutter build apk --debug
+      - name: Build APK
+        run: |
+          cd mobile
+          flutter build apk --debug
+
+      - name: Verify build output
+        run: |
+          ls -la mobile/build/app/outputs/flutter-apk/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: sxbvpn-debug-apk
           path: mobile/build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 30
-
-  build-release-apk:
-    name: Build Release APK
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Clone submodules
-        run: |
-          git submodule update --init --recursive
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
-          channel: 'stable'
-          cache: true
-          cache-dependency-path: mobile/pubspec.lock
-
-      - name: Get dependencies
-        working-directory: ./mobile
-        run: flutter pub get
-
-      - name: Create assets directory
-        run: mkdir -p mobile/assets/images
-
-      - name: Copy logo
-        run: |
-          if [ -f apps/dashboard/public/logo.png ]; then
-            cp apps/dashboard/public/logo.png mobile/assets/images/logo.png
-          fi
-
-      - name: Update pubspec.yaml
-        run: |
-          if ! grep -q assets: mobile/pubspec.yaml; then
-            cat >> mobile/pubspec.yaml << 'PUBSPEC'
-  assets:
-    - assets/images/
-PUBSPEC
-          fi
-
-      - name: Build release APK
-        working-directory: ./mobile
-        run: flutter build apk --release
-        env:
-          BACKEND_URL: ${{ vars.BACKEND_URL }}
-
-      - name: Upload release APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sxbvpn-release-apk
-          path: mobile/build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 90
-
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v1
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        with:
-          files: mobile/build/app/outputs/flutter-apk/app-release.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          retention-days: 7
