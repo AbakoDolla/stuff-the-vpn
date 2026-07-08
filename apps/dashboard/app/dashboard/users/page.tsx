@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, Api } from '@/lib/api';
 import DashboardLayout from '@/components/DashboardLayout';
 import { toast } from 'sonner';
 import { Plus, Users, Search, Ban, CheckCircle, Trash2 } from 'lucide-react';
@@ -30,7 +30,7 @@ export default function UsersPage() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['users', search],
-    queryFn: () => api.get(`/users?search=${encodeURIComponent(search)}&limit=100`).then(r => r.data),
+    queryFn: () => Api.getUsers({ search, limit: 100 }),
     refetchInterval: 30_000,
   });
 

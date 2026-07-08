@@ -102,6 +102,25 @@ export const endpoints = {
 };
 
 // ── Typed fetch helper ────────────────────────────────────────────────────────
+
+// API Response wrapper types
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+  total?: number;
+  limit?: number;
+  offset?: number;
+  timestamp?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export async function apiFetch<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
   const url = `${BASE}${path}`;
   const headers: Record<string, string> = {
@@ -124,11 +143,46 @@ export async function apiFetch<T = unknown>(path: string, init: RequestInit = {}
     throw new Error("Unauthorized");
   }
 
-  const json = await res.json() as { success?: boolean; data?: T; error?: string; message?: string };
+  const json = await res.json() as ApiResponse<T> | { success?: boolean; error?: string; message?: string };
   if (!res.ok || json.success === false) {
-    throw new Error(json.error ?? json.message ?? "API error");
+    throw new Error((json as any).error ?? (json as any).message ?? "API error");
   }
-  return (json.data ?? json) as T;
+  return (json as ApiResponse<T>).data as T;
+}
+
+// Helper for paginated responses
+export async function apiFetchPaginated<T = unknown>(path: string, init: RequestInit = {}): Promise<PaginatedResponse<T>> {
+  const url = `${BASE}${path}`;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init.headers as Record<string, string>),
+  };
+
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(url, { ...init, headers });
+
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem("sxb_user");
+      document.cookie = "stv_token=; path=/; max-age=0";
+      window.location.href = "/login";
+    }
+    throw new Error("Unauthorized");
+  }
+
+  const json = await res.json() as ApiResponse<T[]>;
+  if (!res.ok || json.success === false) {
+    throw new Error(json.message ?? "API error");
+  }
+  return {
+    data: json.data as T[],
+    total: json.total ?? 0,
+    limit: json.limit ?? 50,
+    offset: json.offset ?? 0,
+  };
 }
 
 // ── Typed API namespace ───────────────────────────────────────────────────────
@@ -147,14 +201,15 @@ type NotifRecord = Record<string, unknown>;
 type SettingRecord = Record<string, unknown>;
 type AuditRecord = Record<string, unknown>;
 type TokenRecord = Record<string, unknown>;
+type DeviceRecord = Record<string, unknown>;
 
 export const Api = {
   // Stats
-  getStats: ()                         => apiFetch<Stats>("/admin/stats"),
+  getStats: () => apiFetch<Stats>("/admin/stats"),
 
   // Users
   getUsers: (p?: { limit?: number; page?: number; search?: string }) =>
-    apiFetch<UserRecord[]>(
+    apiFetchPaginated<UserRecord>(
       `/users?${new URLSearchParams(Object.entries(p ?? {}).filter(([,v]) => v != null).map(([k, v]) => [k, String(v)]))}`,
     ),
   getUser:     (id: string)             => apiFetch<UserRecord>(`/users/${id}`),
@@ -166,71 +221,71 @@ export const Api = {
   addQuota:    (id: string, gb: number) => apiFetch<UserRecord>(`/users/${id}/quota`, { method: "PATCH", body: JSON.stringify({ addGB: gb }) }),
 
   // Servers
-  getServers:  ()                       => apiFetch<ServerRecord[]>("/servers"),
+  getServers:  ()                       => apiFetchPaginated<ServerRecord>("/servers"),
   createServer: (data: unknown)         => apiFetch<ServerRecord>("/servers", { method: "POST", body: JSON.stringify(data) }),
   updateServer: (id: string, d: unknown)=> apiFetch<ServerRecord>(`/servers/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deleteServer: (id: string)            => apiFetch<void>(`/servers/${id}`, { method: "DELETE" }),
 
   // Inbounds
-  getInbounds:  ()                      => apiFetch<InboundRecord[]>("/inbounds"),
+  getInbounds:  ()                      => apiFetchPaginated<InboundRecord>("/inbounds"),
   createInbound:(data: unknown)         => apiFetch<InboundRecord>("/inbounds", { method: "POST", body: JSON.stringify(data) }),
   updateInbound:(id: string, d: unknown)=> apiFetch<InboundRecord>(`/inbounds/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deleteInbound:(id: string)            => apiFetch<void>(`/inbounds/${id}`, { method: "DELETE" }),
 
   // Quotas
   getQuotas: (params?: { limit?: number; page?: number; search?: string }) =>
-    apiFetch<QuotaRecord[]>(
+    apiFetchPaginated<QuotaRecord>(
       `/quotas?${new URLSearchParams(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]))}`,
     ),
   createQuota: (data: unknown)          => apiFetch<QuotaRecord>("/quotas", { method: "POST", body: JSON.stringify(data) }),
   resetQuota:  (id: string, data?: { totalGB?: number }) => apiFetch<QuotaRecord>(`/quotas/${id}/reset`, { method: "POST", body: JSON.stringify(data ?? {}) }),
 
   // VPN Templates
-  getVpnTemplates:   ()                 => apiFetch<VpnTemplateRecord[]>("/vpn-templates"),
+  getVpnTemplates:   ()                 => apiFetchPaginated<VpnTemplateRecord>("/vpn-templates"),
   createVpnTemplate: (d: unknown)       => apiFetch<VpnTemplateRecord>("/vpn-templates", { method: "POST", body: JSON.stringify(d) }),
   updateVpnTemplate: (id: string, d: unknown) => apiFetch<VpnTemplateRecord>(`/vpn-templates/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deleteVpnTemplate: (id: string)       => apiFetch<void>(`/vpn-templates/${id}`, { method: "DELETE" }),
 
   // VPN Profiles
-  getVpnProfiles:  ()                   => apiFetch<VpnProfileRecord[]>("/vpn-profiles"),
+  getVpnProfiles:  ()                   => apiFetchPaginated<VpnProfileRecord>("/vpn-profiles"),
   createProfile:   (data: unknown)      => apiFetch<VpnProfileRecord>("/vpn-profiles", { method: "POST", body: JSON.stringify(data) }),
   updateProfile:   (id: string, d: unknown) => apiFetch<VpnProfileRecord>(`/vpn-profiles/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deleteProfile:   (id: string)         => apiFetch<void>(`/vpn-profiles/${id}`, { method: "DELETE" }),
   publishProfile:  (id: string)         => apiFetch<VpnProfileRecord>(`/vpn-profiles/${id}/publish`, { method: "POST" }),
 
   // Licenses
-  getLicenses:     ()                   => apiFetch<LicenseRecord[]>("/licenses"),
+  getLicenses:     ()                   => apiFetchPaginated<LicenseRecord>("/licenses"),
   generateLicense: (data: unknown)      => apiFetch<LicenseRecord>("/licenses/generate", { method: "POST", body: JSON.stringify(data) }),
   revokeLicense:   (id: string)         => apiFetch<void>(`/licenses/revoke`, { method: "POST", body: JSON.stringify({ licenseId: id }) }),
 
   // Vouchers
-  getVouchers:     ()                   => apiFetch<VoucherRecord[]>("/vouchers"),
+  getVouchers:     ()                   => apiFetchPaginated<VoucherRecord>("/vouchers"),
   createVouchers:  (data: unknown)      => apiFetch<VoucherRecord[]>("/admin/bulk-generate", { method: "POST", body: JSON.stringify(data) }),
   revokeVoucher:   (id: string)         => apiFetch<void>(`/vouchers/${id}`, { method: "DELETE" }),
 
   // Tickets
-  getTickets:      ()                   => apiFetch<TicketRecord[]>("/tickets"),
+  getTickets:      ()                   => apiFetchPaginated<TicketRecord>("/tickets"),
   updateTicket:    (id: string, d: unknown) => apiFetch<TicketRecord>(`/tickets/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
 
   // Payments
-  getPayments:     ()                   => apiFetch<PaymentRecord[]>("/payments"),
+  getPayments:     ()                   => apiFetchPaginated<PaymentRecord>("/payments"),
   updatePayment:   (id: string, d: unknown) => apiFetch<PaymentRecord>(`/payments/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
 
   // Notifications
-  getNotifications:()                   => apiFetch<NotifRecord[]>("/notifications"),
+  getNotifications:()                   => apiFetchPaginated<NotifRecord>("/notifications"),
   createNotif:     (d: unknown)         => apiFetch<NotifRecord>("/notifications", { method: "POST", body: JSON.stringify(d) }),
   deleteNotif:     (id: string)         => apiFetch<void>(`/notifications/${id}`, { method: "DELETE" }),
 
   // Settings
-  getSettings:     ()                   => apiFetch<SettingRecord[]>("/settings"),
+  getSettings:     ()                   => apiFetchPaginated<SettingRecord>("/settings"),
   updateSetting:   (id: string, d: unknown) => apiFetch<SettingRecord>(`/settings/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
 
   // Audit
-  getAuditLogs:    ()                   => apiFetch<AuditRecord[]>("/audit"),
+  getAuditLogs:    ()                   => apiFetchPaginated<AuditRecord>("/audit"),
 
   // Tokens (activation tokens for mobile devices)
   getTokens: (p?: { status?: string; limit?: number }) =>
-    apiFetch<TokenRecord[]>(`/tokens?${new URLSearchParams(Object.entries(p ?? {}).filter(([,v]) => v != null).map(([k,v]) => [k, String(v)]))}`),
+    apiFetchPaginated<TokenRecord>(`/tokens?${new URLSearchParams(Object.entries(p ?? {}).filter(([,v]) => v != null).map(([k,v]) => [k, String(v)]))}`),
   generateToken: (deviceId: string) =>
     apiFetch<TokenRecord>("/tokens/generate", { method: "POST", body: JSON.stringify({ deviceId }) }),
   revokeToken: (id: string) =>
@@ -240,13 +295,13 @@ export const Api = {
 
   // Devices
   getDevices: (p?: { status?: string; search?: string; limit?: number }) =>
-    apiFetch<Record<string, unknown>[]>(`/devices?${new URLSearchParams(Object.entries(p ?? {}).filter(([,v]) => v != null).map(([k,v]) => [k, String(v)]))}`),
+    apiFetchPaginated<DeviceRecord>(`/devices?${new URLSearchParams(Object.entries(p ?? {}).filter(([,v]) => v != null).map(([k,v]) => [k, String(v)]))}`),
   getDevice: (id: string) =>
-    apiFetch<Record<string, unknown>>(`/devices/${id}`),
+    apiFetch<DeviceRecord>(`/devices/${id}`),
   updateDevice: (id: string, data: unknown) =>
-    apiFetch<Record<string, unknown>>(`/devices/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    apiFetch<DeviceRecord>(`/devices/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   blockDevice: (id: string, reason?: string) =>
-    apiFetch<Record<string, unknown>>(`/devices/${id}/block`, { method: "POST", body: JSON.stringify({ reason }) }),
+    apiFetch<DeviceRecord>(`/devices/${id}/block`, { method: "POST", body: JSON.stringify({ reason }) }),
   deleteDevice: (id: string) =>
     apiFetch<void>(`/devices/${id}`, { method: "DELETE" }),
 };

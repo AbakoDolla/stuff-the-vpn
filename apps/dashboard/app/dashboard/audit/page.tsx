@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { Shield, Search, RefreshCw } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, Api } from '@/lib/api';
 import DashboardLayout from '@/components/DashboardLayout';
 
 interface LogEntry { id:string; action:string; entity?:string; entityId?:string; ipAddress?:string; createdAt:string; user?:{username:string;email:string}; details?: Record<string,unknown> }
@@ -20,7 +20,7 @@ export default function AuditPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { const r=await api.get('/audit?limit=100'); setLogs(r.data.data??[]); } catch{}finally{setLoading(false);}
+    try { const r=await api.get('/audit?limit=100'); setLogs(r.data??[]); } catch{}finally{setLoading(false);}
   },[]);
 
   useEffect(()=>{load();},[load]);

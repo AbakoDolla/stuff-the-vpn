@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Key, Plus, Eye, EyeOff, Trash2, Copy } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, Api } from '@/lib/api';
 import DashboardLayout from '@/components/DashboardLayout';
 
 interface ApiKeyData { id:string; name:string; keyPrefix:string; isActive:boolean; lastUsedAt?:string; createdAt:string; rawKey?:string }
@@ -13,12 +13,24 @@ export default function ApiKeysPage() {
   const [name, setName] = useState('');
   const [revealed, setRevealed] = useState<ApiKeyData | null>(null);
 
-  const load = async () => { try{const r=await api.get('/api-keys');setKeys(r.data.data??[]);}catch{}finally{setLoading(false);} };
+  const load = async () => { 
+    try {
+      const r = await Api.getSettings();
+      setKeys((r.data as ApiKeyData[]) ?? []);
+    } catch {} 
+    finally { setLoading(false); } 
+  };
   useEffect(()=>{load();},[]);
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
-    try { const r=await api.post('/api-keys',{name}); setRevealed(r.data.data); setShowModal(false); setName(''); await load(); }
+    try { 
+      const r = await api.post('/api-keys',{name}); 
+      setRevealed((r.data as any).data); 
+      setShowModal(false); 
+      setName(''); 
+      await load(); 
+    }
     catch(err: unknown){alert((err as {response?:{data?:{message?:string}}})?.response?.data?.message??'Erreur');}
   };
 

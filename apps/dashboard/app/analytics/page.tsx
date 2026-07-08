@@ -27,8 +27,8 @@ export default function AnalyticsPage() {
     try {
       const [s, u] = await Promise.all([
         Api.getStats() as Promise<StatsData>,
-        Api.getUsers({ limit: 100 }).then((r: { users?: typeof users; data?: typeof users } | typeof users) =>
-          Array.isArray(r) ? r : (r as { users?: typeof users; data?: typeof users }).users ?? (r as { data?: typeof users }).data ?? []
+        Api.getUsers({ limit: 100 }).then((r) =>
+          r.data ?? []
         ).catch(() => [] as typeof users),
       ]);
       setStats(s);

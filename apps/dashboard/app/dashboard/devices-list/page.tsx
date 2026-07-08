@@ -47,8 +47,8 @@ export default function DevicesPage() {
       const params: any = { limit: 100 };
       if (filter !== 'ALL') params.status = filter;
       if (search) params.search = search;
-      const data = await Api.getDevices(params);
-      setDevices(data.devices || data || []);
+      const result = await Api.getDevices(params);
+      setDevices(result.data || []);
     } catch (err: any) {
       setError(err.message || tr.errorLoading);
     } finally {

@@ -19,6 +19,10 @@ interface DataTableProps<T> {
   searchable?: boolean;
   searchPlaceholder?: string;
   onRowClick?: (item: T) => void;
+  loading?: boolean;
+  emptyMessage?: string;
+  actions?: (item: T) => React.ReactNode;
+  searchKeys?: string[];
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -28,6 +32,10 @@ export function DataTable<T extends Record<string, any>>({
   searchable = true,
   searchPlaceholder = 'Rechercher...',
   onRowClick,
+  loading = false,
+  emptyMessage = 'Aucune donnée disponible',
+  actions,
+  searchKeys,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -35,11 +43,19 @@ export function DataTable<T extends Record<string, any>>({
   const [page, setPage] = useState(1);
 
   // Filter
-  const filtered = data.filter((item) =>
-    Object.values(item).some((val) =>
-      String(val).toLowerCase().includes(search.toLowerCase())
-    )
-  );
+  const filtered = data.filter((item) => {
+    if (!search) return true;
+    const searchLower = search.toLowerCase();
+    if (searchKeys && searchKeys.length > 0) {
+      return searchKeys.some(key => {
+        const val = item[key];
+        return val != null && String(val).toLowerCase().includes(searchLower);
+      });
+    }
+    return Object.values(item).some((val) =>
+      val != null && String(val).toLowerCase().includes(searchLower)
+    );
+  });
 
   // Sort
   const sorted = [...filtered].sort((a, b) => {

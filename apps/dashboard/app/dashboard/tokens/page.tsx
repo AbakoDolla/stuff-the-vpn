@@ -42,8 +42,8 @@ export default function TokensPage() {
     try {
       const params: any = { limit: 100 };
       if (filter !== 'ALL') params.status = filter;
-      const data = await Api.getTokens(params);
-      setTokens(data.tokens || data || []);
+      const result = await Api.getTokens(params);
+      setTokens(result.data || []);
     } catch (err: any) {
       setError(err.message || tr.errorLoading);
     } finally {
