@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Backend runs on localhost:4000 on the same machine, or use VPS backend in production
+// For production, we use relative paths to go through Next.js API routes (proxy)
 const BACKEND_BASE = (
-  process.env.NEXT_PUBLIC_API_URL ??
-  process.env.BACKEND_URL ??
-  (
-    process.env.NODE_ENV === 'production'
-      ? 'https://vpnsxb.afrihall.com/api'
-      : 'http://localhost:4000/api'
-  )
+  process.env.NODE_ENV === 'production'
+    ? 'https://vpnsxb.afrihall.com'
+    : process.env.BACKEND_URL ?? 'http://localhost:4000'
 ).replace(/\/+$/, '');
 
 export async function proxyToBackend(request: NextRequest): Promise<NextResponse> {

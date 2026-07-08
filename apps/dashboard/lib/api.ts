@@ -4,9 +4,13 @@
 // which then forward to the backend (localhost:4000) server-side.
 // This avoids CORS issues and works in both dev and production.
 function getBase(): string {
+  // In production, always use relative path - API routes handle the proxy
+  // In development, can use BACKEND_URL if set
+  if (process.env.NODE_ENV === 'production') {
+    return "/api";
+  }
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
   if (envUrl) return envUrl.replace(/\/+$/, "");
-  // Always use relative path from browser — Next.js API routes handle the proxy
   return "/api";
 }
 
