@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Smartphone, Shield, ShieldOff, Trash2, History, AlertCircle, RefreshCw } from 'lucide-react';
 import { Api } from '@/lib/api';
+import { useLanguage } from '@/hooks/useLanguage';
 import DashboardLayout from '@/components/DashboardLayout';
 
 interface Device {
@@ -28,6 +29,7 @@ interface Device {
 }
 
 export default function DevicesPage() {
+  const { tr } = useLanguage();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,7 @@ export default function DevicesPage() {
       const data = await Api.getDevices(params);
       setDevices(data.devices || data || []);
     } catch (err: any) {
-      setError(err.message || 'Erreur lors du chargement des appareils');
+      setError(err.message || tr.errorLoading);
     } finally {
       setLoading(false);
     }
@@ -59,27 +61,27 @@ export default function DevicesPage() {
       await Api.updateDevice(id, { status });
       fetchDevices();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la mise à jour');
+      alert(err.message || tr.errorUpdating);
     }
   };
 
   const blockDevice = async (id: string) => {
-    const reason = prompt('Raison du blocage (optionnel):');
+    const reason = prompt('Reason (optional):');
     try {
       await Api.blockDevice(id, reason || undefined);
       fetchDevices();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors du blocage');
+      alert(err.message || tr.errorBlocking);
     }
   };
 
   const deleteDevice = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet appareil ?')) return;
+    if (!confirm(tr.deleteDevice)) return;
     try {
       await Api.deleteDevice(id);
       fetchDevices();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la suppression');
+      alert(err.message || tr.errorDeleting);
     }
   };
 
@@ -131,9 +133,9 @@ export default function DevicesPage() {
       {/* Header */}
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Appareils</h1>
+          <h1 className="text-2xl font-bold text-white">{tr.devices}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Gérez les appareils enregistrés et leurs activations
+            {tr.devices}
           </p>
         </div>
         <button
@@ -141,30 +143,30 @@ export default function DevicesPage() {
           className="btn-secondary flex items-center gap-2"
         >
           <RefreshCw size={18} />
-          Actualiser
+          {tr.refresh}
         </button>
       </motion.div>
 
       {/* Stats */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-dark-200 rounded-xl p-4 border border-surface-light">
-          <p className="text-gray-400 text-sm">Total Appareils</p>
+          <p className="text-gray-400 text-sm">{tr.totalDevices}</p>
           <p className="text-2xl font-bold text-white">{devices.length}</p>
         </div>
         <div className="bg-dark-200 rounded-xl p-4 border border-surface-light">
-          <p className="text-gray-400 text-sm">Actifs</p>
+          <p className="text-gray-400 text-sm">{tr.activeDevices}</p>
           <p className="text-2xl font-bold text-green-400">
             {devices.filter((d) => d.status === 'ACTIVE').length}
           </p>
         </div>
         <div className="bg-dark-200 rounded-xl p-4 border border-surface-light">
-          <p className="text-gray-400 text-sm">Désactivés</p>
+          <p className="text-gray-400 text-sm">{tr.disabledDevices}</p>
           <p className="text-2xl font-bold text-yellow-400">
             {devices.filter((d) => d.status === 'DISABLED').length}
           </p>
         </div>
         <div className="bg-dark-200 rounded-xl p-4 border border-surface-light">
-          <p className="text-gray-400 text-sm">Bloqués</p>
+          <p className="text-gray-400 text-sm">{tr.blockedDevices}</p>
           <p className="text-2xl font-bold text-red-400">
             {devices.filter((d) => d.status === 'BLOCKED' || d.isCompromised).length}
           </p>
@@ -178,7 +180,7 @@ export default function DevicesPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher par ID, nom, marque..."
+            placeholder={tr.search}
             className="w-full bg-dark-200 border border-surface-light rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
           />
         </div>

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Key, Copy, Check, X, Clock, AlertCircle } from 'lucide-react';
+import { Key, Copy, Check, X, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import { Api } from '@/lib/api';
+import { useLanguage } from '@/hooks/useLanguage';
 import DashboardLayout from '@/components/DashboardLayout';
 
 interface Token {
@@ -21,6 +22,7 @@ interface Token {
 }
 
 export default function TokensPage() {
+  const { tr } = useLanguage();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export default function TokensPage() {
       const data = await Api.getTokens(params);
       setTokens(data.tokens || data || []);
     } catch (err: any) {
-      setError(err.message || 'Erreur lors du chargement des tokens');
+      setError(err.message || tr.errorLoading);
     } finally {
       setLoading(false);
     }
@@ -51,14 +53,14 @@ export default function TokensPage() {
 
   const generateToken = async () => {
     if (!deviceIdInput.trim()) {
-      alert('Veuillez entrer un Device ID');
+      alert(tr.enterDeviceId);
       return;
     }
     
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(deviceIdInput)) {
-      alert('Le Device ID doit être un UUID valide');
+      alert(tr.invalidUuid);
       return;
     }
 
@@ -68,17 +70,17 @@ export default function TokensPage() {
       setDeviceIdInput('');
       fetchTokens();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la génération du token');
+      alert(err.message || tr.errorCreating);
     }
   };
 
   const revokeToken = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir révoquer ce token ?')) return;
+    if (!confirm(tr.revokeToken)) return;
     try {
       await Api.revokeToken(id);
       fetchTokens();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de la révocation');
+      alert(err.message || tr.errorRevoking);
     }
   };
 
@@ -132,9 +134,9 @@ export default function TokensPage() {
       {/* Header */}
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Tokens d&apos;Activation</h1>
+          <h1 className="text-2xl font-bold text-white">{tr.activationTokens}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Générez des tokens cryptographiques pour activer les appareils
+            {tr.generateToken}
           </p>
         </div>
         <button
@@ -142,7 +144,7 @@ export default function TokensPage() {
           className="btn-primary flex items-center gap-2"
         >
           <Key size={18} />
-          Générer Token
+          {tr.generate}
         </button>
       </motion.div>
 
@@ -160,12 +162,12 @@ export default function TokensPage() {
             className="bg-dark-100 border border-surface-light rounded-xl p-6 w-full max-w-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold text-white mb-4">Générer un Token</h2>
+            <h2 className="text-lg font-bold text-white mb-4">{tr.generateToken}</h2>
             
             {newToken ? (
               <div className="space-y-4">
                 <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                  <p className="text-green-400 text-sm mb-2">Token généré avec succès !</p>
+                  <p className="text-green-400 text-sm mb-2">{tr.tokenGenerated}</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 bg-dark-200 rounded px-3 py-2 text-sm text-gray-300 break-all">
                       {newToken.token}
@@ -183,21 +185,21 @@ export default function TokensPage() {
                   </div>
                 </div>
                 <div className="text-sm text-gray-400">
-                  <p>• Device ID: <span className="text-white font-mono">{newToken.deviceId}</span></p>
-                  <p>• Expire le: {formatDate(newToken.parsedExpiresAt || newToken.expiresAt)}</p>
+                  <p>• {tr.deviceId}: <span className="text-white font-mono">{newToken.deviceId}</span></p>
+                  <p>• {tr.expiresAt}: {formatDate(newToken.parsedExpiresAt || newToken.expiresAt)}</p>
                 </div>
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setNewToken(null); setDeviceIdInput(''); }}
                     className="flex-1 btn-secondary"
                   >
-                    Générer un autre
+                    {tr.generate}
                   </button>
                   <button
                     onClick={() => { setShowGenerator(false); setNewToken(null); }}
                     className="flex-1 btn-primary"
                   >
-                    Fermer
+                    {tr.cancel}
                   </button>
                 </div>
               </div>
@@ -205,17 +207,17 @@ export default function TokensPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">
-                    Device ID (UUID)
+                    {tr.deviceUuid}
                   </label>
                   <input
                     type="text"
                     value={deviceIdInput}
                     onChange={(e) => setDeviceIdInput(e.target.value)}
-                    placeholder="ex: 550e8400-e29b-41d4-a716-446655440000"
+                    placeholder={tr.deviceUuidPlaceholder}
                     className="w-full bg-dark-200 border border-surface-light rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
                   />
                   <p className="text-xs text-gray-500 mt-2">
-                    L&apos;ID unique de l&apos;appareil généré par l&apos;application mobile
+                    {tr.deviceUuidHelp}
                   </p>
                 </div>
                 <div className="flex gap-3">
@@ -223,14 +225,14 @@ export default function TokensPage() {
                     onClick={() => setShowGenerator(false)}
                     className="flex-1 btn-secondary"
                   >
-                    Annuler
+                    {tr.cancel}
                   </button>
                   <button
                     onClick={generateToken}
                     className="flex-1 btn-primary flex items-center justify-center gap-2"
                   >
                     <Key size={18} />
-                    Générer
+                    {tr.generate}
                   </button>
                 </div>
               </div>
@@ -251,7 +253,7 @@ export default function TokensPage() {
                 : 'bg-dark-200 text-gray-400 hover:bg-dark-300'
             }`}
           >
-            {status === 'ALL' ? 'Tous' : status.charAt(0) + status.slice(1).toLowerCase()}
+            {status === 'ALL' ? tr.allTokens : status.charAt(0) + status.slice(1).toLowerCase()}
           </button>
         ))}
       </motion.div>
@@ -273,7 +275,7 @@ export default function TokensPage() {
         ) : tokens.length === 0 ? (
           <div className="bg-dark-200 rounded-xl p-12 text-center">
             <Key size={48} className="mx-auto text-gray-600 mb-4" />
-            <p className="text-gray-400">Aucun token trouvé</p>
+            <p className="text-gray-400">{tr.noTokensFound}</p>
           </div>
         ) : (
           <div className="bg-dark-200 rounded-xl border border-surface-light overflow-hidden">
@@ -281,11 +283,11 @@ export default function TokensPage() {
               <thead>
                 <tr className="border-b border-surface-light">
                   <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Token</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Device ID</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Statut</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Expire</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Créé par</th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-gray-400">Actions</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.deviceId}</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.status}</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.expiresAt}</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">{tr.createdBy}</th>
+                  <th className="text-right px-6 py-4 text-sm font-medium text-gray-400">{tr.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -335,7 +337,7 @@ export default function TokensPage() {
                           <button
                             onClick={() => revokeToken(token.id)}
                             className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
-                            title="Révoquer"
+                            title={tr.delete}
                           >
                             <X size={16} className="text-red-400" />
                           </button>

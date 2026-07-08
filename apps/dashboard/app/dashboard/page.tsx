@@ -8,6 +8,7 @@ import {
   Key, Zap,
 } from 'lucide-react';
 import { Api } from '@/lib/api';
+import { useLanguage } from '@/hooks/useLanguage';
 import DashboardLayout from '@/components/DashboardLayout';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -64,21 +65,22 @@ function ActivityIcon({ action }: { action: string }) {
   return <Activity size={14} className="text-gray-400" />;
 }
 
-function formatAction(action: string): string {
+function formatAction(action: string, tr: Record<string, string>): string {
   const map: Record<string, string> = {
-    USER_LOGIN:     'Connexion utilisateur',
-    USER_CREATE:    'Utilisateur créé',
-    USER_DELETE:    'Utilisateur supprimé',
-    USER_SUSPEND:   'Utilisateur suspendu',
-    DEVICE_BLOCK:   'Appareil bloqué',
-    DEVICE_CREATE:  'Appareil activé',
-    TOKEN_GENERATE: 'Token généré',
-    TOKEN_REVOKE:   'Token révoqué',
-    QUOTA_UPDATE:   'Quota mis à jour',
-    LICENSE_CREATE: 'Licence créée',
-    INBOUND_CREATE: 'Inbound créé',
+    USER_LOGIN:     'userLogin',
+    USER_CREATE:    'userCreated',
+    USER_DELETE:    'userDeleted',
+    USER_SUSPEND:   'userSuspended',
+    DEVICE_BLOCK:   'deviceBlocked',
+    DEVICE_CREATE:  'deviceCreated',
+    TOKEN_GENERATE: 'tokenGeneratedAction',
+    TOKEN_REVOKE:   'tokenRevoked',
+    QUOTA_UPDATE:   'quotaUpdated',
+    LICENSE_CREATE: 'licenseCreated',
+    INBOUND_CREATE: 'inboundCreated',
   };
-  return map[action] ?? action.replace(/_/g, ' ').toLowerCase();
+  const key = map[action];
+  return key ? (tr[key] ?? action.replace(/_/g, ' ').toLowerCase()) : action.replace(/_/g, ' ').toLowerCase();
 }
 
 function formatGB(gb: number): string {
@@ -88,6 +90,8 @@ function formatGB(gb: number): string {
 }
 
 export default function DashboardPage() {
+  const { tr } = useLanguage();
+  
   const { data: stats, isLoading: statsLoading, refetch } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: () => Api.getStats(),
@@ -123,48 +127,48 @@ export default function DashboardPage() {
         {/* Header */}
         <motion.div variants={item} className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white">Tableau de bord</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Vue d&apos;ensemble du système SXB VPN</p>
+            <h1 className="text-xl font-bold text-white">{tr.dashboard}</h1>
+            <p className="text-xs text-gray-500 mt-0.5">{tr.systemOverview}</p>
           </div>
           <button
             onClick={() => refetch()}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all text-xs"
           >
             <RefreshCw size={13} />
-            Actualiser
+            {tr.refresh}
           </button>
         </motion.div>
 
         {/* Stats Row */}
         <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
-            title="Utilisateurs actifs"
+            title={tr.activeUsers}
             value={isLoading ? '—' : activeUsers.toLocaleString('fr-FR')}
-            sub={isLoading ? '' : `${totalUsers.toLocaleString('fr-FR')} au total`}
+            sub={isLoading ? '' : `${totalUsers.toLocaleString('fr-FR')} ${tr.totalUsers}`}
             icon={Users}
             color="blue"
             loading={isLoading}
           />
           <StatCard
-            title="Appareils enregistrés"
+            title={tr.registeredDevices}
             value={isLoading ? '—' : totalDevices.toLocaleString('fr-FR')}
-            sub={isLoading ? '' : `${activeDevices} actifs`}
+            sub={isLoading ? '' : `${activeDevices} ${tr.active}`}
             icon={Smartphone}
             color="green"
             loading={isLoading}
           />
           <StatCard
-            title="Données utilisées (total)"
+            title={tr.dataUsed}
             value={isLoading ? '—' : formatGB(totalBandGB)}
-            sub={isLoading ? '' : `Aujourd'hui : ${formatGB(todayBandGB)}`}
+            sub={isLoading ? '' : `${tr.todayData} ${formatGB(todayBandGB)}`}
             icon={HardDrive}
             color="purple"
             loading={isLoading}
           />
           <StatCard
-            title="Licences actives"
+            title={tr.activeLicenses}
             value={isLoading ? '—' : activeLic.toLocaleString('fr-FR')}
-            sub={isLoading ? '' : 'Appareils autorisés'}
+            sub={isLoading ? '' : tr.authorizedDevices}
             icon={Shield}
             color="orange"
             loading={isLoading}
@@ -177,9 +181,9 @@ export default function DashboardPage() {
           {/* Recent Users Table */}
           <div className="lg:col-span-2 card space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-200">Utilisateurs récents</h2>
+              <h2 className="text-sm font-semibold text-gray-200">{tr.recentUsers}</h2>
               <a href="/dashboard/users" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                Voir tout →
+                {tr.viewAll}
               </a>
             </div>
             {usersLoading ? (
@@ -191,16 +195,16 @@ export default function DashboardPage() {
             ) : users.length === 0 ? (
               <div className="flex flex-col items-center py-8 text-gray-500">
                 <Users size={32} className="mb-2 opacity-30" />
-                <p className="text-sm">Aucun utilisateur</p>
+                <p className="text-sm">{tr.noUsersFound}</p>
               </div>
             ) : (
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-gray-500 border-b border-white/5">
-                    <th className="text-left py-2 font-medium">Utilisateur</th>
-                    <th className="text-left py-2 font-medium hidden md:table-cell">Quota</th>
-                    <th className="text-left py-2 font-medium">Statut</th>
-                    <th className="text-left py-2 font-medium hidden lg:table-cell">Expire</th>
+                    <th className="text-left py-2 font-medium">{tr.username}</th>
+                    <th className="text-left py-2 font-medium hidden md:table-cell">{tr.quota}</th>
+                    <th className="text-left py-2 font-medium">{tr.status}</th>
+                    <th className="text-left py-2 font-medium hidden lg:table-cell">{tr.expireAt}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -218,8 +222,8 @@ export default function DashboardPage() {
                         </div>
                       </td>
                       <td className="py-2.5 hidden md:table-cell">
-                        <p className="text-gray-300">{u.quotaUsedGB.toFixed(1)} GB</p>
-                        <p className="text-gray-500 text-[10px]">{u.quotaRemainingGB.toFixed(1)} GB restants</p>
+                        <p className="text-gray-300">{u.quotaUsedGB.toFixed(1)} {tr.gb}</p>
+                        <p className="text-gray-500 text-[10px]">{u.quotaRemainingGB.toFixed(1)} {tr.gb} {tr.quotaRemaining}</p>
                       </td>
                       <td className="py-2.5">
                         <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
@@ -227,7 +231,7 @@ export default function DashboardPage() {
                             ? 'bg-green-500/10 text-green-400 border-green-500/20'
                             : 'bg-red-500/10 text-red-400 border-red-500/20'
                         }`}>
-                          {u.status === 'ACTIVE' ? 'Actif' : u.status}
+                          {u.status === 'ACTIVE' ? tr.active : u.status}
                         </span>
                       </td>
                       <td className="py-2.5 hidden lg:table-cell text-gray-500 text-[10px]">
@@ -243,9 +247,9 @@ export default function DashboardPage() {
           {/* Recent Activities */}
           <div className="card space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-200">Activités récentes</h2>
+              <h2 className="text-sm font-semibold text-gray-200">{tr.recentActivities}</h2>
               <a href="/dashboard/audit" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                Voir tout →
+                {tr.viewAll}
               </a>
             </div>
             {isLoading ? (
@@ -255,7 +259,7 @@ export default function DashboardPage() {
             ) : recentActivities.length === 0 ? (
               <div className="flex flex-col items-center py-8 text-gray-500">
                 <Activity size={28} className="mb-2 opacity-30" />
-                <p className="text-xs">Aucune activité récente</p>
+                <p className="text-xs">{tr.noRecentActivity}</p>
               </div>
             ) : (
               <div className="space-y-1.5">
@@ -265,7 +269,7 @@ export default function DashboardPage() {
                       <ActivityIcon action={act.action} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs text-gray-300 font-medium truncate">{formatAction(act.action)}</p>
+                      <p className="text-xs text-gray-300 font-medium truncate">{formatAction(act.action, tr)}</p>
                       <div className="flex items-center gap-1 mt-0.5">
                         <Clock size={9} className="text-gray-600" />
                         <p className="text-[10px] text-gray-500">
@@ -285,20 +289,20 @@ export default function DashboardPage() {
 
           {/* System Status */}
           <div className="card space-y-3">
-            <h2 className="text-sm font-semibold text-gray-200">État du système</h2>
+            <h2 className="text-sm font-semibold text-gray-200">{tr.systemStatus}</h2>
             <div className="space-y-2">
               {[
-                { label: 'Backend API', ok: true },
-                { label: 'Base de données', ok: true },
+                { label: 'backendApi', ok: true },
+                { label: 'database', ok: true },
                 {
-                  label: 'V2Ray / Xray',
+                  label: 'v2ray',
                   ok: (s?.v2ray as { reachable?: boolean })?.reachable ?? false,
                   sub: (s?.v2ray as { activeConnections?: number })?.activeConnections
-                    ? `${(s?.v2ray as { activeConnections?: number }).activeConnections} connexions actives`
-                    : 'Hors ligne ou non configuré',
+                    ? `${(s?.v2ray as { activeConnections?: number }).activeConnections} ${tr.activeConnections}`
+                    : tr.noActiveInbounds,
                 },
                 {
-                  label: 'Inbounds actifs',
+                  label: 'activeInbounds',
                   ok: ((s?.inbounds as { active?: number })?.active ?? 0) > 0,
                   sub: `${(s?.inbounds as { active?: number })?.active ?? 0} / ${(s?.inbounds as { total?: number })?.total ?? 0}`,
                 },
@@ -307,14 +311,14 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2.5">
                     <div className={`w-2 h-2 rounded-full ${svc.ok ? 'bg-green-400' : 'bg-red-400'}`} />
                     <div>
-                      <p className="text-xs text-gray-300 font-medium">{svc.label}</p>
+                      <p className="text-xs text-gray-300 font-medium">{tr[svc.label as keyof typeof tr] ?? svc.label}</p>
                       {svc.sub && <p className="text-[10px] text-gray-500">{svc.sub}</p>}
                     </div>
                   </div>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full ${
                     svc.ok ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
                   }`}>
-                    {svc.ok ? 'Opérationnel' : 'Hors ligne'}
+                    {svc.ok ? tr.operational : tr.offline}
                   </span>
                 </div>
               ))}
@@ -324,9 +328,9 @@ export default function DashboardPage() {
           {/* Top Users by consumption */}
           <div className="card space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-200">Top consommateurs</h2>
+              <h2 className="text-sm font-semibold text-gray-200">{tr.recentUsers}</h2>
               <a href="/dashboard/users" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                Voir tout →
+                {tr.viewAll}
               </a>
             </div>
             {isLoading ? (
@@ -336,7 +340,7 @@ export default function DashboardPage() {
             ) : topUsers.length === 0 ? (
               <div className="flex flex-col items-center py-8 text-gray-500">
                 <Zap size={28} className="mb-2 opacity-30" />
-                <p className="text-xs">Aucune donnée de consommation</p>
+                <p className="text-xs">{tr.noData}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -348,10 +352,10 @@ export default function DashboardPage() {
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
                           <span className="text-gray-500 font-mono w-4">{i + 1}</span>
-                          <span className="text-gray-300 font-medium">{u.username ?? u.email ?? 'Utilisateur'}</span>
+                          <span className="text-gray-300 font-medium">{u.username ?? u.email ?? 'User'}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-400">{u.quotaUsedGB.toFixed(1)} GB</span>
+                          <span className="text-gray-400">{u.quotaUsedGB.toFixed(1)} {tr.gb}</span>
                           {pct > 80 ? <TrendingUp size={12} className="text-red-400" /> : <TrendingDown size={12} className="text-green-400" />}
                         </div>
                       </div>
