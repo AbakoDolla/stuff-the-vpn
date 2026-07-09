@@ -109,11 +109,23 @@ export default function DashboardPage() {
   });
 
   const isLoading = statsLoading;
-  const users = usersData?.users ?? usersData ?? [];
+  
+  // Safely extract users array from various possible response formats
+  const users: Array<{ id: string; username?: string; email?: string; phone?: string; status: string; quotaUsedGB: number; quotaRemainingGB: number; expireAt?: string }> = 
+    Array.isArray(usersData) ? usersData :
+    Array.isArray(usersData?.data) ? usersData.data :
+    Array.isArray(usersData?.users) ? usersData.users :
+    [];
+    
   const recentActivities: Array<{ action: string; userId?: string; createdAt: string; details?: Record<string, unknown> }> =
-    (stats as { recentActivities?: Array<{ action: string; userId?: string; createdAt: string; details?: Record<string, unknown> }> })?.recentActivities ?? [];
+    Array.isArray((stats as { recentActivities?: Array<{ action: string; userId?: string; createdAt: string; details?: Record<string, unknown> }> })?.recentActivities)
+      ? (stats as { recentActivities?: Array<{ action: string; userId?: string; createdAt: string; details?: Record<string, unknown> }> })!.recentActivities!
+      : [];
+      
   const topUsers: Array<{ id: string; username?: string; email?: string; quotaUsedGB: number; quotaRemainingGB: number }> =
-    (stats as { topUsers?: Array<{ id: string; username?: string; email?: string; quotaUsedGB: number; quotaRemainingGB: number }> })?.topUsers ?? [];
+    Array.isArray((stats as { topUsers?: Array<{ id: string; username?: string; email?: string; quotaUsedGB: number; quotaRemainingGB: number }> })?.topUsers)
+      ? (stats as { topUsers?: Array<{ id: string; username?: string; email?: string; quotaUsedGB: number; quotaRemainingGB: number }> })!.topUsers!
+      : [];
 
   const s = stats as Record<string, unknown> | undefined;
   const totalUsers    = (s?.users as { total?: number })?.total ?? (s?.totalUsers as number) ?? 0;
