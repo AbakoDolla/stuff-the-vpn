@@ -7,7 +7,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { toast } from 'sonner';
 import { Plus, Users, Search, Ban, CheckCircle, Trash2, HardDrive } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { frFR as fr } from 'date-fns/locale';
 
 interface User {
   id:string; username:string; email?:string; phone?:string;
@@ -155,7 +155,7 @@ export default function UsersPage() {
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                           style={{background:'linear-gradient(135deg,#6366F1,#8B5CF6)'}}>
-                          {u.username[0].toUpperCase()}
+                          {(u.username?.[0] ?? 'U').toUpperCase()}
                         </div>
                         <div>
                           <p className="font-medium text-sm">{u.username}</p>

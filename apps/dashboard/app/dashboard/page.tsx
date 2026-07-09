@@ -10,8 +10,8 @@ import {
 import { Api } from '@/lib/api';
 import { useLanguage } from '@/hooks/useLanguage';
 import DashboardLayout from '@/components/DashboardLayout';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { formatDistanceToNow, Locale } from 'date-fns';
+import { frFR as fr } from 'date-fns/locale';
 
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
