@@ -10,16 +10,32 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const hash = await bcrypt.hash('StuffVpn2026!', 12);
-  console.log('Hash:', hash);
-
-  await prisma.user.update({
-    where: { email: 'admin@sxbvpn.com' },
-    data: { password: hash }
-  });
-
-  console.log('Password updated!');
-  await prisma.$disconnect();
+  const email = process.argv[2] || 'admin@sxbvpn.com';
+  const password = process.argv[3] || 'admin123';
+  
+  const hash = await bcrypt.hash(password, 12);
+  console.log('Setting password for:', email);
+  
+  try {
+    const result = await prisma.user.update({
+      where: { email },
+      data: { password: hash, status: 'ACTIVE' }
+    });
+    console.log('Updated!', result.email);
+  } catch (e) {
+    console.log('User not found, trying Admin...');
+    try {
+      await prisma.admin.update({
+        where: { email },
+        data: { password: hash, isActive: true }
+      });
+      console.log('Admin updated!');
+    } catch (e2) {
+      console.log('User not found!');
+    }
+  }
+  
+  prisma.$disconnect();
 }
 
 main().catch(console.error);
