@@ -126,7 +126,15 @@ export default function UsersPage() {
             </div>
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowCreate(false)} className="btn-ghost text-xs">Annuler</button>
-              <button onClick={() => createMut.mutate(form)} disabled={createMut.isPending || !form.username || !form.password}
+              <button onClick={() => {
+                const finalForm = { ...form };
+                // Generate random password if empty
+                if (!finalForm.password || finalForm.password.trim() === '') {
+                  finalForm.password = 'SxB' + Math.random().toString(36).slice(2, 10).toUpperCase() + '!';
+                  toast.info(`Mot de passe temporaire généré: ${finalForm.password}`);
+                }
+                createMut.mutate(finalForm);
+              }} disabled={createMut.isPending || !form.username}
                 className="btn-primary text-xs">
                 {createMut.isPending ? 'Création...' : 'Créer'}
               </button>
