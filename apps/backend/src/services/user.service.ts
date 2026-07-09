@@ -4,7 +4,8 @@ import { omit } from "../utils/crypto.js";
 
   export async function createUser(data: {
     username: string;
-    email: string;
+    email?: string;
+    phone?: string;
     password?: string;
     role?: string;
     deviceLimit?: number;
@@ -15,7 +16,8 @@ import { omit } from "../utils/crypto.js";
     const user = await prisma.user.create({
       data: {
         username: data.username,
-        email: data.email,
+        email: data.email || null,
+        phone: data.phone || null,
         password: hashed,
         role: (data.role ?? "USER") as "USER" | "ADMIN" | "SUPER_ADMIN" | "RESELLER",
         deviceLimit: data.deviceLimit ?? 2,

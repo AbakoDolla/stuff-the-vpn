@@ -2,7 +2,8 @@ import { z } from "zod";
 
   export const createUserSchema = z.object({
     username: z.string().min(3).max(32),
-    email: z.string().email(),
+    email: z.string().email().optional().or(z.literal("")),
+    phone: z.string().optional(),
     password: z.string().min(6).optional(),
     role: z.enum(["USER", "ADMIN", "SUPER_ADMIN", "RESELLER"]).optional(),
     deviceLimit: z.number().int().min(1).max(100).optional(),
@@ -12,7 +13,8 @@ import { z } from "zod";
 
   export const updateUserSchema = z.object({
     username: z.string().min(3).max(32).optional(),
-    email: z.string().email().optional(),
+    email: z.string().email().optional().or(z.literal("")),
+    phone: z.string().optional(),
     status: z.enum(["ACTIVE", "SUSPENDED", "BANNED"]).optional(),
     deviceLimit: z.number().int().min(1).max(100).optional(),
     quotaRemainingGB: z.number().nonnegative().optional(),
