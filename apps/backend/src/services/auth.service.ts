@@ -197,3 +197,47 @@ export async function logoutSession(token: string) {
     data: { isActive: false },
   });
 }
+
+/**
+ * Login with dashboard token - allows users/resellers to login using a pre-generated token
+ */
+export async function loginWithDashboardToken(
+  loginToken: string,
+  ipAddress?: string,
+) {
+  // Find user by loginToken
+  const user = await prisma.user.findFirst({
+    where: { 
+      loginToken,
+      status: "ACTIVE",
+    },
+  });
+
+  if (!user) throw new Error("Token de connexion invalide ou expiré");
+  
+  // Check if token is expired
+  if (user.loginTokenExpiresAt && user.loginTokenExpiresAt < new Date()) {
+    throw new Error("Token de connexion expiré");
+  }
+
+  // Create session
+  const session = await prisma.session.create({
+    data: { token: "tmp", userId: user.id, ipAddress },
+  });
+
+  const finalToken = jwt.sign(
+    { userId: user.id, role: user.role, sessionId: session.id, type: "dashboard" } satisfies AuthPayload,
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
+  );
+  
+  await prisma.session.update({ where: { id: session.id }, data: { token: finalToken } });
+
+  // Clear the login token after use
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { loginToken: null, loginTokenExpiresAt: null },
+  });
+
+  return { token: finalToken, user: omit(user, ["password"]) };
+}

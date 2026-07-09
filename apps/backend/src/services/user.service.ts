@@ -2,6 +2,16 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../prisma/client.js";
 import { omit } from "../utils/crypto.js";
 
+// Generate a unique login token
+function generateLoginToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let token = 'SXB-';
+  for (let i = 0; i < 12; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
   export async function createUser(data: {
     username: string;
     email?: string;
@@ -11,11 +21,18 @@ import { omit } from "../utils/crypto.js";
     deviceLimit?: number;
     quotaRemainingGB?: number;
     expireAt?: string;
+    name?: string;
   }) {
     const hashed = data.password ? await bcrypt.hash(data.password, 10) : null;
+    
+    // Generate login token for dashboard access (non-admin users)
+    const loginToken = generateLoginToken();
+    const loginTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    
     const user = await prisma.user.create({
       data: {
         username: data.username,
+        name: data.name || data.username,
         email: data.email || null,
         phone: data.phone || null,
         password: hashed,
@@ -23,9 +40,15 @@ import { omit } from "../utils/crypto.js";
         deviceLimit: data.deviceLimit ?? 2,
         quotaRemainingGB: data.quotaRemainingGB ?? 10,
         expireAt: data.expireAt ? new Date(data.expireAt) : null,
+        loginToken,
+        loginTokenExpiresAt,
       },
     });
-    return omit(user, ["password"]);
+    return {
+      ...omit(user, ["password"]),
+      loginToken,
+      loginTokenExpiresAt,
+    };
   }
 
   export async function listUsers(page = 1, limit = 20, search?: string) {
@@ -52,8 +75,9 @@ import { omit } from "../utils/crypto.js";
       prisma.user.count({ where }),
     ]);
 
+    // Exclude password and loginToken from list for security
     return {
-      users: data.map((u) => { const { password: _pw, ...rest } = u; return rest; }),
+      users: data.map((u) => { const { password: _pw, loginToken: _lt, ...rest } = u; return rest; }),
       total,
       page,
       limit,
@@ -157,4 +181,18 @@ import { omit } from "../utils/crypto.js";
       where: { id },
       data: { deletedAt: new Date(), status: "BANNED" },
     });
+  }
+
+  export async function regenerateLoginToken(id: string) {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id } });
+    if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
+      throw new Error("Cannot regenerate token for admin users");
+    }
+    const loginToken = generateLoginToken();
+    const loginTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    await prisma.user.update({
+      where: { id },
+      data: { loginToken, loginTokenExpiresAt },
+    });
+    return { loginToken, loginTokenExpiresAt };
   }

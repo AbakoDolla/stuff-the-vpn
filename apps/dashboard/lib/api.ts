@@ -235,6 +235,7 @@ export const Api = {
   setUserStatus: (id: string, status: string) =>
     apiFetch<UserRecord>(`/users/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   addQuota:    (id: string, gb: number) => apiFetch<UserRecord>(`/users/${id}/quota`, { method: "PATCH", body: JSON.stringify({ addGB: gb }) }),
+  regenerateUserToken: (id: string) => apiFetch<{loginToken: string}>(`/users/${id}/regenerate-token`, { method: "POST" }),
 
   // Servers
   getServers:  ()                       => apiFetchPaginated<ServerRecord>("/servers"),

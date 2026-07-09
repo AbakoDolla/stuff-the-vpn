@@ -122,3 +122,13 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
     next(err);
   }
 }
+
+export async function regenerateLoginToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = String(req.params["id"]);
+    const result = await userService.regenerateLoginToken(id);
+    sendSuccess(res, result, "Login token regenerated successfully");
+  } catch (err) {
+    next(err);
+  }
+}

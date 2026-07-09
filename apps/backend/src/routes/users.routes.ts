@@ -24,5 +24,6 @@ router.delete("/:id", userController.deleteUser);
 router.patch("/:id/status", validate(suspendUserSchema), userController.setUserStatus);
 router.patch("/:id/quota", validate(addQuotaSchema), userController.addQuota);
 router.patch("/:id/extend", validate(extendExpirySchema), userController.extendExpiry);
+router.post("/:id/regenerate-token", userController.regenerateLoginToken);
 
 export default router;

@@ -12,6 +12,7 @@ router.post("/register",      authRateLimit, validate(registerSchema), authContr
 router.post("/login",         authRateLimit, validate(loginSchema),    authController.login);
 router.post("/admin/login",   authRateLimit,                           authController.adminLogin);
 router.post("/login/license", authRateLimit, authController.loginWithLicense);
+router.post("/token/login",  authRateLimit, authController.loginWithToken);
 router.post("/refresh",       authRateLimit, authController.refreshToken);
 
 // Auth required

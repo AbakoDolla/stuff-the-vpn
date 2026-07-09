@@ -111,3 +111,23 @@ export async function logout(req: AuthRequest, res: Response, next: NextFunction
     next(err);
   }
 }
+
+/**
+ * POST /api/auth/token/login
+ * Connexion avec token de connexion généré par l'admin pour les utilisateurs/resellers
+ */
+export async function loginWithToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { token } = req.body as { token?: string };
+    if (!token) {
+      sendError(res, "Token de connexion requis", HTTP_STATUS.BAD_REQUEST);
+      return;
+    }
+    const result = await authService.loginWithDashboardToken(token, req.ip);
+    res.cookie("stv_token", result.token, COOKIE_OPTS);
+    sendSuccess(res, result, "Connexion réussie");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    sendError(res, msg, HTTP_STATUS.UNAUTHORIZED);
+  }
+}

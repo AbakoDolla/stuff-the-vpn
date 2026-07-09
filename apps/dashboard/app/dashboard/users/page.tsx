@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, Api } from '@/lib/api';
 import DashboardLayout from '@/components/DashboardLayout';
 import { toast } from 'sonner';
-import { Plus, Users, Search, Ban, CheckCircle, Trash2, HardDrive } from 'lucide-react';
+import { Plus, Users, Search, Ban, CheckCircle, Trash2, HardDrive, Key, Copy } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { frFR as fr } from 'date-fns/locale';
 
@@ -46,8 +46,13 @@ export default function UsersPage() {
 
   const createMut = useMutation({
     mutationFn: (body: CreateForm) => api.post('/users', body),
-    onSuccess: () => {
-      toast.success('Utilisateur créé');
+    onSuccess: (data) => {
+      const token = (data as {loginToken?: string})?.loginToken;
+      if (token) {
+        toast.success(`Utilisateur créé ! Token: ${token}`);
+      } else {
+        toast.success('Utilisateur créé');
+      }
       qc.invalidateQueries({queryKey:['users']});
       setShowCreate(false);
       setForm({ username:'', email:'', phone:'', password:'', role:'USER', quotaRemainingGB: 10, expireAt: undefined });
@@ -63,6 +68,24 @@ export default function UsersPage() {
       } else {
         toast.error(errData?.message ?? 'Erreur création');
       }
+    },
+  });
+
+  const regenerateTokenMut = useMutation({
+    mutationFn: (id: string) => Api.regenerateUserToken(id),
+    onSuccess: (data) => {
+      const token = (data as unknown as {loginToken?: string})?.loginToken;
+      if (token) {
+        navigator.clipboard.writeText(token).then(() => {
+          toast.success(`Token regénéré et copié: ${token}`);
+        }).catch(() => {
+          toast.success(`Token regénéré: ${token}`);
+        });
+      }
+      qc.invalidateQueries({queryKey:['users']});
+    },
+    onError: (e: {response?: {data?: {message?: string}}}) => {
+      toast.error(e.response?.data?.message ?? 'Erreur regénération token');
     },
   });
 
@@ -207,6 +230,13 @@ export default function UsersPage() {
                           </span>
                         ) : (
                           <>
+                            {u.role !== 'ADMIN' && u.role !== 'SUPER_ADMIN' && (
+                              <button onClick={() => regenerateTokenMut.mutate(u.id)}
+                                className="text-blue-400 hover:text-blue-300 p-1" title="Regénérer token de connexion"
+                                disabled={regenerateTokenMut.isPending}>
+                                <Key className="w-4 h-4"/>
+                              </button>
+                            )}
                             {u.status === 'ACTIVE' ? (
                               <button onClick={() => statusMut.mutate({id:u.id, status:'SUSPENDED'})}
                                 className="text-yellow-400 hover:text-yellow-300" title="Suspendre">
