@@ -22,6 +22,7 @@ interface CreateForm {
   password: string;
   role: string;
   quotaRemainingGB: number;
+  expireAt?: string;
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -35,7 +36,7 @@ export default function UsersPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState<CreateForm>({ username:'', email:'', phone:'', password:'', role:'USER', quotaRemainingGB: 10 });
+  const [form, setForm] = useState<CreateForm>({ username:'', email:'', phone:'', password:'', role:'USER', quotaRemainingGB: 10, expireAt: undefined });
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['users', search],
@@ -49,7 +50,7 @@ export default function UsersPage() {
       toast.success('Utilisateur créé');
       qc.invalidateQueries({queryKey:['users']});
       setShowCreate(false);
-      setForm({ username:'', email:'', phone:'', password:'', role:'USER', quotaRemainingGB: 10 });
+      setForm({ username:'', email:'', phone:'', password:'', role:'USER', quotaRemainingGB: 10, expireAt: undefined });
     },
     onError: (e: {response?: {data?: {message?: string; data?: Record<string, string[]>}}}) => {
       const errData = e.response?.data;
@@ -122,6 +123,14 @@ export default function UsersPage() {
                   onChange={e => setForm(p => ({...p, quotaRemainingGB: Number(e.target.value)}))} 
                   placeholder="10" />
                 <p className="text-[10px] text-[#64748B] mt-1">Quota de données en GB</p>
+              </div>
+              <div>
+                <label className="text-xs text-[#94A3B8] mb-1 block">Date d'expiration</label>
+                <input className="input" type="date"
+                  value={form.expireAt || ''}
+                  onChange={e => setForm(p => ({...p, expireAt: e.target.value || undefined}))}
+                  min={new Date().toISOString().split('T')[0]} />
+                <p className="text-[10px] text-[#64748B] mt-1">Laisser vide si pas d'expiration</p>
               </div>
             </div>
             <div className="flex justify-end gap-3">
