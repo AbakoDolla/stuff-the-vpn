@@ -1,0 +1,34 @@
+{
+  "name": "stuff-the-vpn",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plateforme SaaS VPN commerciale — V2Ray & SSH",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "lib/*"
+  ],
+  "scripts": {
+    "dev": "echo 'Use docker-compose or run apps individually. See docs/deployment.md'",
+    "lint": "npm exec eslint --workspace-root --ignore-path .gitignore .",
+    "typecheck": "npm exec tsc -b .",
+    "build": "npm run build:prisma && npm -r build",
+    "build:prisma": "cd apps/backend && DATABASE_URL='postgresql://dummy:dummy@localhost:5432/dummy' npx prisma generate",
+    "start:backend": "cd apps/backend && npm start",
+    "start:dashboard": "cd apps/dashboard && npm start"
+  },
+  "devDependencies": {
+    "eslint": "^8.42.0",
+    "prettier": "^2.8.8",
+    "sharp": "^0.35.3",
+    "typescript": "^5.1.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "prisma": "5.22.0"
+  }
+}

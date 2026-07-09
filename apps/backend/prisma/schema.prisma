@@ -1,0 +1,695 @@
+// schema.prisma — SXB VPN — Schéma complet v3
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ENUMS
+// ══════════════════════════════════════════════════════════════════
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+  RESELLER
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  EXPIRED
+}
+
+enum DeviceStatus {
+  ACTIVE
+  DISABLED
+  BLOCKED
+  PENDING
+}
+
+enum TokenStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  REVOKED
+}
+
+enum ActivationStatus {
+  PENDING
+  ACTIVATED
+  SUSPENDED
+  REVOKED
+}
+
+enum QuotaPolicy {
+  SUSPEND
+  THROTTLE
+  NOTIFY
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  SUSPENDED
+}
+
+enum VoucherStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  REVOKED
+}
+
+enum InboundProtocol {
+  SSH
+  SSH_SSL
+  SSH_WS
+  SSH_WS_SSL
+  SSH_SLOWDNS
+  SSH_PAYLOAD
+  SSH_PAYLOAD_SSL
+  VLESS
+  VLESS_REALITY
+  VMESS
+  TROJAN
+  TROJAN_GO
+  SHADOWSOCKS
+  SHADOWSOCKS_R
+  WIREGUARD
+  OPENVPN
+  HYSTERIA2
+  TUIC
+  HTTP_PROXY
+  SOCKS5
+}
+
+enum VpnProfileStatus {
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  REVOKED
+  MAINTENANCE
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+  RESOLVED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  SUCCESS
+  ERROR
+  PROMO
+}
+
+enum AuditAction {
+  // Auth
+  USER_LOGIN
+  USER_LOGOUT
+  USER_REGISTER
+  USER_SUSPEND
+  USER_ACTIVATE
+  USER_UPDATE
+  USER_DELETE
+  // Device
+  DEVICE_REGISTER
+  DEVICE_ACTIVATE
+  DEVICE_SYNC
+  DEVICE_DISABLE
+  DEVICE_BLOCK
+  DEVICE_DELETE
+  DEVICE_COMPROMISED
+  // Token
+  TOKEN_CREATE
+  TOKEN_USE
+  TOKEN_EXPIRE
+  TOKEN_REVOKE
+  // VPN
+  VPN_CONNECT
+  VPN_DISCONNECT
+  VPN_CREATE
+  VPN_UPDATE
+  VPN_DELETE
+  VPN_PROFILE_PUBLISH
+  // Quota
+  QUOTA_UPDATE
+  QUOTA_EXCEEDED
+  QUOTA_RESET
+  // Ticket
+  TICKET_CREATE
+  TICKET_REPLY
+  TICKET_CLOSE
+  // API & Payment
+  APIKEY_CREATE
+  APIKEY_REVOKE
+  PAYMENT_CREATE
+  PAYMENT_COMPLETE
+  PAYMENT_FAIL
+  // Voucher/License
+  VOUCHER_CREATE
+  VOUCHER_REDEEM
+  LICENSE_CREATE
+  LICENSE_REVOKE
+  // Reseller
+  RESELLER_CREATE
+  RESELLER_UPDATE
+  // Server
+  SERVER_CREATE
+  SERVER_UPDATE
+  SERVER_DELETE
+  // Admin
+  ADMIN_ACTION
+  SETTINGS_UPDATE
+  // Fraud
+  FRAUD_ATTEMPT
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MODELS
+// ══════════════════════════════════════════════════════════════════
+
+// ─── Admin (Dashboard) ─────────────────────────────────────────────
+model Admin {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  password     String
+  name         String?
+  role         String    @default("ADMIN")
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  activationTokens ActivationToken[]
+  vpnProfiles      VpnProfile[]
+  auditLogs        AuditLog[]
+}
+
+// ─── User (Application Mobile) ────────────────────────────────────
+model User {
+  id               String      @id @default(uuid())
+  email            String?     @unique
+  phone            String?     @unique
+  username         String?     @unique
+  name             String?
+  password         String?
+  role             UserRole    @default(USER)
+  status           UserStatus  @default(ACTIVE)
+  deviceLimit      Int         @default(3)
+  quotaUsedGB      Float       @default(0)
+  quotaRemainingGB Float       @default(0)
+  expireAt         DateTime?
+  createdBy        String?
+  resellerId       String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  deletedAt        DateTime?
+  loginToken       String?
+  loginTokenExpiresAt DateTime?
+
+  reseller         Reseller?           @relation("ResellerClients", fields: [resellerId], references: [id])
+  licenses         License[]
+  devices          Device[]
+  sessions         Session[]
+  usageLogs        UsageLog[]
+  createdVouchers  Voucher[]           @relation("VoucherCreatedBy")
+  redeemedVouchers Voucher[]           @relation("VoucherRedeemedBy")
+  apiKeys          ApiKey[]
+  notifications    Notification[]
+  tickets          Ticket[]            @relation("TicketAuthor")
+  ticketReplies    TicketReply[]       @relation("TicketReplyAuthor")
+  payments         Payment[]
+  auditLogs        AuditLog[]
+  resellerProfile  Reseller?           @relation("ResellerUser")
+  quotas           Quota[]
+  activations      Activation[]
+  vpnUserProfiles  VpnUserProfile[]
+}
+
+model License {
+  id          String        @id @default(uuid())
+  token       String        @unique
+  phone       String?
+  deviceId    String?
+  deviceName  String?
+  status      LicenseStatus @default(ACTIVE)
+  dataLimitGB Float         @default(30)
+  dataUsedGB  Float         @default(0)
+  deviceLimit Int           @default(1)
+  expireAt    DateTime?
+  lastUsedAt  DateTime?
+  userId      String?
+  user        User?         @relation(fields: [userId], references: [id])
+  createdBy   String?
+  resellerId  String?
+  reseller    Reseller?     @relation(fields: [resellerId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+// ─── Device (Application Mobile) ─────────────────────────────────
+model Device {
+  id               String           @id @default(uuid())
+  deviceId         String           @unique  // Identifiant unique appareil
+  deviceName       String?
+  brand            String?          // Samsung, Xiaomi, etc.
+  model            String?          // SM-G998B, etc.
+  platform         String?
+  osVersion        String?          // Android 14, etc.
+  appVersion       String?
+  androidId        String?
+  fingerprint      String?
+  publicIp         String?
+  country          String?
+  status           DeviceStatus     @default(PENDING)
+  firstActivatedAt DateTime?
+  lastSyncAt       DateTime?
+  connectionCount  Int              @default(0)
+  isCompromised    Boolean          @default(false)
+  lastIp           String?
+  lastSeenAt       DateTime?
+  isActive         Boolean          @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  userId   String
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activations Activation[]
+  syncLogs  SyncLog[]
+  quotas    Quota[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ─── Activation Token (Cryptographique) ──────────────────────────
+model ActivationToken {
+  id           String      @id @default(uuid())
+  token        String      @unique
+  deviceId     String      // Pour quel appareil
+  signature    String      // Signature cryptographique
+  timestamp    BigInt      // Unix timestamp
+  expiresAt    DateTime
+  status       TokenStatus @default(ACTIVE)
+  usedAt       DateTime?
+  usedByDevice String?     // Confirmé après utilisation
+  createdBy    String
+  admin        Admin       @relation(fields: [createdBy], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([deviceId])
+  @@index([token])
+  @@index([status])
+}
+
+// ─── Activation (Enregistrement Permanent) ──────────────────────
+model Activation {
+  id            String            @id @default(uuid())
+  deviceId      String
+  device        Device            @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User              @relation(fields: [userId], references: [id])
+  status        ActivationStatus  @default(PENDING)
+  tokenUsed     String?
+  activatedAt   DateTime?
+  suspendedAt   DateTime?
+  revokedAt     DateTime?
+  reason        String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([deviceId])
+  @@index([userId])
+}
+
+// ─── Quota ────────────────────────────────────────────────────────
+model Quota {
+  id             String      @id @default(uuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId       String?
+  device         Device?     @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  totalGB        Float       @default(0)
+  usedGB         Float       @default(0)
+  remainingGB    Float       @default(0)
+  resetAt        DateTime?
+  policy         QuotaPolicy @default(SUSPEND)
+  lastUpdatedAt  DateTime    @default(now())
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  history QuotaHistory[]
+
+  @@index([userId])
+  @@index([deviceId])
+}
+
+// ─── Quota History ────────────────────────────────────────────────
+model QuotaHistory {
+  id         String   @id @default(uuid())
+  quotaId    String
+  quota      Quota    @relation(fields: [quotaId], references: [id], onDelete: Cascade)
+  usedGB     Float
+  uploadGB   Float
+  downloadGB Float
+  clientIp   String?
+  serverIp   String?
+  timestamp  DateTime @default(now())
+
+  @@index([quotaId])
+}
+
+// ─── Sync Log ────────────────────────────────────────────────────
+model SyncLog {
+  id                  String   @id @default(uuid())
+  deviceId            String
+  device              Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  clientVersion       String?
+  configVersion       Int?
+  newConfigAvailable  Boolean  @default(false)
+  syncStatus          String   // SUCCESS, PARTIAL, FAILED
+  errorMessage        String?
+  clientIp            String?
+  timestamp           DateTime @default(now())
+
+  @@index([deviceId])
+  @@index([timestamp])
+}
+
+model Session {
+  id         String    @id @default(uuid())
+  token      String    @unique
+  deviceName String?
+  ipAddress  String?
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Server {
+  id            String    @id @default(uuid())
+  name          String
+  host          String
+  ip            String?
+  port          Int       @default(443)
+  country       String
+  city          String?
+  flag          String    @default("🏳️")
+  protocol      String    @default("VLESS")
+  ping          Int       @default(0)
+  load          Int       @default(0)
+  isActive      Boolean   @default(true)
+  isRecommended Boolean   @default(false)
+  config        Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  usageLogs   UsageLog[]
+}
+
+model Inbound {
+  id           String          @id @default(uuid())
+  protocol     InboundProtocol @default(VLESS)
+  host         String
+  port         Int
+  remark       String?
+  enabled      Boolean         @default(true)
+  isPremium    Boolean         @default(false)
+  sortOrder    Int             @default(0)
+  // Xray API stats
+  xrayApiPort  Int?
+  activeConns  Int             @default(0)
+  totalUpGB    Float           @default(0)
+  totalDownGB  Float           @default(0)
+  // V2Ray / VLESS / VMESS / Trojan
+  uuid         String?
+  path         String?
+  sni          String?
+  network      String?
+  tls          Boolean         @default(false)
+  pbk          String?
+  sid          String?
+  fp           String?
+  // SSH
+  sshUser      String?
+  sshPassword  String?
+  sshPayload   String?
+  // Shadowsocks
+  ssMethod     String?
+  ssPassword   String?
+  // WireGuard
+  wgPrivateKey String?
+  wgPublicKey  String?
+  wgPeerKey    String?
+  wgDns        String?
+  wgPreshared  String?
+  // SlowDNS
+  slowdnsNs    String?
+  // OpenVPN config blob
+  ovpnConfig   String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model Plan {
+  id           String    @id @default(uuid())
+  name         String
+  description  String?
+  price        Float
+  currency     String    @default("XAF")
+  dataLimitGB  Float
+  deviceLimit  Int       @default(1)
+  durationDays Int
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  payments    Payment[]
+}
+
+model Voucher {
+  id           String        @id @default(uuid())
+  code         String        @unique
+  quotaGB      Float         @default(10)
+  durationDay  Int           @default(30)
+  maxUses      Int           @default(1)
+  usedCount    Int           @default(0)
+  status       VoucherStatus @default(ACTIVE)
+  expireAt     DateTime?
+  usedAt       DateTime?
+  createdBy    String?
+  createdById  String?
+  createdByUser User?        @relation("VoucherCreatedBy", fields: [createdById], references: [id])
+  userId       String?
+  user         User?         @relation("VoucherRedeemedBy", fields: [userId], references: [id])
+  resellerId   String?
+  reseller     Reseller?     @relation(fields: [resellerId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Reseller {
+  id          String    @id @default(uuid())
+  name        String
+  email       String?   @unique
+  phone       String?
+  userId      String?   @unique
+  user        User?     @relation("ResellerUser", fields: [userId], references: [id])
+  commission  Float     @default(0)
+  balance     Float     @default(0)
+  isActive    Boolean   @default(true)
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  clients  User[]    @relation("ResellerClients")
+  licenses License[]
+  vouchers Voucher[]
+}
+
+// ─── VPN User Profile (User's assigned VPN config) ───────────────
+model VpnUserProfile {
+  id              String           @id @default(uuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id])
+  profileId       String
+  profile         VpnProfile      @relation(fields: [profileId], references: [id])
+  deviceId        String?
+  encryptedConfig String           // Config chiffrée pour cet utilisateur
+  status          VpnProfileStatus @default(ACTIVE)
+  uploadMB        Float            @default(0)
+  downloadMB      Float            @default(0)
+  lastUsedAt      DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([userId, deviceId, profileId])
+  @@index([userId])
+  @@index([deviceId])
+}
+
+// ─── VPN Profile (Admin-managed) ────────────────────────────────
+model VpnProfile {
+  id              String           @id @default(uuid())
+  name            String
+  server          String
+  port            Int
+  protocol        String           // VLESS, VMess, Trojan, WireGuard, etc.
+  dns             String?
+  network         String?
+  certificate     String?          // Certificate data (stored as text, encrypted in app)
+  privateKey      String?          // Private key (stored as text, encrypted in app)
+  publicKey       String?          // WireGuard public key
+  configData      Json?            // Configuration JSON chiffrée
+  priority        Int              @default(0)
+  version         Int              @default(1)
+  status          VpnProfileStatus @default(ACTIVE)
+  publishedAt     DateTime?
+  createdBy       String
+  admin           Admin            @relation(fields: [createdBy], references: [id])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  userProfiles VpnUserProfile[]
+
+  @@index([status])
+  @@index([protocol])
+}
+
+model Ticket {
+  id        String         @id @default(uuid())
+  subject   String
+  body      String
+  priority  TicketPriority @default(NORMAL)
+  status    TicketStatus   @default(OPEN)
+  authorId  String
+  author    User           @relation("TicketAuthor", fields: [authorId], references: [id])
+  replies   TicketReply[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model TicketReply {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  body      String
+  authorId  String
+  author    User     @relation("TicketReplyAuthor", fields: [authorId], references: [id])
+  isStaff   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  name        String
+  keyHash     String    @unique
+  keyPrefix   String
+  permissions String[]
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Payment {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  planId    String?
+  plan      Plan?         @relation(fields: [planId], references: [id])
+  amount    Float
+  currency  String        @default("XAF")
+  status    PaymentStatus @default(PENDING)
+  method    String?
+  reference String?       @unique
+  metadata  Json?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model UsageLog {
+  id         String   @id @default(uuid())
+  uploadGB   Float    @default(0)
+  downloadGB Float    @default(0)
+  totalGB    Float    @default(0)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  serverId   String?
+  server     Server?  @relation(fields: [serverId], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  action    AuditAction
+  entity    String?
+  entityId  String?
+  details   Json?
+  adminId   String?
+  admin     Admin?      @relation(fields: [adminId], references: [id])
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id])
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime    @default(now())
+
+  @@index([adminId])
+  @@index([entityId])
+  @@index([action])
+}

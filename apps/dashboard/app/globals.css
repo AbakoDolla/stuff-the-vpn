@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-dark text-gray-100 font-sans antialiased;
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { @apply bg-dark-400; }
+  ::-webkit-scrollbar-thumb { @apply bg-dark-50 rounded-full; }
+}
+
+@layer components {
+  /* ── Cards ──────────────────────────────────────────────── */
+  .card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/5 rounded-xl p-4 sm:p-5;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-300 hover:border-blue-500/30;
+  }
+
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/5 rounded-xl;
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300 hover:border-primary/30;
+  }
+
+  /* ── Inputs ─────────────────────────────────────────────── */
+  .input {
+    @apply w-full px-3 py-2.5 bg-slate-800 border border-white/10 rounded-xl
+           text-slate-100 placeholder-slate-600 text-sm
+           focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30
+           transition-all duration-200;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2.5 bg-dark-100 border border-white/5 rounded-lg
+           text-gray-100 placeholder-gray-500
+           focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50
+           transition-all duration-200;
+  }
+
+  /* ── Buttons ────────────────────────────────────────────── */
+  .btn-primary {
+    @apply px-4 py-2 bg-gradient-to-r from-primary to-accent text-white rounded-lg font-medium
+           transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg font-medium
+           transition-all duration-200 border border-white/5;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300
+           rounded-lg font-medium transition-all duration-200 border border-red-500/20;
+  }
+
+  /* ── Status ─────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .status-dot { @apply w-2 h-2 rounded-full inline-block; }
+  .status-dot.online    { @apply bg-green-500; }
+  .status-dot.offline   { @apply bg-red-500; }
+  .status-dot.connecting { @apply bg-yellow-500 animate-pulse; }
+
+  /* ── Text ───────────────────────────────────────────────── */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+  }
+
+  /* ── Surface ────────────────────────────────────────────── */
+  .surface-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    @apply backdrop-blur-xl rounded-xl;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+}
+
+/* ── Badge variants ──────────────────────────────────────────────────────── */
+@layer components {
+  .badge-active   { @apply badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/20; }
+  .badge-inactive { @apply badge bg-red-500/10 text-red-400 border border-red-500/20; }
+  .badge-warning  { @apply badge bg-amber-500/10 text-amber-400 border border-amber-500/20; }
+  .badge-green    { @apply badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/20; }
+  .badge-red      { @apply badge bg-red-500/10 text-red-400 border border-red-500/20; }
+  .badge-yellow   { @apply badge bg-amber-500/10 text-amber-400 border border-amber-500/20; }
+  .badge-gray     { @apply badge bg-slate-500/10 text-slate-400 border border-slate-500/20; }
+  .badge-blue     { @apply badge bg-blue-500/10 text-blue-400 border border-blue-500/20; }
+  .badge-purple   { @apply badge bg-purple-500/10 text-purple-400 border border-purple-500/20; }
+
+  /* ── Form label ─────────────────────────────────────────── */
+  .label {
+    @apply block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wide;
+  }
+
+  /* ── Surface variants ────────────────────────────────────── */
+  .bg-surface        { background: rgba(255,255,255,0.05); }
+  .bg-surface-hover  { background: rgba(255,255,255,0.10); }
+  .bg-dark-100       { background-color: #1A1F2E; }
+  .bg-dark-400       { background-color: #0B0F19; }
+  .bg-dark-50        { background-color: #1A1F2E; }
+  .bg-dark           { background-color: #0B0F19; }
+}

@@ -1,0 +1,13 @@
+node_modules
+apps/backend
+apps/mobile
+apps/dashboard/node_modules
+packages/shared/node_modules
+packages/types/node_modules
+packages/ui/node_modules
+lib/api-zod/node_modules
+lib/db/node_modules
+apps/dashboard/.next
+**/dist
+**/.dart_tool
+**/build

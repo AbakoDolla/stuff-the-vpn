@@ -1,0 +1,77 @@
+# ─── Docker Compose ───────────────────────────────────────────────────────────
+# Environnement de développement local complet.
+#
+# Services inclus :
+# - backend    : API Node.js (port 3001)
+# - dashboard  : Interface Next.js (port 3000)
+# - postgres   : Base de données PostgreSQL (port 5432)
+# - redis      : Cache et sessions (port 6379)
+#
+# TODO (Phase 7): Ajouter les services V2Ray et SSH.
+
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: stv_postgres
+    environment:
+      POSTGRES_DB: stuff_the_vpn
+      POSTGRES_USER: stv_user
+      POSTGRES_PASSWORD: stv_password # TODO: utiliser docker secrets en production
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stv_user -d stuff_the_vpn"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: stv_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  backend:
+    build:
+      context: ../apps/backend
+      dockerfile: ../../docker/backend.Dockerfile
+    container_name: stv_backend
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://stv_user:stv_password@postgres:5432/stuff_the_vpn
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: change_me_in_production
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ../apps/backend/src:/app/src # Hot-reload en développement
+
+  dashboard:
+    build:
+      context: ../apps/dashboard
+      dockerfile: ../../docker/dashboard.Dockerfile
+    container_name: stv_dashboard
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,1 @@
+{"buildDependenciesMetafile": {"@prisma/engines": {"scripts": {"postinstall": "node scripts/install.js"}}, "prisma": {"scripts": {"postinstall": "node scripts/install.js"}}}}

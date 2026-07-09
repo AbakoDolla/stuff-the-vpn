@@ -1,0 +1,69 @@
+name: Build & Download APK
+
+on:
+  push:
+    branches: [ main, sxb-vpn-redesign ]
+    paths:
+      - 'apps/mobile/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'apps/mobile/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  build-apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+          cache-dependency-path: apps/mobile/pubspec.lock
+
+      - name: Install dependencies
+        run: |
+          cd apps/mobile
+          flutter pub get
+
+      - name: Ensure logo asset exists
+        run: |
+          mkdir -p apps/mobile/assets/images
+          if [ -f logo.png ]; then
+            cp logo.png apps/mobile/assets/images/logo.png
+          elif [ -f apps/dashboard/public/logo.png ]; then
+            cp apps/dashboard/public/logo.png apps/mobile/assets/images/logo.png
+          fi
+          ls -la apps/mobile/assets/images/ 2>/dev/null || echo "assets/images not found"
+
+      - name: Build APK (release)
+        run: |
+          cd apps/mobile
+          flutter build apk --release \
+            --dart-define=BACKEND_URL=https://vpnsxb.afrihall.com/api \
+            2>&1
+          ls -la build/app/outputs/flutter-apk/
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sxbvpn-release-apk
+          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
