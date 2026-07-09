@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/app.dart';
@@ -10,8 +10,7 @@ void main() {
   // 🔍 DIAGNOSTIC LOGS - Affiche toutes les erreurs en détail
   // ═══════════════════════════════════════════════════════════════════════════
   
-  // 1️⃣ Affiche les logs Flutter en console
-  debugPrintBegin('═══ STUFF THE VPN APP START ═══');
+  debugPrint('═══ STUFF THE VPN APP START ═══');
   
   // 2️⃣ Configure les erreurs globales
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -26,15 +25,20 @@ void main() {
   };
   
   // 3️⃣ Affiche les erreurs non catchées
-  PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('╔═══════════════════════════════════════════════════════════════');
-    debugPrint('║ 🔴 UNCAUGHT EXCEPTION');
-    debugPrint('╠═══════════════════════════════════════════════════════════════');
-    debugPrint('║ Error: $error');
-    debugPrint('╚═══════════════════════════════════════════════════════════════');
-    debugPrintStack(stackTrace: stack);
-    return true;
-  };
+  if (kIsWeb) {
+    // Web doesn't support PlatformDispatcher.instance.onError
+    debugPrint('ℹ️ Running on Web - skipping PlatformDispatcher setup');
+  } else {
+    PlatformDispatcher.instance.onError = (error, stack) {
+      debugPrint('╔═══════════════════════════════════════════════════════════════');
+      debugPrint('║ 🔴 UNCAUGHT EXCEPTION');
+      debugPrint('╠═══════════════════════════════════════════════════════════════');
+      debugPrint('║ Error: $error');
+      debugPrint('╚═══════════════════════════════════════════════════════════════');
+      debugPrintStack(stackTrace: stack);
+      return true;
+    };
+  }
 
   runApp(
     ProviderScope(
@@ -54,12 +58,10 @@ class _ProviderLogger extends ProviderObserver {
     debugPrint('║ Error: $error');
     debugPrint('╚═══════════════════════════════════════════════════════════════');
     debugPrintStack(stackTrace: stackTrace);
-    super.onError(provider, error, stackTrace);
   }
 
   @override
   void onChange(ProviderBase<dynamic> provider, Object? previousValue, Object? newValue) {
     debugPrint('📍 [Provider] ${provider.name ?? provider.runtimeType} = $newValue');
-    super.onChange(provider, previousValue, newValue);
   }
 }
