@@ -155,7 +155,8 @@ class _ErrorOverlayState extends State<_ErrorOverlay> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        // FIX: Pas de const pour le texte dynamique
+                        Text(
                           '🔍 LOGS (${_ErrorStore.errors.length})',
                           style: TextStyle(
                             color: Colors.white,
