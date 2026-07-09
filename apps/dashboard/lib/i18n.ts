@@ -7,13 +7,21 @@ const LANG_KEY = 'sxb_lang';
 
 export function getLang(): Lang {
   if (typeof window === 'undefined') return 'fr';
-  return (localStorage.getItem(LANG_KEY) as Lang) ?? 'fr';
+  try {
+    return (localStorage.getItem(LANG_KEY) as Lang) ?? 'fr';
+  } catch {
+    return 'fr';
+  }
 }
 
 export function setLang(lang: Lang) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(LANG_KEY, lang);
-  window.dispatchEvent(new CustomEvent('lang-change', { detail: lang }));
+  try {
+    localStorage.setItem(LANG_KEY, lang);
+    window.dispatchEvent(new CustomEvent('lang-change', { detail: lang }));
+  } catch {
+    // Silently fail if localStorage is not available
+  }
 }
 
 export const t: Record<Lang, Record<string, string>> = {

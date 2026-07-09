@@ -20,7 +20,11 @@ const TOKEN_KEY = "sxb_token";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
 }
 
 type AxiosLike = {
@@ -56,9 +60,13 @@ async function _request(
 
   if (res.status === 401) {
     if (typeof window !== "undefined") {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem("sxb_user");
-      document.cookie = "stv_token=; path=/; max-age=0";
+      try {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem("sxb_user");
+        document.cookie = "stv_token=; path=/; max-age=0";
+      } catch {
+        // Silently fail if localStorage is not available
+      }
       window.location.href = "/login";
     }
     throw new Error("Unauthorized");
@@ -135,9 +143,13 @@ export async function apiFetch<T = unknown>(path: string, init: RequestInit = {}
 
   if (res.status === 401) {
     if (typeof window !== "undefined") {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem("sxb_user");
-      document.cookie = "stv_token=; path=/; max-age=0";
+      try {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem("sxb_user");
+        document.cookie = "stv_token=; path=/; max-age=0";
+      } catch {
+        // Silently fail if localStorage is not available
+      }
       window.location.href = "/login";
     }
     throw new Error("Unauthorized");
@@ -165,9 +177,13 @@ export async function apiFetchPaginated<T = unknown>(path: string, init: Request
 
   if (res.status === 401) {
     if (typeof window !== "undefined") {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem("sxb_user");
-      document.cookie = "stv_token=; path=/; max-age=0";
+      try {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem("sxb_user");
+        document.cookie = "stv_token=; path=/; max-age=0";
+      } catch {
+        // Silently fail if localStorage is not available
+      }
       window.location.href = "/login";
     }
     throw new Error("Unauthorized");
