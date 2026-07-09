@@ -2,11 +2,14 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/models.dart';
+import 'crash_service.dart';
 
 /// Secure Storage Service for storing sensitive data
 class StorageService {
   static StorageService? _instance;
-  final FlutterSecureStorage _secureStorage;
+  late FlutterSecureStorage _secureStorage;
+  late CrashService _crashService;
+  bool _initialized = false;
   
   // Storage Keys
   static const String _keyDeviceId = 'device_id';
@@ -23,47 +26,104 @@ class StorageService {
   static const String _keyAutoSyncEnabled = 'auto_sync_enabled';
   static const String _keyAutoLaunchEnabled = 'auto_launch_enabled';
 
-  StorageService._() : _secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
-  );
+  StorageService._() {
+    _secureStorage = const FlutterSecureStorage(
+      aOptions: AndroidOptions(
+        encryptedSharedPreferences: true,
+      ),
+    );
+    _crashService = CrashService();
+  }
 
   static StorageService get instance {
     _instance ??= StorageService._();
     return _instance!;
   }
+  
+  /// Initialize storage service - must be called on app startup
+  Future<void> initialize() async {
+    if (_initialized) return;
+    
+    try {
+      _crashService.logInfo('[Storage] Initializing...');
+      // Test if storage is accessible
+      await _secureStorage.read(key: 'test_key');
+      _initialized = true;
+      _crashService.logInfo('[Storage] Initialized successfully');
+    } catch (e) {
+      _crashService.logError('[Storage] Initialization failed', e, null);
+      _initialized = false;
+    }
+  }
+  
+  bool get isInitialized => _initialized;
 
   // ============ DEVICE ============
 
   /// Save device ID
   Future<void> saveDeviceId(String deviceId) async {
-    await _secureStorage.write(key: _keyDeviceId, value: deviceId);
+    try {
+      if (!_initialized) await initialize();
+      await _secureStorage.write(key: _keyDeviceId, value: deviceId);
+    } catch (e) {
+      _crashService.logError('[Storage] Failed to save device ID', e, null);
+      rethrow;
+    }
   }
 
   /// Get device ID
   Future<String?> getDeviceId() async {
-    return await _secureStorage.read(key: _keyDeviceId);
+    try {
+      if (!_initialized) await initialize();
+      return await _secureStorage.read(key: _keyDeviceId);
+    } catch (e) {
+      _crashService.logError('[Storage] Failed to read device ID', e, null);
+      return null;
+    }
   }
 
   /// Save device token
   Future<void> saveDeviceToken(String token) async {
-    await _secureStorage.write(key: _keyDeviceToken, value: token);
+    try {
+      if (!_initialized) await initialize();
+      await _secureStorage.write(key: _keyDeviceToken, value: token);
+    } catch (e) {
+      _crashService.logError('[Storage] Failed to save device token', e, null);
+      rethrow;
+    }
   }
 
   /// Get device token
   Future<String?> getDeviceToken() async {
-    return await _secureStorage.read(key: _keyDeviceToken);
+    try {
+      if (!_initialized) await initialize();
+      return await _secureStorage.read(key: _keyDeviceToken);
+    } catch (e) {
+      _crashService.logError('[Storage] Failed to read device token', e, null);
+      return null;
+    }
   }
 
   /// Save auth token
   Future<void> saveAuthToken(String token) async {
-    await _secureStorage.write(key: _keyAuthToken, value: token);
+    try {
+      if (!_initialized) await initialize();
+      await _secureStorage.write(key: _keyAuthToken, value: token);
+    } catch (e) {
+      _crashService.logError('[Storage] Failed to save auth token', e, null);
+      rethrow;
+    }
   }
 
   /// Get auth token
   Future<String?> getAuthToken() async {
-    return await _secureStorage.read(key: _keyAuthToken);
+    try {
+      if (!_initialized) await initialize();
+      return await _secureStorage.read(key: _keyAuthToken);
+    } catch (e) {
+      _crashService.logError('[Storage] Failed to read auth token', e, null);
+      return null;
+    }
   }
 
   /// Save device data

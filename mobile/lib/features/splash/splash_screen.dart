@@ -4,6 +4,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../services/services.dart';
+import '../../services/connectivity_service.dart';
+import '../../services/crash_service.dart';
 import '../activation/activation_screen.dart';
 import '../home/home_screen.dart';
 
@@ -24,6 +26,11 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _logoOpacityAnimation;
   late Animation<double> _textOpacityAnimation;
   late Animation<Offset> _textSlideAnimation;
+  
+  late CrashService _crashService;
+  late ConnectivityService _connectivityService;
+  bool _initFailed = false;
+  int _retryCount = 0;
 
   String _statusText = 'Initialisation...';
   double _progress = 0.0;
@@ -81,6 +88,11 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _initialize() async {
     try {
+      _crashService = CrashService();
+      _connectivityService = ConnectivityService();
+      
+      _crashService.logInfo('[Splash] Starting initialization');
+      
       // Lock orientation to portrait
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
@@ -96,6 +108,9 @@ class _SplashScreenState extends State<SplashScreen>
       // Start animations
       _logoController.forward();
 
+      // Initialize critical services
+      await _initializeServices();
+
       // Simulate initialization steps
       await _checkIntegrity();
       await _checkDevice();
@@ -108,11 +123,43 @@ class _SplashScreenState extends State<SplashScreen>
       // Navigate to appropriate screen
       await _navigateToNextScreen();
     } catch (e) {
+      _crashService.logError('[Splash] Initialization failed', e, null);
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();
+          _initFailed = true;
         });
       }
+    }
+  }
+  
+  Future<void> _initializeServices() async {
+    _updateStatus('Initialisation des services...', 0.05);
+    
+    try {
+      // Initialize storage
+      await StorageService.instance.initialize();
+      _crashService.logInfo('[Splash] Storage initialized');
+      
+      // Initialize connectivity
+      _connectivityService.initialize();
+      _crashService.logInfo('[Splash] Connectivity initialized');
+      
+      // Check connectivity
+      if (!_connectivityService.isConnected) {
+        _updateStatus('Attente de la connexion réseau...', 0.1);
+        final connected = await _connectivityService.waitForConnection(
+          timeout: const Duration(seconds: 10),
+        );
+        if (!connected) {
+          throw Exception('Pas de connexion réseau disponible');
+        }
+      }
+      
+      _crashService.logInfo('[Splash] Services initialized successfully');
+    } catch (e) {
+      _crashService.logError('[Splash] Service initialization failed', e, null);
+      rethrow;
     }
   }
 
@@ -135,18 +182,27 @@ class _SplashScreenState extends State<SplashScreen>
       final deviceToken = await StorageService.instance.getDeviceToken();
 
       if (deviceId != null && deviceToken != null) {
+        _crashService.logInfo('[Splash] Found stored device credentials');
         // Device is registered, check authorization
         try {
-          final device = await ApiService.instance.checkDeviceAuthorization(deviceId);
+          final device = await ApiService.instance.checkDeviceAuthorization(deviceId).timeout(
+            const Duration(seconds: 8),
+            onTimeout: () {
+              throw TimeoutException('Device authorization check timeout');
+            },
+          );
           if (device != null && device.isActive) {
             await StorageService.instance.saveDevice(device);
             ApiService.instance.setAuthToken(deviceToken);
+            _crashService.logInfo('[Splash] Device authorized');
           }
         } catch (e) {
+          _crashService.logError('[Splash] Device check failed, using cached data', e, null);
           // Continue with stored data
         }
       }
     } catch (e) {
+      _crashService.logError('[Splash] Session check failed', e, null);
       // Continue without session check
     }
   }
@@ -171,6 +227,36 @@ class _SplashScreenState extends State<SplashScreen>
         _statusText = text;
         _progress = progress;
       });
+    }
+  }
+  
+  void _retryInitialization() {
+    if (mounted) {
+      setState(() {
+        _initFailed = false;
+        _errorMessage = null;
+        _statusText = 'Initialisation...';
+        _progress = 0.0;
+        _retryCount++;
+      });
+      
+      // Reset animations
+      _logoController.reset();
+      _textController.reset();
+      
+      _crashService.logInfo('[Splash] Retrying initialization (attempt $_retryCount)');
+      
+      // Max 3 retries
+      if (_retryCount <= 3) {
+        _initialize();
+      } else {
+        if (mounted) {
+          setState(() {
+            _initFailed = true;
+            _errorMessage = 'Impossible de démarrer l\'application après 3 tentatives';
+          });
+        }
+      }
     }
   }
 
@@ -223,8 +309,13 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _logoController.dispose();
-    _textController.dispose();
+    try {
+      _logoController.dispose();
+      _textController.dispose();
+      _connectivityService.dispose();
+    } catch (e) {
+      _crashService.logError('[Splash] Error during dispose', e, null);
+    }
     super.dispose();
   }
 
@@ -329,40 +420,63 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   child: Column(
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0, end: _progress),
-                          duration: const Duration(milliseconds: 300),
-                          builder: (context, value, child) {
-                            return LinearProgressIndicator(
-                              value: value,
-                              minHeight: 4,
-                              backgroundColor: AppColors.border,
-                              valueColor: const AlwaysStoppedAnimation(
-                                AppColors.primary,
+                      if (_initFailed)
+                        Column(
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: AppColors.error,
+                              size: 40,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              _errorMessage ?? 'Une erreur est survenue',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.error,
                               ),
-                            );
-                          },
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            ElevatedButton.icon(
+                              onPressed: _retryInitialization,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Réessayer'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Column(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                              child: TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0, end: _progress),
+                                duration: const Duration(milliseconds: 300),
+                                builder: (context, value, child) {
+                                  return LinearProgressIndicator(
+                                    value: value,
+                                    minHeight: 4,
+                                    backgroundColor: AppColors.border,
+                                    valueColor: const AlwaysStoppedAnimation(
+                                      AppColors.primary,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              _statusText,
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textTertiary,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        _statusText,
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.textTertiary,
-                        ),
-                      ),
-                      if (_errorMessage != null) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          _errorMessage!,
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.error,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
                     ],
                   ),
                 ),

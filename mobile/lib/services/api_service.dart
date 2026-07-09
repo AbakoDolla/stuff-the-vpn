@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/models.dart';
+import 'crash_service.dart';
 
 /// API Service for communicating with the SXB VPN backend
 /// Uses /api/mobile/* routes for mobile-specific endpoints
@@ -18,10 +20,17 @@ class ApiService {
   // Mobile API base URL
   String get _mobileBase => '$_baseUrl/mobile';
   
+  // Timeout and retry settings
+  static const Duration _defaultTimeout = Duration(seconds: 10);
+  static const int _maxRetries = 3;
+  
   String? _authToken;
   static ApiService? _instance;
+  late CrashService _crashService;
 
-  ApiService._();
+  ApiService._() {
+    _crashService = CrashService();
+  }
 
   static ApiService get instance {
     _instance ??= ApiService._();
@@ -43,15 +52,59 @@ class ApiService {
     return headers;
   }
 
-  Future<Map<String, dynamic>> _handleResponse(http.Response response) async {
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+  Future<T> _withRetry<T>(
+    Future<T> Function() request, {
+    int maxRetries = _maxRetries,
+    Duration timeout = _defaultTimeout,
+  }) async {
+    int attempt = 0;
+    dynamic lastError;
     
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return body;
+    while (attempt < maxRetries) {
+      try {
+        attempt++;
+        _crashService.logInfo('[API] Attempt $attempt/$maxRetries');
+        
+        final result = await request().timeout(
+          timeout,
+          onTimeout: () {
+            throw TimeoutException('API request timeout after ${timeout.inSeconds}s');
+          },
+        );
+        
+        _crashService.logInfo('[API] Success on attempt $attempt');
+        return result;
+      } catch (e) {
+        lastError = e;
+        _crashService.logError('[API] Attempt $attempt failed', e, null);
+        
+        if (attempt < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s
+          final delay = Duration(seconds: 1 << (attempt - 1));
+          _crashService.logInfo('[API] Retrying in ${delay.inSeconds}s...');
+          await Future.delayed(delay);
+        }
+      }
     }
     
-    final error = body['message'] ?? body['error'] ?? 'Unknown error';
-    throw ApiException(error.toString(), response.statusCode);
+    _crashService.logError('[API] All retries failed', lastError, null);
+    throw lastError ?? ApiException('Request failed after $maxRetries attempts', null);
+  }
+
+  Future<Map<String, dynamic>> _handleResponse(http.Response response) async {
+    try {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return body;
+      }
+      
+      final error = body['message'] ?? body['error'] ?? 'Unknown error';
+      throw ApiException(error.toString(), response.statusCode);
+    } catch (e) {
+      _crashService.logError('[API] Response parsing error', e, null);
+      rethrow;
+    }
   }
 
   // ============ AUTHENTICATION ============
@@ -68,24 +121,26 @@ class ApiService {
     String? phone,
     String? email,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_mobileBase/device/activate'),
-      headers: _headers,
-      body: jsonEncode({
-        'deviceId': deviceId,
-        'token': token,
-        'deviceName': deviceName,
-        'brand': brand,
-        'model': model,
-        'osVersion': osVersion,
-        'appVersion': appVersion,
-        'phone': phone,
-        'email': email,
-      }),
-    );
-    
-    final data = await _handleResponse(response);
-    return Device.fromJson(data['data'] ?? data);
+    return _withRetry(() async {
+      final response = await http.post(
+        Uri.parse('$_mobileBase/device/activate'),
+        headers: _headers,
+        body: jsonEncode({
+          'deviceId': deviceId,
+          'token': token,
+          'deviceName': deviceName,
+          'brand': brand,
+          'model': model,
+          'osVersion': osVersion,
+          'appVersion': appVersion,
+          'phone': phone,
+          'email': email,
+        }),
+      );
+      
+      final data = await _handleResponse(response);
+      return Device.fromJson(data['data'] ?? data);
+    });
   }
 
   /// Activate with license token (legacy system)
@@ -95,48 +150,53 @@ class ApiService {
     String? deviceName,
     String? phone,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_mobileBase/activate'),
-      headers: _headers,
-      body: jsonEncode({
-        'token': token,
-        'deviceId': deviceId,
-        'deviceName': deviceName,
-        'phone': phone,
-      }),
-    );
-    
-    final data = await _handleResponse(response);
-    return Device.fromJson(data['data'] ?? data);
+    return _withRetry(() async {
+      final response = await http.post(
+        Uri.parse('$_mobileBase/activate'),
+        headers: _headers,
+        body: jsonEncode({
+          'token': token,
+          'deviceId': deviceId,
+          'deviceName': deviceName,
+          'phone': phone,
+        }),
+      );
+      
+      final data = await _handleResponse(response);
+      return Device.fromJson(data['data'] ?? data);
+    });
   }
 
   /// Check if a device is authorized
   Future<Device?> checkDeviceAuthorization(String deviceId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$_mobileBase/subscription'),
-        headers: _headers,
-      );
-      
-      if (response.statusCode == 401 || response.statusCode == 403) {
+      return await _withRetry(() async {
+        final response = await http.get(
+          Uri.parse('$_mobileBase/subscription'),
+          headers: _headers,
+        );
+        
+        if (response.statusCode == 401 || response.statusCode == 403) {
+          return null;
+        }
+        
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          return Device.fromJson({
+            'id': deviceId,
+            'deviceId': deviceId,
+            'status': 'ACTIVE',
+            'connectionCount': 0,
+            'isCompromised': false,
+            'createdAt': DateTime.now().toIso8601String(),
+            'updatedAt': DateTime.now().toIso8601String(),
+          });
+        }
+        
         return null;
-      }
-      
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return Device.fromJson({
-          'id': deviceId,
-          'deviceId': deviceId,
-          'status': 'ACTIVE',
-          'connectionCount': 0,
-          'isCompromised': false,
-          'createdAt': DateTime.now().toIso8601String(),
-          'updatedAt': DateTime.now().toIso8601String(),
-        });
-      }
-      
-      return null;
+      });
     } catch (e) {
+      _crashService.logError('[API] Device authorization check failed', e, null);
       return null;
     }
   }
@@ -145,45 +205,59 @@ class ApiService {
 
   /// Sync device data with backend
   Future<Map<String, dynamic>> syncDevice(String deviceId) async {
-    final response = await http.get(
-      Uri.parse('$_mobileBase/sync'),
-      headers: _headers,
-    );
-    
-    return await _handleResponse(response);
+    return _withRetry(() async {
+      final response = await http.get(
+        Uri.parse('$_mobileBase/sync'),
+        headers: _headers,
+      );
+      
+      return await _handleResponse(response);
+    });
   }
 
   /// Get subscription status (combines user + quota info)
   Future<Map<String, dynamic>> getSubscriptionStatus() async {
-    final response = await http.get(
-      Uri.parse('$_mobileBase/subscription'),
-      headers: _headers,
-    );
-    
-    return await _handleResponse(response);
+    return _withRetry(() async {
+      final response = await http.get(
+        Uri.parse('$_mobileBase/subscription'),
+        headers: _headers,
+      );
+      
+      return await _handleResponse(response);
+    });
   }
 
   /// Get user profile
   Future<User> getUserProfile() async {
-    final sub = await getSubscriptionStatus();
-    return User.fromJson({
-      'id': sub['id'] ?? '',
-      'status': sub['status'] ?? 'ACTIVE',
-      'email': sub['email'],
-      'quotaTotalGB': sub['dataLimit'] ?? 0,
-      'quotaUsedGB': sub['dataUsed'] ?? 0,
-    });
+    try {
+      final sub = await getSubscriptionStatus();
+      return User.fromJson({
+        'id': sub['id'] ?? '',
+        'status': sub['status'] ?? 'ACTIVE',
+        'email': sub['email'],
+        'quotaTotalGB': sub['dataLimit'] ?? 0,
+        'quotaUsedGB': sub['dataUsed'] ?? 0,
+      });
+    } catch (e) {
+      _crashService.logError('[API] Failed to get user profile', e, null);
+      rethrow;
+    }
   }
 
   /// Get user quota information
   Future<Quota> getQuota() async {
-    final sub = await getSubscriptionStatus();
-    return Quota.fromJson({
-      'id': 'quota',
-      'totalGB': sub['dataLimit'] ?? 0,
-      'usedGB': sub['dataUsed'] ?? 0,
-      'status': sub['status'],
-    });
+    try {
+      final sub = await getSubscriptionStatus();
+      return Quota.fromJson({
+        'id': 'quota',
+        'totalGB': sub['dataLimit'] ?? 0,
+        'usedGB': sub['dataUsed'] ?? 0,
+        'status': sub['status'],
+      });
+    } catch (e) {
+      _crashService.logError('[API] Failed to get quota', e, null);
+      rethrow;
+    }
   }
 
   /// Get notifications
