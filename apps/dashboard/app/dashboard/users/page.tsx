@@ -51,8 +51,18 @@ export default function UsersPage() {
       setShowCreate(false);
       setForm({ username:'', email:'', phone:'', password:'', role:'USER', quotaRemainingGB: 10 });
     },
-    onError: (e: {response?: {data?: {message?: string}}}) =>
-      toast.error(e.response?.data?.message ?? 'Erreur création'),
+    onError: (e: {response?: {data?: {message?: string; data?: Record<string, string[]>}}}) => {
+      const errData = e.response?.data;
+      if (errData?.data) {
+        // Format Zod validation errors: { field: ["error messages"] }
+        const messages = Object.entries(errData.data)
+          .map(([field, errors]) => `${field}: ${(errors as string[]).join(', ')}`)
+          .join(' | ');
+        toast.error(messages || 'Erreur de validation');
+      } else {
+        toast.error(errData?.message ?? 'Erreur création');
+      }
+    },
   });
 
   const statusMut = useMutation({
