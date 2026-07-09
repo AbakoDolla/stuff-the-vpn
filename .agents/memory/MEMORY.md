@@ -1,0 +1,1 @@
+- [SXB VPN project setup](sxb-vpn-project-setup.md) — this workspace hosts an external GitHub monorepo (Flutter mobile + Node backend + Next.js dashboard), not the Replit artifacts template; see topic file before touching root structure or trying to use createArtifact.
