@@ -45,11 +45,11 @@ export default function UsersPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: (body: CreateForm) => api.post('/users', body),
+    mutationFn: (body: CreateForm) => Api.createUser(body),
     onSuccess: (data) => {
-      const token = (data as {loginToken?: string})?.loginToken;
-      if (token) {
-        toast.success(`Utilisateur créé ! Token: ${token}`);
+      const response = data as {loginToken?: string};
+      if (response?.loginToken) {
+        toast.success(`Utilisateur créé ! Token: ${response.loginToken}`);
       } else {
         toast.success('Utilisateur créé');
       }
@@ -57,7 +57,7 @@ export default function UsersPage() {
       setShowCreate(false);
       setForm({ username:'', email:'', phone:'', password:'', role:'USER', quotaRemainingGB: 10, expireAt: undefined });
     },
-    onError: (e: {response?: {data?: {message?: string; data?: Record<string, string[]>}}}) => {
+    onError: (e: Error & {response?: {data?: {message?: string; data?: Record<string, string[]>}}}) => {
       const errData = e.response?.data;
       if (errData?.data) {
         // Format Zod validation errors: { field: ["error messages"] }
@@ -66,7 +66,7 @@ export default function UsersPage() {
           .join(' | ');
         toast.error(messages || 'Erreur de validation');
       } else {
-        toast.error(errData?.message ?? 'Erreur création');
+        toast.error(e.message || errData?.message || 'Erreur création');
       }
     },
   });
