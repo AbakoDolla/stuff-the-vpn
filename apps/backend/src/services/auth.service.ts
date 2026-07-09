@@ -55,18 +55,18 @@ export async function loginUser(
 }
 
 /**
- * Admin login — vérifie d'abord la table User (rôle ADMIN/SUPER_ADMIN),
- * puis la table Admin séparée si non trouvé.
+ * Dashboard login — permet à TOUS les utilisateurs actifs de se connecter au dashboard.
+ * Vérifie d'abord la table User, puis la table Admin séparée.
  */
 export async function loginAdmin(
   email: string,
   password: string,
   ipAddress?: string,
 ) {
-  // 1. Try User table (admins seeded with SUPER_ADMIN/ADMIN role)
+  // 1. Try User table (ALL roles allowed)
   const user = await prisma.user.findUnique({ where: { email } });
 
-  if (user && ["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+  if (user) {
     if (user.status !== "ACTIVE") throw new Error(`Account is ${user.status.toLowerCase()}`);
     if (!user.password) throw new Error("Invalid credentials");
     const valid = await bcrypt.compare(password, user.password);

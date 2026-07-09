@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, Api } from '@/lib/api';
 import DashboardLayout from '@/components/DashboardLayout';
 import { toast } from 'sonner';
-import { Plus, Users, Search, Ban, CheckCircle, Trash2 } from 'lucide-react';
+import { Plus, Users, Search, Ban, CheckCircle, Trash2, HardDrive } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -13,6 +13,15 @@ interface User {
   id:string; username:string; email?:string; phone?:string;
   role:string; status:string; quotaUsedGB:number; quotaRemainingGB:number;
   expireAt?:string; createdAt:string; lastLoginAt?:string;
+}
+
+interface CreateForm {
+  username: string;
+  email: string;
+  phone: string;
+  password: string;
+  role: string;
+  quotaRemainingGB: number;
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -26,7 +35,7 @@ export default function UsersPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ username:'', email:'', phone:'', password:'', role:'CLIENT' });
+  const [form, setForm] = useState<CreateForm>({ username:'', email:'', phone:'', password:'', role:'CLIENT', quotaRemainingGB: 10 });
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['users', search],
@@ -35,12 +44,12 @@ export default function UsersPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: (body: typeof form) => api.post('/users', body),
+    mutationFn: (body: CreateForm) => api.post('/users', body),
     onSuccess: () => {
       toast.success('Utilisateur créé');
       qc.invalidateQueries({queryKey:['users']});
       setShowCreate(false);
-      setForm({ username:'', email:'', phone:'', password:'', role:'CLIENT' });
+      setForm({ username:'', email:'', phone:'', password:'', role:'CLIENT', quotaRemainingGB: 10 });
     },
     onError: (e: {response?: {data?: {message?: string}}}) =>
       toast.error(e.response?.data?.message ?? 'Erreur création'),
@@ -84,7 +93,7 @@ export default function UsersPage() {
                 <div key={String(k)}>
                   <label className="text-xs text-[#94A3B8] mb-1 block">{l}</label>
                   <input className="input" type={String(t)}
-                    value={String((form as Record<string,string>)[String(k)])}
+                    value={String((form as Record<string,string | number>)[String(k)])}
                     onChange={e => setForm(p => ({...p, [String(k)]: e.target.value}))} />
                 </div>
               ))}
@@ -93,6 +102,16 @@ export default function UsersPage() {
                 <select className="input" value={form.role} onChange={e => setForm(p=>({...p,role:e.target.value}))}>
                   {['CLIENT','RESELLER','SUPPORT','ADMIN'].map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="text-xs text-[#94A3B8] mb-1 block flex items-center gap-1">
+                  <HardDrive className="w-3 h-3" /> Quota (GB)
+                </label>
+                <input className="input" type="number" min="0" step="1"
+                  value={form.quotaRemainingGB}
+                  onChange={e => setForm(p => ({...p, quotaRemainingGB: Number(e.target.value)}))} 
+                  placeholder="10" />
+                <p className="text-[10px] text-[#64748B] mt-1">Quota de données en GB</p>
               </div>
             </div>
             <div className="flex justify-end gap-3">
