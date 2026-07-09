@@ -118,12 +118,12 @@ export async function logout(req: AuthRequest, res: Response, next: NextFunction
  */
 export async function loginWithToken(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { token } = req.body as { token?: string };
+    const { token, deviceId, deviceName } = req.body as { token?: string; deviceId?: string; deviceName?: string };
     if (!token) {
       sendError(res, "Token de connexion requis", HTTP_STATUS.BAD_REQUEST);
       return;
     }
-    const result = await authService.loginWithDashboardToken(token, req.ip);
+    const result = await authService.loginWithDashboardToken(token, req.ip, deviceId, deviceName);
     res.cookie("stv_token", result.token, COOKIE_OPTS);
     sendSuccess(res, result, "Connexion réussie");
   } catch (err) {

@@ -15,6 +15,7 @@ class ApiEndpoints {
   // ── Auth ─────────────────────────────────────────────────────────────────
   static const String login        = '/auth/login';
   static const String loginLicense = '/mobile/activate'; // legacy
+  static const String loginToken   = '/auth/token/login';  // new token login
   static const String deviceActivate = '/mobile/device/activate'; // new system
   static const String refresh      = '/auth/refresh';
   static const String register     = '/auth/register';

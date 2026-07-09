@@ -70,6 +70,31 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
+  /// Login with dashboard token only (simplified login)
+  Future<void> loginWithToken({
+    required String token,
+    String? deviceId,
+    String? deviceName,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final result = await ref.read(authServiceProvider).loginWithToken(
+        token: token,
+        deviceId: deviceId,
+        deviceName: deviceName,
+      );
+      if (!result.success) {
+        throw Exception(result.error ?? 'Login failed');
+      }
+      state = AsyncValue.data(AuthState(
+        user: result.user,
+        license: result.license,
+      ));
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
   /// Register a new account with email, password, and username
   Future<void> register(String email, String password, String username) async {
     state = const AsyncValue.loading();

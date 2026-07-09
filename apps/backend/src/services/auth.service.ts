@@ -204,6 +204,8 @@ export async function logoutSession(token: string) {
 export async function loginWithDashboardToken(
   loginToken: string,
   ipAddress?: string,
+  deviceId?: string,
+  deviceName?: string,
 ) {
   // Find user by loginToken
   const user = await prisma.user.findFirst({
@@ -220,9 +222,14 @@ export async function loginWithDashboardToken(
     throw new Error("Token de connexion expiré");
   }
 
-  // Create session
+  // Create session with device info
   const session = await prisma.session.create({
-    data: { token: "tmp", userId: user.id, ipAddress },
+    data: { 
+      token: "tmp", 
+      userId: user.id, 
+      ipAddress,
+      deviceName: deviceName || deviceId || "Unknown Device",
+    },
   });
 
   const finalToken = jwt.sign(

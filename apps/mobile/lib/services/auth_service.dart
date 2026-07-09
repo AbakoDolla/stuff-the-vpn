@@ -23,6 +23,44 @@ class AuthService {
 
   AuthService(this._api, this._storage);
 
+  /// Login with dashboard token (for users/resellers)
+  Future<AuthResult> loginWithToken({
+    required String token,
+    String? deviceId,
+    String? deviceName,
+  }) async {
+    try {
+      final response = await _api.post(ApiEndpoints.loginToken, data: {
+        "token": token,
+        if (deviceId != null) "deviceId": deviceId,
+        if (deviceName != null) "deviceName": deviceName,
+      });
+      final json = response.data as Map<String, dynamic>;
+      final payload = (json["data"] as Map<String, dynamic>?) ?? json;
+
+      final jwtToken = (payload["accessToken"] ?? payload["token"])?.toString();
+      if (jwtToken == null) return const AuthResult(success: false, error: "No token received");
+
+      await _storage.saveToken(jwtToken);
+
+      UserModel? user;
+      final userJson = payload["user"] as Map<String, dynamic>?;
+      if (userJson != null) {
+        user = UserModel.fromJson(userJson);
+        await _storage.saveUserId(user.id);
+        await _storage.saveUserEmail(user.email);
+      }
+
+      return AuthResult(
+        success: true,
+        token: jwtToken,
+        user: user,
+      );
+    } catch (e) {
+      return AuthResult(success: false, error: _parseError(e));
+    }
+  }
+
   /// Login with license token, phone, and device ID
   Future<AuthResult> loginWithLicense({
     required String token,
