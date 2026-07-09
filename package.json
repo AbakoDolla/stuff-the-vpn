@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "description": "Plateforme SaaS VPN commerciale — V2Ray & SSH",
-  "packageManager": "pnpm@11.7.0",
   "workspaces": [
     "apps/*",
     "packages/*",
@@ -11,12 +10,12 @@
   ],
   "scripts": {
     "dev": "echo 'Use docker-compose or run apps individually. See docs/deployment.md'",
-    "lint": "pnpm exec eslint --workspace-root --ignore-path .gitignore .",
-    "typecheck": "pnpm exec tsc -b .",
-    "build": "pnpm run build:prisma && pnpm -r build",
-    "build:prisma": "cd apps/backend && DATABASE_URL='postgresql://dummy:dummy@localhost:5432/dummy' pnpm prisma generate",
-    "start:backend": "cd apps/backend && pnpm start",
-    "start:dashboard": "cd apps/dashboard && pnpm start"
+    "lint": "npm exec eslint --workspace-root --ignore-path .gitignore .",
+    "typecheck": "npm exec tsc -b .",
+    "build": "npm run build:prisma && npm -r build",
+    "build:prisma": "cd apps/backend && DATABASE_URL='postgresql://dummy:dummy@localhost:5432/dummy' npx prisma generate",
+    "start:backend": "cd apps/backend && npm start",
+    "start:dashboard": "cd apps/dashboard && npm start"
   },
   "devDependencies": {
     "eslint": "^8.42.0",
