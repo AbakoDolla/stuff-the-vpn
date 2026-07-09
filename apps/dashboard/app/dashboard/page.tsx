@@ -27,31 +27,35 @@ function StatCard({
   loading?: boolean;
 }) {
   const colors = {
-    blue:   { bg: 'from-blue-500/10 to-blue-600/5',   icon: 'text-blue-400',   border: 'border-blue-500/20' },
-    green:  { bg: 'from-green-500/10 to-green-600/5', icon: 'text-green-400',  border: 'border-green-500/20' },
-    purple: { bg: 'from-purple-500/10 to-purple-600/5',icon: 'text-purple-400',border: 'border-purple-500/20' },
-    orange: { bg: 'from-orange-500/10 to-orange-600/5',icon: 'text-orange-400',border: 'border-orange-500/20' },
+    blue:   { bg: 'from-blue-600/5 to-blue-500/0',   icon: 'text-blue-400',   border: 'border-blue-500/30', iconBg: 'bg-blue-500/10' },
+    green:  { bg: 'from-green-600/5 to-green-500/0', icon: 'text-green-400',  border: 'border-green-500/30', iconBg: 'bg-green-500/10' },
+    purple: { bg: 'from-purple-600/5 to-purple-500/0',icon: 'text-purple-400',border: 'border-purple-500/30', iconBg: 'bg-purple-500/10' },
+    orange: { bg: 'from-orange-600/5 to-orange-500/0',icon: 'text-orange-400',border: 'border-orange-500/30', iconBg: 'bg-orange-500/10' },
   }[color];
 
   return (
-    <div className={`card bg-gradient-to-br ${colors.bg} border ${colors.border} p-5`}>
-      <div className="flex items-start justify-between">
-        <div className="min-w-0">
-          <p className="text-xs text-gray-500 font-medium mb-1">{title}</p>
+    <motion.div 
+      variants={item}
+      className={`group relative overflow-hidden card bg-gradient-to-br ${colors.bg} border ${colors.border} p-6 hover:border-${color}-500/50 transition-all duration-300`}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <div className="relative flex items-start justify-between">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wider">{title}</p>
           {loading ? (
-            <div className="h-8 w-24 bg-white/5 rounded-lg animate-pulse" />
+            <div className="h-8 w-32 bg-white/5 rounded-lg animate-pulse" />
           ) : (
-            <p className="text-2xl font-bold text-white leading-tight">{value}</p>
+            <p className="text-3xl font-bold text-white leading-tight">{value}</p>
           )}
           {sub && !loading && (
-            <p className="text-xs text-gray-500 mt-1">{sub}</p>
+            <p className="text-xs text-gray-500 mt-2.5">{sub}</p>
           )}
         </div>
-        <div className={`p-2.5 rounded-xl bg-white/5 ${colors.icon} shrink-0`}>
-          <Icon size={20} />
+        <div className={`p-3 rounded-lg ${colors.iconBg} ${colors.icon} shrink-0 transition-transform duration-300 group-hover:scale-110`}>
+          <Icon size={24} />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -179,11 +183,14 @@ export default function DashboardPage() {
         <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
           {/* Recent Users Table */}
-          <div className="lg:col-span-2 card space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-200">{tr.recentUsers}</h2>
-              <a href="/dashboard/users" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                {tr.viewAll}
+          <motion.div variants={item} className="lg:col-span-2 card space-y-4">
+            <div className="flex items-center justify-between pb-4 border-b border-white/5">
+              <div>
+                <h2 className="text-sm font-bold text-white">{tr.recentUsers}</h2>
+                <p className="text-xs text-gray-500 mt-1">Derniers utilisateurs enregistrés</p>
+              </div>
+              <a href="/dashboard/users" className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20">
+                {tr.viewAll} →
               </a>
             </div>
             {usersLoading ? (
@@ -198,58 +205,106 @@ export default function DashboardPage() {
                 <p className="text-sm">{tr.noUsersFound}</p>
               </div>
             ) : (
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-gray-500 border-b border-white/5">
-                    <th className="text-left py-2 font-medium">{tr.username}</th>
-                    <th className="text-left py-2 font-medium hidden md:table-cell">{tr.quota}</th>
-                    <th className="text-left py-2 font-medium">{tr.status}</th>
-                    <th className="text-left py-2 font-medium hidden lg:table-cell">{tr.expireAt}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(users as Array<{ id: string; username?: string; email?: string; phone?: string; status: string; quotaUsedGB: number; quotaRemainingGB: number; expireAt?: string }>).map((u) => (
-                    <tr key={u.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                      <td className="py-2.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                            {(u.username ?? u.email ?? '?')[0].toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-200 text-xs">{u.username ?? '—'}</p>
-                            <p className="text-gray-500 text-[10px]">{u.email ?? u.phone ?? ''}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-2.5 hidden md:table-cell">
-                        <p className="text-gray-300">{u.quotaUsedGB.toFixed(1)} {tr.gb}</p>
-                        <p className="text-gray-500 text-[10px]">{u.quotaRemainingGB.toFixed(1)} {tr.gb} {tr.quotaRemaining}</p>
-                      </td>
-                      <td className="py-2.5">
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
-                          u.status === 'ACTIVE'
-                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                            : 'bg-red-500/10 text-red-400 border-red-500/20'
-                        }`}>
-                          {u.status === 'ACTIVE' ? tr.active : u.status}
-                        </span>
-                      </td>
-                      <td className="py-2.5 hidden lg:table-cell text-gray-500 text-[10px]">
-                        {u.expireAt ? new Date(u.expireAt).toLocaleDateString('fr-FR') : '—'}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-gray-400 border-b border-white/10">
+                      <th className="text-left py-3 px-4 font-semibold">{tr.username}</th>
+                      <th className="text-left py-3 px-4 font-semibold hidden md:table-cell">{tr.quota}</th>
+                      <th className="text-left py-3 px-4 font-semibold">{tr.status}</th>
+                      <th className="text-left py-3 px-4 font-semibold hidden lg:table-cell">{tr.expireAt}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {(users as Array<{ id: string; username?: string; email?: string; phone?: string; status: string; quotaUsedGB: number; quotaRemainingGB: number; expireAt?: string }>).map((u) => (
+                      <tr key={u.id} className="border-b border-white/5 hover:bg-white/5 transition-colors duration-200">
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                              {(u.username ?? u.email ?? '?')[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-100 text-xs">{u.username ?? '—'}</p>
+                              <p className="text-gray-500 text-[11px]">{u.email ?? u.phone ?? ''}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 hidden md:table-cell">
+                          <p className="text-gray-200 font-medium">{u.quotaUsedGB.toFixed(1)} {tr.gb}</p>
+                          <p className="text-gray-500 text-[11px]">{u.quotaRemainingGB.toFixed(1)} {tr.gb} {tr.quotaRemaining}</p>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border inline-flex items-center gap-1.5 ${
+                            u.status === 'ACTIVE'
+                              ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                              : 'bg-red-500/10 text-red-400 border-red-500/30'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${u.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`} />
+                            {u.status === 'ACTIVE' ? tr.active : u.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 hidden lg:table-cell text-gray-500 text-[11px]">
+                          {u.expireAt ? new Date(u.expireAt).toLocaleDateString('fr-FR') : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </div>
+          </motion.div>
 
-          {/* Recent Activities */}
-          <div className="card space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-200">{tr.recentActivities}</h2>
-              <a href="/dashboard/audit" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                {tr.viewAll}
+          {/* Top Users by consumption */}
+          <motion.div variants={item} className="card space-y-4">
+            <div className="pb-4 border-b border-white/5">
+              <h2 className="text-sm font-bold text-white">Top utilisateurs</h2>
+              <p className="text-xs text-gray-500 mt-1">Consommation de données</p>
+            </div>
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1,2,3,4,5].map(i => <div key={i} className="h-10 bg-white/5 rounded-lg animate-pulse" />)}
+              </div>
+            ) : topUsers.length === 0 ? (
+              <div className="flex flex-col items-center py-8 text-gray-500">
+                <Zap size={32} className="mb-3 opacity-40" />
+                <p className="text-xs">{tr.noData}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {topUsers.map((u, i) => {
+                  const total = u.quotaUsedGB + u.quotaRemainingGB;
+                  const pct = total > 0 ? Math.min(100, Math.round((u.quotaUsedGB / total) * 100)) : 0;
+                  const getColor = () => {
+                    if (pct > 80) return 'from-red-500 to-red-600';
+                    if (pct > 50) return 'from-orange-500 to-orange-600';
+                    return 'from-blue-500 to-blue-600';
+                  };
+                  return (
+                    <div key={u.id} className="space-y-2 p-3 rounded-lg bg-white/3 hover:bg-white/5 transition-colors duration-200">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-gray-500 font-bold text-sm w-5">{i + 1}</span>
+                          <span className="text-gray-200 font-semibold">{u.username ?? u.email ?? 'User'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-300 font-medium">{u.quotaUsedGB.toFixed(1)} GB</span>
+                          {pct > 80 ? <TrendingUp size={14} className="text-red-400" /> : <TrendingDown size={14} className="text-green-400" />}
+                        </div>
+                      </div>
+                      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all bg-gradient-to-r ${getColor()}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+              <a href="/dashboard/audit" className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20">
+                {tr.viewAll} →
               </a>
             </div>
             {isLoading ? (
@@ -258,20 +313,20 @@ export default function DashboardPage() {
               </div>
             ) : recentActivities.length === 0 ? (
               <div className="flex flex-col items-center py-8 text-gray-500">
-                <Activity size={28} className="mb-2 opacity-30" />
+                <Activity size={32} className="mb-3 opacity-40" />
                 <p className="text-xs">{tr.noRecentActivity}</p>
               </div>
             ) : (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {recentActivities.slice(0, 8).map((act, i) => (
-                  <div key={i} className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white/5 transition-colors">
-                    <div className="mt-0.5 p-1.5 rounded-lg bg-white/5 shrink-0">
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors duration-200 group">
+                    <div className="mt-0.5 p-2 rounded-lg bg-white/5 group-hover:bg-white/10 shrink-0 transition-colors">
                       <ActivityIcon action={act.action} />
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-gray-300 font-medium truncate">{formatAction(act.action, tr)}</p>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Clock size={9} className="text-gray-600" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-gray-200 font-medium truncate">{formatAction(act.action, tr)}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Clock size={11} className="text-gray-600 shrink-0" />
                         <p className="text-[10px] text-gray-500">
                           {formatDistanceToNow(new Date(act.createdAt), { addSuffix: true, locale: fr })}
                         </p>
@@ -281,15 +336,17 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
-          </div>
-        </motion.div>
+          </motion.div>
 
         {/* Bottom row: System Status + Top Users */}
         <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
           {/* System Status */}
-          <div className="card space-y-3">
-            <h2 className="text-sm font-semibold text-gray-200">{tr.systemStatus}</h2>
+          <motion.div variants={item} className="card space-y-4">
+            <div className="pb-4 border-b border-white/5">
+              <h2 className="text-sm font-bold text-white">{tr.systemStatus}</h2>
+              <p className="text-xs text-gray-500 mt-1">Santé des services critiques</p>
+            </div>
             <div className="space-y-2">
               {[
                 { label: 'backendApi', ok: true },
@@ -307,16 +364,19 @@ export default function DashboardPage() {
                   sub: `${(s?.inbounds as { active?: number })?.active ?? 0} / ${(s?.inbounds as { total?: number })?.total ?? 0}`,
                 },
               ].map((svc) => (
-                <div key={svc.label} className="flex items-center justify-between p-3 rounded-lg bg-white/3 border border-white/5">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-2 h-2 rounded-full ${svc.ok ? 'bg-green-400' : 'bg-red-400'}`} />
+                <div key={svc.label} className="flex items-center justify-between p-3 rounded-lg border transition-all duration-200 hover:border-opacity-100" style={{
+                  backgroundColor: svc.ok ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+                  borderColor: svc.ok ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                }}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2.5 h-2.5 rounded-full ${svc.ok ? 'bg-green-500' : 'bg-red-500'}`} />
                     <div>
-                      <p className="text-xs text-gray-300 font-medium">{tr[svc.label as keyof typeof tr] ?? svc.label}</p>
-                      {svc.sub && <p className="text-[10px] text-gray-500">{svc.sub}</p>}
+                      <p className="text-xs text-gray-200 font-medium">{tr[svc.label as keyof typeof tr] ?? svc.label}</p>
+                      {svc.sub && <p className="text-[11px] text-gray-500 mt-0.5">{svc.sub}</p>}
                     </div>
                   </div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                    svc.ok ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                  <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${
+                    svc.ok ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'
                   }`}>
                     {svc.ok ? tr.operational : tr.offline}
                   </span>
