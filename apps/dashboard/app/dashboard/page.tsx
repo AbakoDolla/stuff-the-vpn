@@ -254,6 +254,48 @@ export default function DashboardPage() {
             )}
           </motion.div>
 
+          {/* Recent Activities */}
+          <motion.div variants={item} className="card space-y-4">
+            <div className="flex items-center justify-between pb-4 border-b border-white/5">
+              <div>
+                <h2 className="text-sm font-bold text-white">{tr.recentActivity || 'Activités récentes'}</h2>
+                <p className="text-xs text-gray-500 mt-1">{tr.systemActivity || 'Dernières actions'}</p>
+              </div>
+              <a href="/dashboard/audit" className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20">
+                {tr.viewAll} →
+              </a>
+            </div>
+            {isLoading ? (
+              <div className="space-y-2">
+                {[1,2,3,4,5].map(i => <div key={i} className="h-8 bg-white/5 rounded-lg animate-pulse" />)}
+              </div>
+            ) : recentActivities.length === 0 ? (
+              <div className="flex flex-col items-center py-8 text-gray-500">
+                <Activity size={32} className="mb-3 opacity-40" />
+                <p className="text-xs">{tr.noRecentActivity || 'Aucune activité récente'}</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {recentActivities.slice(0, 8).map((act, i) => (
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors duration-200 group">
+                    <div className="mt-0.5 p-2 rounded-lg bg-white/5 group-hover:bg-white/10 shrink-0 transition-colors">
+                      <ActivityIcon action={act.action} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-gray-200 font-medium truncate">{formatAction(act.action, tr)}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Clock size={11} className="text-gray-600 shrink-0" />
+                        <p className="text-[10px] text-gray-500">
+                          {formatDistanceToNow(new Date(act.createdAt), { addSuffix: true, locale: fr })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+
           {/* Top Users by consumption */}
           <motion.div variants={item} className="card space-y-4">
             <div className="pb-4 border-b border-white/5">
@@ -303,42 +345,10 @@ export default function DashboardPage() {
               </div>
             )}
           </motion.div>
-              <a href="/dashboard/audit" className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20">
-                {tr.viewAll} →
-              </a>
-            </div>
-            {isLoading ? (
-              <div className="space-y-2">
-                {[1,2,3,4,5].map(i => <div key={i} className="h-8 bg-white/5 rounded-lg animate-pulse" />)}
-              </div>
-            ) : recentActivities.length === 0 ? (
-              <div className="flex flex-col items-center py-8 text-gray-500">
-                <Activity size={32} className="mb-3 opacity-40" />
-                <p className="text-xs">{tr.noRecentActivity}</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {recentActivities.slice(0, 8).map((act, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors duration-200 group">
-                    <div className="mt-0.5 p-2 rounded-lg bg-white/5 group-hover:bg-white/10 shrink-0 transition-colors">
-                      <ActivityIcon action={act.action} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-gray-200 font-medium truncate">{formatAction(act.action, tr)}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Clock size={11} className="text-gray-600 shrink-0" />
-                        <p className="text-[10px] text-gray-500">
-                          {formatDistanceToNow(new Date(act.createdAt), { addSuffix: true, locale: fr })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.div>
 
-        {/* Bottom row: System Status + Top Users */}
+        </motion.div>
+
+        {/* Bottom row: System Status + Recent Users */}
         <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
           {/* System Status */}
@@ -383,10 +393,10 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
-          {/* Top Users by consumption */}
-          <div className="card space-y-3">
+          {/* Recent Users */}
+          <motion.div variants={item} className="card space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-200">{tr.recentUsers}</h2>
               <a href="/dashboard/users" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
@@ -430,7 +440,7 @@ export default function DashboardPage() {
                 })}
               </div>
             )}
-          </div>
+          </motion.div>
         </motion.div>
 
       </motion.div>
