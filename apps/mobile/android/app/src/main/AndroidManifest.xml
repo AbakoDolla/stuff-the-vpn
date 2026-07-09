@@ -10,7 +10,6 @@
 
     <!-- Foreground service for persistent notification -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
 
     <!-- Notification permission (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
@@ -40,23 +39,6 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-
-        <!--
-            VPN foreground service — declared by flutter_v2ray internally but
-            we declare it here explicitly so the system can bind to it.
-        -->
-        <service
-            android:name="com.v2ray.ang.service.V2RayVpnService"
-            android:exported="false"
-            android:permission="android.permission.BIND_VPN_SERVICE"
-            android:foregroundServiceType="specialUse">
-            <intent-filter>
-                <action android:name="android.net.VpnService"/>
-            </intent-filter>
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="VPN"/>
-        </service>
 
         <meta-data
             android:name="flutterEmbedding"

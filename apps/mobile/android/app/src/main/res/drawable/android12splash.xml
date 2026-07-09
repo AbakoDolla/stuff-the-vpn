@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 12+ splash screen animated icon.
+    Used by values-v31/styles.xml via windowSplashScreenAnimatedIcon.
+    Must fit within a 288dp × 288dp area (visible content: 192dp × 192dp circle).
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="192dp"
+        android:height="192dp"
+        android:gravity="center"
+        android:drawable="@drawable/ic_launcher_foreground" />
+</layer-list>
