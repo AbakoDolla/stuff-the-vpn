@@ -28,14 +28,14 @@ const STATUS_BADGE: Record<string, string> = {
   ACTIVE:'badge-green', SUSPENDED:'badge-red', BANNED:'badge-red', EXPIRED:'badge-yellow', PENDING:'badge-gray'
 };
 const ROLE_BADGE: Record<string, string> = {
-  CLIENT:'badge-gray', RESELLER:'badge-blue', ADMIN:'badge-yellow', SUPER_ADMIN:'badge-red', SUPPORT:'badge-blue'
+  USER:'badge-gray', RESELLER:'badge-blue', ADMIN:'badge-yellow', SUPER_ADMIN:'badge-red', SUPPORT:'badge-blue'
 };
 
 export default function UsersPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState<CreateForm>({ username:'', email:'', phone:'', password:'', role:'CLIENT', quotaRemainingGB: 10 });
+  const [form, setForm] = useState<CreateForm>({ username:'', email:'', phone:'', password:'', role:'USER', quotaRemainingGB: 10 });
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['users', search],
@@ -49,7 +49,7 @@ export default function UsersPage() {
       toast.success('Utilisateur créé');
       qc.invalidateQueries({queryKey:['users']});
       setShowCreate(false);
-      setForm({ username:'', email:'', phone:'', password:'', role:'CLIENT', quotaRemainingGB: 10 });
+      setForm({ username:'', email:'', phone:'', password:'', role:'USER', quotaRemainingGB: 10 });
     },
     onError: (e: {response?: {data?: {message?: string}}}) =>
       toast.error(e.response?.data?.message ?? 'Erreur création'),
@@ -100,7 +100,7 @@ export default function UsersPage() {
               <div>
                 <label className="text-xs text-[#94A3B8] mb-1 block">Rôle</label>
                 <select className="input" value={form.role} onChange={e => setForm(p=>({...p,role:e.target.value}))}>
-                  {['CLIENT','RESELLER','SUPPORT','ADMIN'].map(r => <option key={r} value={r}>{r}</option>)}
+                  {['USER','RESELLER','SUPPORT','ADMIN'].map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
               <div>
