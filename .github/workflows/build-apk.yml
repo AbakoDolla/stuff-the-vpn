@@ -2,13 +2,13 @@ name: Build & Download APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, sxb-vpn-redesign ]
     paths:
-      - 'mobile/**'
+      - 'apps/mobile/**'
   pull_request:
     branches: [ main ]
     paths:
-      - 'mobile/**'
+      - 'apps/mobile/**'
   workflow_dispatch:
 
 permissions:
@@ -19,7 +19,7 @@ jobs:
   build-apk:
     name: Build APK
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,43 +36,34 @@ jobs:
           flutter-version: '3.24.0'
           channel: 'stable'
           cache: true
-          cache-dependency-path: mobile/pubspec.lock
-
-      - name: Get Java path
-        id: java
-        run: echo JAVA_HOME= >> $GITHUB_OUTPUT
+          cache-dependency-path: apps/mobile/pubspec.lock
 
       - name: Install dependencies
         run: |
-          cd mobile
+          cd apps/mobile
           flutter pub get
 
-      - name: Create assets directory and copy logo
+      - name: Ensure logo asset exists
         run: |
-          mkdir -p mobile/assets/images
-          cp apps/dashboard/public/logo.png mobile/assets/images/logo.png || echo "Logo not found"
-          ls -la mobile/assets/images/
-
-      - name: Update pubspec.yaml
-        run: |
-          if ! grep -q "assets:" mobile/pubspec.yaml; then
-            echo '' >> mobile/pubspec.yaml
-            echo '  assets:' >> mobile/pubspec.yaml
-            echo '    - assets/images/' >> mobile/pubspec.yaml
+          mkdir -p apps/mobile/assets/images
+          if [ -f logo.png ]; then
+            cp logo.png apps/mobile/assets/images/logo.png
+          elif [ -f apps/dashboard/public/logo.png ]; then
+            cp apps/dashboard/public/logo.png apps/mobile/assets/images/logo.png
           fi
+          ls -la apps/mobile/assets/images/ 2>/dev/null || echo "assets/images not found"
 
-      - name: Build APK
-        env:
-          JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk_jre/17.0.19-10/x64
+      - name: Build APK (release)
         run: |
-          cd mobile
-          flutter build apk --debug 2>&1 || true
-          ls -la build/app/outputs/flutter-apk/ 2>/dev/null || echo "No APK found"
+          cd apps/mobile
+          flutter build apk --release \
+            --dart-define=BACKEND_URL=https://vpnsxb.afrihall.com/api \
+            2>&1
+          ls -la build/app/outputs/flutter-apk/
 
       - name: Upload APK artifact
-        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: sxbvpn-debug-apk
-          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 7
+          name: sxbvpn-release-apk
+          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30

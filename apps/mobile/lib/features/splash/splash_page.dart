@@ -4,8 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
-import '../../providers/auth_provider.dart';
-import '../../widgets/gradient_button.dart';
+import '../../providers/activation_provider.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -24,8 +23,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
   late Animation<double> _logoOpacity;
   final List<_Particle> _particles = [];
   final Random _random = Random();
-  bool _showLanding = false;
-  bool _isCheckingAuth = true;
+  bool _navigationTriggered = false;
 
   @override
   void initState() {
@@ -43,6 +41,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
       vsync: this,
       duration: const Duration(seconds: 4),
     )..repeat();
+
     _logoEnterCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -55,7 +54,6 @@ class _SplashPageState extends ConsumerState<SplashPage>
     );
 
     _initParticles();
-    _checkAuth();
   }
 
   void _initParticles() {
@@ -70,20 +68,13 @@ class _SplashPageState extends ConsumerState<SplashPage>
     }
   }
 
-  Future<void> _checkAuth() async {
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-
-    final authState = await ref.read(authStateProvider.future);
-    if (!mounted) return;
-
-    if (authState.isAuthenticated) {
+  void _navigate(ActivationState activation) {
+    if (_navigationTriggered) return;
+    _navigationTriggered = true;
+    if (activation.isActivated) {
       context.go('/home');
     } else {
-      setState(() {
-        _isCheckingAuth = false;
-        _showLanding = true;
-      });
+      context.go('/activation');
     }
   }
 
@@ -97,7 +88,34 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
   @override
   Widget build(BuildContext context) {
+    // Listen to activation state — once checking is done, redirect
+    ref.listen<AsyncValue<ActivationState>>(activationProvider,
+        (previous, next) {
+      next.whenData((activation) {
+        if (!activation.isChecking && mounted) {
+          Future.delayed(const Duration(milliseconds: 800), () {
+            if (mounted) _navigate(activation);
+          });
+        }
+      });
+    });
+
+    // Also check immediately on build in case state is already resolved
+    final activationAsync = ref.watch(activationProvider);
+    activationAsync.whenData((activation) {
+      if (!activation.isChecking && !_navigationTriggered) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Future.delayed(const Duration(milliseconds: 800), () {
+              if (mounted) _navigate(activation);
+            });
+          }
+        });
+      }
+    });
+
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.gradientDark),
         child: Stack(
@@ -105,15 +123,13 @@ class _SplashPageState extends ConsumerState<SplashPage>
             // Floating particles
             AnimatedBuilder(
               animation: _particleCtrl,
-              builder: (context, _) {
-                return CustomPaint(
-                  size: Size.infinite,
-                  painter: _ParticlePainter(
-                    particles: _particles,
-                    progress: _particleCtrl.value,
-                  ),
-                );
-              },
+              builder: (context, _) => CustomPaint(
+                size: Size.infinite,
+                painter: _ParticlePainter(
+                  particles: _particles,
+                  progress: _particleCtrl.value,
+                ),
+              ),
             ),
             // Blue glow spots
             Positioned(
@@ -159,46 +175,42 @@ class _SplashPageState extends ConsumerState<SplashPage>
                   // Animated logo with glow
                   AnimatedBuilder(
                     animation: _logoEnterCtrl,
-                    builder: (context, _) {
-                      return Opacity(
-                        opacity: _logoOpacity.value,
-                        child: Transform.scale(
-                          scale: _logoScale.value,
-                          child: AnimatedBuilder(
-                            animation: _pulseAnim,
-                            builder: (context, child) {
-                              return Container(
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.primary
-                                          .withOpacity(0.15 * _pulseAnim.value),
-                                      blurRadius: 60 * _pulseAnim.value,
-                                      spreadRadius: 20 * _pulseAnim.value,
-                                    ),
-                                    BoxShadow(
-                                      color: AppColors.accent
-                                          .withOpacity(0.08 * _pulseAnim.value),
-                                      blurRadius: 100 * _pulseAnim.value,
-                                      spreadRadius: 30 * _pulseAnim.value,
-                                    ),
-                                  ],
+                    builder: (context, _) => Opacity(
+                      opacity: _logoOpacity.value,
+                      child: Transform.scale(
+                        scale: _logoScale.value,
+                        child: AnimatedBuilder(
+                          animation: _pulseAnim,
+                          builder: (context, child) => Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(
+                                      0.15 * _pulseAnim.value),
+                                  blurRadius: 60 * _pulseAnim.value,
+                                  spreadRadius: 20 * _pulseAnim.value,
                                 ),
-                                child: child,
-                              );
-                            },
-                            child: Image.asset(
-                              'assets/images/logo.png',
-                              width: 140,
-                              height: 140,
-                              fit: BoxFit.contain,
+                                BoxShadow(
+                                  color: AppColors.accent.withOpacity(
+                                      0.08 * _pulseAnim.value),
+                                  blurRadius: 100 * _pulseAnim.value,
+                                  spreadRadius: 30 * _pulseAnim.value,
+                                ),
+                              ],
                             ),
+                            child: child,
+                          ),
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            width: 130,
+                            height: 130,
+                            fit: BoxFit.contain,
                           ),
                         ),
-                      );
-                    },
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 28),
                   // Brand name
@@ -206,13 +218,13 @@ class _SplashPageState extends ConsumerState<SplashPage>
                     shaderCallback: (bounds) => const LinearGradient(
                       colors: [AppColors.primary, AppColors.accent],
                     ).createShader(bounds),
-                    child: Text(
-                      'Stuff X Bilal VPN',
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    child: const Text(
+                      'SXB VPN',
+                      style: TextStyle(
                         color: Colors.white,
-                        letterSpacing: 2,
+                        letterSpacing: 3,
                         fontWeight: FontWeight.w800,
-                        fontSize: 26,
+                        fontSize: 28,
                       ),
                     ),
                   )
@@ -225,66 +237,28 @@ class _SplashPageState extends ConsumerState<SplashPage>
                       ),
                   const SizedBox(height: 10),
                   // Tagline
-                  Text(
-                    'Sécurisé  •  Rapide  •  Illimité',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      letterSpacing: 3,
+                  const Text(
+                    'Sécurisée  ·  Rapide  ·  Fiable',
+                    style: TextStyle(
+                      letterSpacing: 2,
                       color: AppColors.textMuted,
                       fontSize: 13,
                     ),
                   )
                       .animate()
-                      .fadeIn(delay: 700.ms, duration: 500.ms)
-                      .then()
-                      .shimmer(
-                        duration: 1500.ms,
-                        color: AppColors.primary.withOpacity(0.3),
-                      ),
-
+                      .fadeIn(delay: 700.ms, duration: 500.ms),
                   const Spacer(flex: 2),
-
-                  if (_isCheckingAuth)
-                    SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(
-                          AppColors.accent.withOpacity(0.6),
-                        ),
+                  // Loading indicator
+                  SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(
+                        AppColors.accent.withOpacity(0.6),
                       ),
-                    ).animate().fadeIn(duration: 400.ms),
-
-                  if (_showLanding) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: GradientButton(
-                        text: 'Commencer',
-                        onPressed: () => context.go('/auth/login'),
-                      ),
-                    ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          'Déjà un compte? ',
-                          style: TextStyle(color: AppColors.textMuted, fontSize: 14),
-                        ),
-                        GestureDetector(
-                          onTap: () => context.go('/auth/login'),
-                          child: const Text(
-                            'Se connecter',
-                            style: TextStyle(
-                              color: AppColors.accent,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ).animate().fadeIn(delay: 200.ms),
-                  ],
+                    ),
+                  ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
                   const SizedBox(height: 48),
                 ],
               ),
@@ -302,7 +276,6 @@ class _Particle {
   final double size;
   final double speed;
   final double opacity;
-
   const _Particle({
     required this.x,
     required this.y,
@@ -315,7 +288,6 @@ class _Particle {
 class _ParticlePainter extends CustomPainter {
   final List<_Particle> particles;
   final double progress;
-
   _ParticlePainter({required this.particles, required this.progress});
 
   @override
@@ -323,7 +295,7 @@ class _ParticlePainter extends CustomPainter {
     for (final p in particles) {
       final y = (p.y + progress * p.speed) % 1.0;
       final x = p.x;
-      final opacity = p.opacity * (1 - (y - 0.5).abs() * 1.5).clamp(0, 1);
+      final opacity = p.opacity * (1 - (y - 0.5).abs() * 1.5).clamp(0.0, 1.0);
       canvas.drawCircle(
         Offset(x * size.width, y * size.height),
         p.size,
@@ -335,5 +307,6 @@ class _ParticlePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ParticlePainter old) => old.progress != progress;
+  bool shouldRepaint(covariant _ParticlePainter old) =>
+      old.progress != progress;
 }

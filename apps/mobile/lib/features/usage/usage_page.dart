@@ -3,16 +3,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
-import '../../providers/auth_provider.dart';
+import '../../providers/activation_provider.dart';
 import '../../services/user_service.dart';
 
-final usageProvider = FutureProvider<UsageData>((ref) async {
-  final authState = ref.watch(authStateProvider).valueOrNull;
-  final userService = ref.watch(userServiceProvider);
-  final userId = authState?.user?.id;
-  if (userId == null || userId.isEmpty) return UsageData(totalGb: 0, daily: [], byApp: {});
+final usageProvider = FutureProvider.autoDispose<UsageData>((ref) async {
+  final activation = ref.watch(activationProvider).valueOrNull;
+  final userService = ref.read(userServiceProvider);
+  final userId = activation?.user?.id ?? '';
+  if (userId.isEmpty) return _emptyUsage();
   return userService.getUsage(userId);
 });
+
+UsageData _emptyUsage() {
+  final now = DateTime.now();
+  return UsageData(
+    totalGb: 0,
+    daily: List.generate(
+        30, (i) => DailyUsage(date: now.subtract(Duration(days: 29 - i)), gb: 0)),
+    byApp: {},
+  );
+}
 
 class UsagePage extends ConsumerWidget {
   const UsagePage({super.key});
@@ -20,95 +30,119 @@ class UsagePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usage = ref.watch(usageProvider);
+    final sub = ref.watch(_usageSubProvider);
+
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.gradientDark),
         child: SafeArea(
           child: usage.when(
-            loading: () =>
-                const Center(child: CircularProgressIndicator(color: AppColors.accent)),
-            error: (_, __) =>
-                const Center(child: Text('Erreur de chargement')),
-            data: (data) => _buildContent(context, data),
+            loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.accent)),
+            error: (_, __) => Center(
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                const Icon(Icons.cloud_off_rounded,
+                    color: AppColors.textMuted, size: 48),
+                const SizedBox(height: 12),
+                const Text('Données non disponibles',
+                    style: TextStyle(color: AppColors.textMuted)),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => ref.invalidate(usageProvider),
+                  child: const Text('Réessayer',
+                      style: TextStyle(color: AppColors.accent)),
+                ),
+              ]),
+            ),
+            data: (data) => _buildContent(context, ref, data, sub),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, UsageData data) {
+  Widget _buildContent(BuildContext context, WidgetRef ref, UsageData data,
+      AsyncValue<Map<String, dynamic>?> sub) {
+    final subData = sub.valueOrNull;
+    final dataLimit = _d(subData?['dataLimit']) ?? 0.0;
+    final dataUsed = _d(subData?['dataUsed']) ?? 0.0;
+    final dataRemaining = _d(subData?['dataRemaining']) ?? 0.0;
+    final usagePct =
+        dataLimit > 0 ? (dataUsed / dataLimit).clamp(0.0, 1.0) : 0.0;
+
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(child: _header(context, data)),
+        SliverToBoxAdapter(
+            child: _quotaCard(context, sub.isLoading, dataUsed,
+                dataRemaining, dataLimit, usagePct)),
         SliverToBoxAdapter(child: _chart(context, data)),
         SliverToBoxAdapter(child: _stats(context, data)),
-        const SliverToBoxAdapter(child: SizedBox(height: 80)),
+        const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
     );
   }
 
-  String _formatDate(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
-
   Widget _header(BuildContext context, UsageData data) {
-    final now = DateTime.now();
-    final from = now.subtract(const Duration(days: 29));
-
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Utilisation', style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 4),
-          Text('${_formatDate(from)} – ${_formatDate(now)} ${now.year}',
-              style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: AppColors.gradientCard,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.cardBorder),
-            ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Consommation totale',
-                  style: Theme.of(context).textTheme.bodySmall),
-              const SizedBox(height: 6),
-              Text(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Consommation',
+            style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 22,
+                fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        Text('30 derniers jours',
+            style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: AppColors.gradientCard,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.cardBorder),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Total consommé',
+                style:
+                    TextStyle(color: AppColors.textMuted, fontSize: 12)),
+            const SizedBox(height: 6),
+            ShaderMask(
+              shaderCallback: (b) => const LinearGradient(
+                      colors: [AppColors.primary, AppColors.accent])
+                  .createShader(b),
+              child: Text(
                 data.totalGb > 0
                     ? '${data.totalGb.toStringAsFixed(2)} GB'
                     : 'Aucune donnée',
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      foreground: Paint()
-                        ..shader = const LinearGradient(
-                          colors: [AppColors.primary, AppColors.accent],
-                        ).createShader(const Rect.fromLTWH(0, 0, 200, 40)),
-                    ),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700),
               ),
-              if (data.totalGb > 0) ...[
-                const SizedBox(height: 12),
-                Row(children: [
-                  _miniStat(context, Icons.arrow_downward_rounded,
-                      AppColors.accent,
-                      '${data.downloadGb.toStringAsFixed(2)} GB',
-                      'Téléchargé'),
-                  const SizedBox(width: 20),
-                  _miniStat(context, Icons.arrow_upward_rounded,
-                      AppColors.primary,
-                      '${data.uploadGb.toStringAsFixed(2)} GB',
-                      'Envoyé'),
-                ]),
-              ],
-            ]),
-          ),
-        ],
-      ),
-    ).animate().fadeIn().slideY(begin: -0.1, end: 0);
+            ),
+            if (data.totalGb > 0) ...[
+              const SizedBox(height: 12),
+              Row(children: [
+                _miniStat(Icons.arrow_downward_rounded, AppColors.accent,
+                    '${data.downloadGb.toStringAsFixed(2)} GB', 'Téléchargé'),
+                const SizedBox(width: 24),
+                _miniStat(Icons.arrow_upward_rounded, AppColors.primary,
+                    '${data.uploadGb.toStringAsFixed(2)} GB', 'Envoyé'),
+              ]),
+            ],
+          ]),
+        ),
+      ]),
+    ).animate().fadeIn().slideY(begin: -0.05, end: 0);
   }
 
-  Widget _miniStat(BuildContext context, IconData icon, Color color,
-      String value, String label) {
+  Widget _miniStat(
+      IconData icon, Color color, String value, String label) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(icon, color: color, size: 14),
       const SizedBox(width: 4),
@@ -117,11 +151,88 @@ class UsagePage extends ConsumerWidget {
             style: TextStyle(
                 color: color, fontWeight: FontWeight.w700, fontSize: 13)),
         Text(label,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(fontSize: 10)),
+            style: const TextStyle(
+                color: AppColors.textMuted, fontSize: 10)),
       ]),
+    ]);
+  }
+
+  Widget _quotaCard(
+      BuildContext context,
+      bool isLoading,
+      double dataUsed,
+      double dataRemaining,
+      double dataLimit,
+      double usagePct) {
+    if (isLoading) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+        child: Container(
+          height: 80,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.cardBorder),
+          ),
+          child: const Center(
+            child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.accent)),
+          ),
+        ),
+      );
+    }
+    if (dataLimit <= 0) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Column(children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _quotaStat('Utilisé', _fmtGB(dataUsed), AppColors.error),
+              _quotaStat('Restant', _fmtGB(dataRemaining), AppColors.accent),
+              _quotaStat('Total', _fmtGB(dataLimit), AppColors.textSecondary),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: usagePct,
+              backgroundColor: AppColors.cardBorder,
+              valueColor: AlwaysStoppedAnimation(
+                usagePct > 0.8
+                    ? AppColors.error
+                    : usagePct > 0.5
+                        ? AppColors.warning
+                        : AppColors.accent,
+              ),
+              minHeight: 6,
+            ),
+          ),
+        ]),
+      ),
+    ).animate().fadeIn(delay: 100.ms);
+  }
+
+  Widget _quotaStat(String label, String value, Color color) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label,
+          style: const TextStyle(
+              color: AppColors.textMuted, fontSize: 11)),
+      Text(value,
+          style: TextStyle(
+              color: color, fontSize: 16, fontWeight: FontWeight.w700)),
     ]);
   }
 
@@ -143,8 +254,8 @@ class UsagePage extends ConsumerWidget {
               const Icon(Icons.bar_chart_rounded,
                   color: AppColors.textMuted, size: 36),
               const SizedBox(height: 8),
-              Text('Pas encore de données',
-                  style: Theme.of(context).textTheme.bodySmall),
+              const Text('Pas encore de données',
+                  style: TextStyle(color: AppColors.textMuted)),
             ]),
           ),
         ),
@@ -193,9 +304,11 @@ class UsagePage extends ConsumerWidget {
                       return const SizedBox.shrink();
                     }
                     final d = data.daily[idx].date;
-                    return Text(_formatDate(d),
-                        style: const TextStyle(
-                            color: AppColors.textMuted, fontSize: 10));
+                    return Text(
+                      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}',
+                      style: const TextStyle(
+                          color: AppColors.textMuted, fontSize: 10),
+                    );
                   },
                 ),
               ),
@@ -214,7 +327,7 @@ class UsagePage extends ConsumerWidget {
                   gradient: LinearGradient(
                     colors: [
                       AppColors.primary.withOpacity(0.3),
-                      Colors.transparent
+                      Colors.transparent,
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -242,30 +355,33 @@ class UsagePage extends ConsumerWidget {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.cardBorder),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Répartition', style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 16),
-            _barRow(context, Icons.arrow_downward_rounded, AppColors.accent,
-                'Téléchargement',
-                '${data.downloadGb.toStringAsFixed(2)} GB', dlPct),
-            const SizedBox(height: 14),
-            _barRow(context, Icons.arrow_upward_rounded, AppColors.primary,
-                'Envoi', '${data.uploadGb.toStringAsFixed(2)} GB', ulPct),
-          ],
-        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Répartition',
+              style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14)),
+          const SizedBox(height: 16),
+          _barRow(Icons.arrow_downward_rounded, AppColors.accent,
+              'Téléchargement',
+              '${data.downloadGb.toStringAsFixed(2)} GB', dlPct),
+          const SizedBox(height: 14),
+          _barRow(Icons.arrow_upward_rounded, AppColors.primary, 'Envoi',
+              '${data.uploadGb.toStringAsFixed(2)} GB', ulPct),
+        ]),
       ),
     ).animate().fadeIn(delay: 300.ms);
   }
 
-  Widget _barRow(BuildContext context, IconData icon, Color color,
-      String label, String value, double pct) {
+  Widget _barRow(IconData icon, Color color, String label, String value,
+      double pct) {
     return Row(children: [
       Icon(icon, color: color, size: 20),
       const SizedBox(width: 10),
       Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
         Row(children: [
           Text(label,
               style: const TextStyle(
@@ -290,4 +406,22 @@ class UsagePage extends ConsumerWidget {
       ])),
     ]);
   }
+
+  static String _fmtGB(double gb) {
+    if (gb <= 0) return '0 GB';
+    if (gb >= 1000) return '${(gb / 1000).toStringAsFixed(1)} TB';
+    return '${gb.toStringAsFixed(1)} GB';
+  }
+
+  static double? _d(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
 }
+
+final _usageSubProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
+  return ref.read(userServiceProvider).getSubscription();
+});

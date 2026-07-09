@@ -14,7 +14,8 @@ class ApiEndpoints {
 
   // ── Auth ─────────────────────────────────────────────────────────────────
   static const String login        = '/auth/login';
-  static const String loginLicense = '/mobile/activate';
+  static const String loginLicense = '/mobile/activate'; // legacy
+  static const String deviceActivate = '/mobile/device/activate'; // new system
   static const String refresh      = '/auth/refresh';
   static const String register     = '/auth/register';
   static const String me           = '/auth/me';
@@ -24,6 +25,13 @@ class ApiEndpoints {
   static const String mobileConfig       = '/mobile/config';
   static const String mobileSubscription = '/mobile/subscription';
   static const String mobileLogs         = '/mobile/logs';
+  static const String mobileSync         = '/mobile/sync';
+  static const String mobileUsage        = '/mobile/usage';
+
+  // ── Notifications ─────────────────────────────────────────────────────────
+  static const String notifications         = '/notifications';
+  static String notificationRead(String id) => '/notifications/$id/read';
+  static const String notificationsReadAll  = '/notifications/read-all';
 
   // ── Legacy VPN ────────────────────────────────────────────────────────────
   static const String myConfig          = '/vpn/my-config';
