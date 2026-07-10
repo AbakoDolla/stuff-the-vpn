@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Api } from '@/lib/api';
 import DashboardLayout from '@/components/DashboardLayout';
 import { toast } from 'sonner';
-import { Plus, Users, Search, Ban, CheckCircle, Trash2, HardDrive, Key, Copy, X, Calendar, User, Shield, Wifi } from 'lucide-react';
+import { Plus, Users, Search, Ban, CheckCircle, Trash2, HardDrive, Key, Copy, X, Calendar, User, Shield, Wifi, Edit } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { frFR as fr } from 'date-fns/locale';
 
@@ -31,6 +31,11 @@ interface CreateForm {
   email: string;
   phone: string;
   role: string;
+  quotaRemainingGB: number;
+  expireAt?: string;
+}
+
+interface EditForm {
   quotaRemainingGB: number;
   expireAt?: string;
 }
@@ -71,6 +76,11 @@ export default function UsersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [createdUser, setCreatedUser] = useState<CreatedUserData | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState<EditForm>({
+    quotaRemainingGB: 10,
+    expireAt: undefined
+  });
   const [form, setForm] = useState<CreateForm>({
     username: '',
     email: '',
@@ -131,12 +141,23 @@ export default function UsersPage() {
 
   const statusMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      Api.updateUser('', { status }),
+      Api.updateUser(id, { status }),
     onSuccess: () => {
       toast.success('Statut mis à jour');
       qc.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (e: Error) => toast.error(e.message || 'Erreur'),
+  });
+
+  const editMut = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: EditForm }) =>
+      Api.updateUser(id, data),
+    onSuccess: () => {
+      toast.success('Utilisateur modifié');
+      qc.invalidateQueries({ queryKey: ['users'] });
+      setEditingUser(null);
+    },
+    onError: (e: Error) => toast.error(e.message || 'Erreur modification'),
   });
 
   const deleteMut = useMutation({
@@ -326,6 +347,66 @@ export default function UsersPage() {
           </div>
         )}
 
+        {/* Edit User Modal */}
+        {editingUser && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-[#1E293B] rounded-2xl p-6 w-full max-w-md space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Edit className="w-5 h-5 text-indigo-400" />
+                  Modifier {editingUser.username}
+                </h2>
+                <button onClick={() => setEditingUser(null)} className="text-gray-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-[#94A3B8] mb-1 block flex items-center gap-1">
+                      <HardDrive className="w-3 h-3" /> Quota (GB)
+                    </label>
+                    <input
+                      className="input w-full"
+                      type="number"
+                      min="0"
+                      value={editForm.quotaRemainingGB}
+                      onChange={e => setEditForm(p => ({ ...p, quotaRemainingGB: Number(e.target.value) }))}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-[#94A3B8] mb-1 block flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> Expiration
+                    </label>
+                    <input
+                      className="input w-full"
+                      type="date"
+                      value={editForm.expireAt || ''}
+                      onChange={e => setEditForm(p => ({ ...p, expireAt: e.target.value || undefined }))}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setEditingUser(null)} className="btn-ghost flex-1">
+                  Annuler
+                </button>
+                <button
+                  onClick={() => editMut.mutate({ id: editingUser.id, data: editForm })}
+                  disabled={editMut.isPending}
+                  className="btn-primary flex-1"
+                >
+                  {editMut.isPending ? 'Modification...' : 'Modifier'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Users Grid - Responsive */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -396,6 +477,20 @@ export default function UsersPage() {
                 <div className="flex items-center gap-2 pt-2 border-t border-white/5">
                   {u.role !== 'SUPER_ADMIN' && (
                     <>
+                      <button
+                        onClick={() => {
+                          setEditingUser(u);
+                          setEditForm({
+                            quotaRemainingGB: u.quotaRemainingGB,
+                            expireAt: u.expireAt
+                          });
+                        }}
+                        className="btn-ghost text-xs py-2 flex items-center justify-center gap-1"
+                      >
+                        <Edit className="w-3 h-3" />
+                        Modifier
+                      </button>
+
                       <button
                         onClick={() => regenerateTokenMut.mutate(u.id)}
                         className="flex-1 btn-ghost text-xs py-2 flex items-center justify-center gap-1"
