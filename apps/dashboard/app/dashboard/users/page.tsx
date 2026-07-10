@@ -470,7 +470,7 @@ export default function UsersPage() {
                 {u.expireAt && (
                   <div className="flex items-center gap-2 text-xs text-[#64748B]">
                     <Calendar className="w-3 h-3" />
-                    <span>Expire: {format(new Date(u.expireAt), 'dd/MM/yyyy', { locale: fr })}</span>
+                    <span>Expire: {u.expireAt ? format(new Date(u.expireAt), 'dd/MM/yyyy', { locale: fr }) : 'Jamais'}</span>
                   </div>
                 )}
 
