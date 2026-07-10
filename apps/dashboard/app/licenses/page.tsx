@@ -18,6 +18,14 @@ interface License {
   user?: { username: string; email: string } | null;
 }
 
+interface PaginatedLicenseResponse {
+  data: License[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export default function LicensesPage() {
   const [licenses, setLicenses] = useState<License[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +38,14 @@ export default function LicensesPage() {
     setLoading(true);
     try {
       const r = await Api.getLicenses();
-      setLicenses((r.data as License[]) ?? []);
+      const responseData = r.data as PaginatedLicenseResponse | License[];
+      if (Array.isArray(responseData)) {
+        setLicenses(responseData);
+      } else if (responseData && typeof responseData === 'object' && 'data' in responseData) {
+        setLicenses((responseData as PaginatedLicenseResponse).data);
+      } else {
+        setLicenses([]);
+      }
     } catch { setLicenses([]); }
     finally { setLoading(false); }
   }, []);
