@@ -4,8 +4,48 @@ import { prisma } from "../prisma/client.js";
 import { env } from "../config/env.js";
 import { omit } from "../utils/crypto.js";
 import type { RegisterInput, LoginInput } from "../validators/auth.validator.js";
-import type { AuthPayload } from "../types/index.js";
+import type { AuthPayload, UserSessionInfo } from "../types/index.js";
 import * as licenseService from "./license.service.js";
+import { ROLE_PERMISSIONS, getPermissionsForRole, type Role, type Permission } from "../constants/permissions.js";
+
+/**
+ * Construit les informations de session utilisateur avec permissions
+ */
+function buildUserSession(user: any): UserSessionInfo {
+  const role = user.role as Role;
+  const permissions = getPermissionsForRole(role);
+  
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    name: user.name,
+    phone: user.phone,
+    role,
+    status: user.status,
+    permissions,
+    resellerId: user.resellerId,
+    deviceLimit: user.deviceLimit,
+    quotaUsedGB: user.quotaUsedGB,
+    quotaRemainingGB: user.quotaRemainingGB,
+    expireAt: user.expireAt,
+    createdAt: user.createdAt,
+  };
+}
+
+/**
+ * Construit le payload JWT avec permissions
+ */
+function buildAuthPayload(userId: string, role: Role, sessionId?: string, type?: "user" | "device" | "admin"): AuthPayload {
+  const permissions = getPermissionsForRole(role);
+  return {
+    userId,
+    role,
+    sessionId,
+    type,
+    permissions,
+  };
+}
 
 export async function registerUser(input: RegisterInput) {
   const hashed = await bcrypt.hash(input.password, env.BCRYPT_ROUNDS);
@@ -17,7 +57,7 @@ export async function registerUser(input: RegisterInput) {
       role: (input.role as "USER" | "SUPPORT" | "RESELLER" | "ADMIN" | "SUPER_ADMIN") ?? "USER",
     },
   });
-  return omit(user, ["password"]);
+  return buildUserSession(user);
 }
 
 export async function loginUser(
@@ -43,15 +83,15 @@ export async function loginUser(
     data: { token: "tmp", deviceName, ipAddress, userId: user.id },
   });
 
-  const finalToken = jwt.sign(
-    { userId: user.id, role: user.role, sessionId: session.id } satisfies AuthPayload,
-    env.JWT_SECRET,
-    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
-  );
+  const role = user.role as Role;
+  const payload = buildAuthPayload(user.id, role, session.id, "user");
+  const finalToken = jwt.sign(payload, env.JWT_SECRET, {
+    expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+  });
 
   await prisma.session.update({ where: { id: session.id }, data: { token: finalToken } });
 
-  return { token: finalToken, user: omit(user, ["password"]) };
+  return { token: finalToken, user: buildUserSession(user), expiresIn: env.JWT_EXPIRES_IN };
 }
 
 /**
@@ -76,14 +116,14 @@ export async function loginAdmin(
       data: { token: "tmp", userId: user.id, ipAddress },
     });
 
-    const finalToken = jwt.sign(
-      { userId: user.id, role: user.role, sessionId: session.id, type: "admin" } satisfies AuthPayload,
-      env.JWT_SECRET,
-      { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
-    );
+    const role = user.role as Role;
+    const payload = buildAuthPayload(user.id, role, session.id, "admin");
+    const finalToken = jwt.sign(payload, env.JWT_SECRET, {
+      expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+    });
     await prisma.session.update({ where: { id: session.id }, data: { token: finalToken } });
 
-    return { token: finalToken, user: omit(user, ["password"]) };
+    return { token: finalToken, user: buildUserSession(user), expiresIn: env.JWT_EXPIRES_IN };
   }
 
   // 2. Fallback: check Admin table
@@ -95,11 +135,12 @@ export async function loginAdmin(
 
   await prisma.admin.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } });
 
-  const token = jwt.sign(
-    { userId: admin.id, role: admin.role ?? "ADMIN", type: "admin" } as AuthPayload,
-    env.JWT_SECRET,
-    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
-  );
+  const role = (admin.role ?? "ADMIN") as Role;
+  const permissions = getPermissionsForRole(role);
+  const payload = buildAuthPayload(admin.id, role, undefined, "admin");
+  const token = jwt.sign(payload, env.JWT_SECRET, {
+    expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+  });
 
   return {
     token,
@@ -107,9 +148,12 @@ export async function loginAdmin(
       id:       admin.id,
       username: admin.name ?? "Admin",
       email:    admin.email,
-      role:     admin.role ?? "ADMIN",
+      role,
       status:   "ACTIVE",
+      permissions,
+      createdAt: admin.createdAt,
     },
+    expiresIn: env.JWT_EXPIRES_IN,
   };
 }
 
@@ -158,35 +202,46 @@ export async function loginWithLicense(
     data: { token: "tmp", userId: user.id, deviceName, ipAddress },
   });
 
-  const finalToken = jwt.sign(
-    { userId: user.id, role: user.role, sessionId: session.id } satisfies AuthPayload,
-    env.JWT_SECRET,
-    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
-  );
+  const role = user.role as Role;
+  const payload = buildAuthPayload(user.id, role, session.id, "device");
+  const finalToken = jwt.sign(payload, env.JWT_SECRET, {
+    expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+  });
   await prisma.session.update({ where: { id: session.id }, data: { token: finalToken } });
 
-  return { token: finalToken, user: omit(user, ["password"]) };
+  return { token: finalToken, user: buildUserSession(user), expiresIn: env.JWT_EXPIRES_IN };
 }
 
 export async function refreshToken(userId: string, sessionId: string) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
-  const newToken = jwt.sign(
-    { userId: user.id, role: user.role, sessionId } satisfies AuthPayload,
-    env.JWT_SECRET,
-    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
-  );
+  const role = user.role as Role;
+  const payload = buildAuthPayload(user.id, role, sessionId);
+  const newToken = jwt.sign(payload, env.JWT_SECRET, {
+    expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+  });
   await prisma.session.update({ where: { id: sessionId }, data: { token: newToken, lastUsedAt: new Date() } });
-  return { token: newToken };
+  return { token: newToken, expiresIn: env.JWT_EXPIRES_IN };
 }
 
 export async function getMe(userId: string) {
   // Try User table first
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (user) return omit(user, ["password"]);
+  if (user) return buildUserSession(user);
 
   // Try Admin table
   const admin = await prisma.admin.findUnique({ where: { id: userId } });
-  if (admin) return { id: admin.id, username: admin.name ?? "Admin", email: admin.email, role: admin.role, status: "ACTIVE" };
+  if (admin) {
+    const role = (admin.role ?? "ADMIN") as Role;
+    return {
+      id: admin.id,
+      username: admin.name ?? "Admin",
+      email: admin.email,
+      role,
+      status: "ACTIVE" as const,
+      permissions: getPermissionsForRole(role),
+      createdAt: admin.createdAt,
+    };
+  }
 
   throw new Error("User not found");
 }
@@ -232,11 +287,11 @@ export async function loginWithDashboardToken(
     },
   });
 
-  const finalToken = jwt.sign(
-    { userId: user.id, role: user.role, sessionId: session.id, type: "dashboard" } satisfies AuthPayload,
-    env.JWT_SECRET,
-    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] },
-  );
+  const role = user.role as Role;
+  const payload = buildAuthPayload(user.id, role, session.id, "dashboard");
+  const finalToken = jwt.sign(payload, env.JWT_SECRET, {
+    expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+  });
   
   await prisma.session.update({ where: { id: session.id }, data: { token: finalToken } });
 
@@ -246,5 +301,5 @@ export async function loginWithDashboardToken(
     data: { loginToken: null, loginTokenExpiresAt: null },
   });
 
-  return { token: finalToken, user: omit(user, ["password"]) };
+  return { token: finalToken, user: buildUserSession(user), expiresIn: env.JWT_EXPIRES_IN };
 }
