@@ -51,18 +51,28 @@ function generateLoginToken(): string {
     };
   }
 
-  export async function listUsers(page = 1, limit = 20, search?: string) {
+  export async function listUsers(page = 1, limit = 20, search?: string, additionalFilter?: Record<string, any>) {
     const skip = (page - 1) * limit;
-    const where = search
-      ? {
-          OR: [
-            { username: { contains: search, mode: "insensitive" as const } },
-            { email: { contains: search, mode: "insensitive" as const } },
-            { phone: { contains: search, mode: "insensitive" as const } },
-            { name: { contains: search, mode: "insensitive" as const } },
-          ],
-        }
-      : {};
+    
+    // Base where clause
+    const where: Record<string, any> = {
+      deletedAt: null, // Exclude soft-deleted users
+    };
+    
+    // Add search filter
+    if (search) {
+      where.OR = [
+        { username: { contains: search, mode: "insensitive" as const } },
+        { email: { contains: search, mode: "insensitive" as const } },
+        { phone: { contains: search, mode: "insensitive" as const } },
+        { name: { contains: search, mode: "insensitive" as const } },
+      ];
+    }
+    
+    // Merge additional filter (for reseller isolation)
+    if (additionalFilter) {
+      Object.assign(where, additionalFilter);
+    }
 
     const [data, total] = await Promise.all([
       prisma.user.findMany({

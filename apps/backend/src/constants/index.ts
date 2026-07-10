@@ -15,10 +15,10 @@ export const HTTP_STATUS = {
 
 /**
  * Aligné sur l'enum Prisma UserRole :
- * CLIENT | SUPPORT | RESELLER | ADMIN | SUPER_ADMIN
+ * USER | SUPPORT | RESELLER | ADMIN | SUPER_ADMIN
  */
 export const ROLES = {
-  CLIENT:     "CLIENT",
+  USER:       "USER",
   SUPPORT:    "SUPPORT",
   RESELLER:   "RESELLER",
   ADMIN:      "ADMIN",
@@ -29,3 +29,6 @@ export const VOUCHER_CODE_LENGTH = 12;
 export const DEFAULT_DEVICE_LIMIT = 1;
 export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 100;
+
+// Re-export permissions
+export * from "./permissions.js";

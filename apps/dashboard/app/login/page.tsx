@@ -4,16 +4,47 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Eye, EyeOff, Loader2, ShieldCheck, Lock, Mail, Key, User } from 'lucide-react';
+import { useDashboardStore } from '@/lib/store';
+import { type Role } from '@/lib/auth';
 
-function saveAuth(user: { id: string; username: string; email: string; role: string; token: string }) {
+interface UserResponse {
+  id: string;
+  username?: string | null;
+  email?: string | null;
+  name?: string | null;
+  phone?: string | null;
+  role: Role;
+  status: string;
+  permissions: string[];
+  resellerId?: string | null;
+  deviceLimit?: number;
+  quotaUsedGB?: number;
+  quotaRemainingGB?: number;
+  expireAt?: string | null;
+  createdAt: string;
+}
+
+interface LoginResponse {
+  success?: boolean;
+  data?: {
+    user?: UserResponse;
+    token?: string;
+  };
+  message?: string;
+}
+
+function saveAuth(user: UserResponse, token: string) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('sxb_token', user.token);
-  localStorage.setItem('sxb_user', JSON.stringify(user));
-  document.cookie = `stv_token=${user.token}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
+  const userWithToken = { ...user, token };
+  localStorage.setItem('sxb_token', token);
+  localStorage.setItem('sxb_user', JSON.stringify(userWithToken));
+  document.cookie = `stv_token=${token}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
 }
 
 export default function LoginPage() {
   const router = useRouter();
+  const setUser = useDashboardStore((s) => s.setUser);
+  const setToken = useDashboardStore((s) => s.setToken);
   const [loginType, setLoginType] = useState<'admin' | 'user'>('user');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,7 +58,7 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      let res, json;
+      let res: Response, json: LoginResponse;
       
       if (loginType === 'admin') {
         // Admin login with email/password
@@ -36,22 +67,18 @@ export default function LoginPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
-        json = await res.json() as { success?: boolean; data?: { user?: { id?: string; username?: string; email?: string; role?: string }; token?: string }; message?: string };
+        json = await res.json();
         
-        if (!res.ok || !json.data?.token) {
+        if (!res.ok || !json.data?.token || !json.data?.user) {
           setError(json.message || 'Identifiants administrateur invalides');
           setLoading(false);
           return;
         }
         
         const { token, user } = json.data;
-        saveAuth({
-          id:       user?.id ?? '',
-          username: user?.username ?? 'Admin',
-          email:    user?.email ?? email,
-          role:     user?.role ?? 'ADMIN',
-          token:    token!,
-        });
+        saveAuth(user!, token!);
+        setUser(user!);
+        setToken(token!);
         router.push('/dashboard');
       } else {
         // User/Reseller login with token
@@ -60,22 +87,18 @@ export default function LoginPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: loginToken }),
         });
-        json = await res.json() as { success?: boolean; data?: { user?: { id?: string; username?: string; email?: string; role?: string; phone?: string }; token?: string }; message?: string };
+        json = await res.json();
         
-        if (!res.ok || !json.data?.token) {
+        if (!res.ok || !json.data?.token || !json.data?.user) {
           setError(json.message || 'Token de connexion invalide');
           setLoading(false);
           return;
         }
         
         const { token, user } = json.data;
-        saveAuth({
-          id:       user?.id ?? '',
-          username: user?.username ?? 'User',
-          email:    user?.email ?? '',
-          role:     user?.role ?? 'USER',
-          token:    token!,
-        });
+        saveAuth(user!, token!);
+        setUser(user!);
+        setToken(token!);
         router.push('/dashboard');
       }
     } catch {

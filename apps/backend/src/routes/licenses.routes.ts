@@ -1,6 +1,8 @@
 import { Router } from "express";
 import * as licenseController from "../controllers/license.controller.js";
-import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
+import { requirePermission } from "../middleware/permission.middleware.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 
 const router = Router();
 
@@ -13,13 +15,16 @@ router.get("/:token/status", licenseController.getLicenseStatus);
 // Authenticated
 router.use(authMiddleware);
 
-router.post("/bind-device", licenseController.bindDevice);
-router.post("/reset-device", licenseController.resetDevice);
-router.post("/revoke", requireRole("ADMIN", "SUPER_ADMIN"), licenseController.revokeLicense);
+// License management
+router.post("/bind-device", requirePermission(PERMISSIONS.DEVICES_MANAGE), licenseController.bindDevice);
+router.post("/reset-device", requirePermission(PERMISSIONS.LICENSES_RESET_DEVICE), licenseController.resetDevice);
+router.post("/revoke", requirePermission(PERMISSIONS.LICENSES_REVOKE), licenseController.revokeLicense);
 
-// Admin only
-router.post("/generate", requireRole("ADMIN", "SUPER_ADMIN", "RESELLER"), licenseController.generateToken);
-router.get("/", requireRole("ADMIN", "SUPER_ADMIN"), licenseController.listLicenses);
+// Generate tokens - Admin et Reseller
+router.post("/generate", requirePermission(PERMISSIONS.LICENSES_CREATE), licenseController.generateToken);
+
+// List licenses - Admin et Super Admin
+router.get("/", requirePermission(PERMISSIONS.LICENSES_VIEW), licenseController.listLicenses);
 
 export default router;
 
