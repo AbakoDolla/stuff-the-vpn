@@ -97,7 +97,14 @@ export default function UsersPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: (body: CreateForm) => Api.createUser(body),
+    mutationFn: (body: CreateForm) => {
+      // Convert date string to ISO-8601 format for Prisma
+      const apiData = {
+        ...body,
+        expireAt: body.expireAt ? new Date(body.expireAt + 'T23:59:59.999Z').toISOString() : undefined
+      };
+      return Api.createUser(apiData);
+    },
     onSuccess: (data) => {
       const response = data as unknown as CreatedUserData;
       if (response?.loginToken) {
@@ -150,8 +157,14 @@ export default function UsersPage() {
   });
 
   const editMut = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: EditForm }) =>
-      Api.updateUser(id, data),
+    mutationFn: ({ id, data }: { id: string; data: EditForm }) => {
+      // Convert date string to ISO-8601 format for Prisma
+      const apiData = {
+        quotaRemainingGB: data.quotaRemainingGB,
+        expireAt: data.expireAt ? new Date(data.expireAt + 'T23:59:59.999Z').toISOString() : undefined
+      };
+      return Api.updateUser(id, apiData);
+    },
     onSuccess: () => {
       toast.success('Utilisateur modifié');
       qc.invalidateQueries({ queryKey: ['users'] });
