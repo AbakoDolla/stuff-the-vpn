@@ -216,25 +216,23 @@ model Admin {
 
 // ─── User (Application Mobile) ────────────────────────────────────
 model User {
-  id                   String      @id @default(uuid())
-  email                String?     @unique
-  phone                String?     @unique
-  username             String?     @unique
-  name                 String?
-  password             String?
-  role                 UserRole    @default(USER)
-  status               UserStatus  @default(ACTIVE)
-  deviceLimit          Int         @default(3)
-  quotaUsedGB          Float       @default(0)
-  quotaRemainingGB     Float       @default(0)
-  expireAt             DateTime?
-  createdBy            String?
-  resellerId           String?
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
-  deletedAt            DateTime?
-  loginToken           String?
-  loginTokenExpiresAt  DateTime?
+  id               String      @id @default(uuid())
+  email            String?     @unique
+  phone            String?     @unique
+  username         String?     @unique
+  name             String?
+  password         String?
+  role             UserRole    @default(USER)
+  status           UserStatus  @default(ACTIVE)
+  deviceLimit      Int         @default(3)
+  quotaUsedGB      Float       @default(0)
+  quotaRemainingGB Float       @default(0)
+  expireAt         DateTime?
+  createdBy        String?
+  resellerId       String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  deletedAt        DateTime?
 
   reseller         Reseller?           @relation("ResellerClients", fields: [resellerId], references: [id])
   licenses         License[]
