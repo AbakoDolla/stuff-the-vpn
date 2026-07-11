@@ -4,25 +4,18 @@ import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
+import path from "path";
+import { fileURLToPath } from "url";
 import { logger } from "./lib/logger.js";
 import { env } from "./config/env.js";
 import router from "./routes/index.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 
 const app: Express = express();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ─── Security ────────────────────────────────────────────────────────────────
 app.use(helmet());
-<<<<<<< HEAD
-const corsOrigin = env.CORS_ORIGIN === "*" ? true : env.CORS_ORIGIN;
-
-app.use(
-  cors({
-    origin: corsOrigin,
-    credentials: true,
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Device-Name"],
-=======
 
 // Configure CORS properly for both web and mobile clients
 const getCorsOrigin = () => {
@@ -30,7 +23,6 @@ const getCorsOrigin = () => {
   if (origin === "*" || env.NODE_ENV === "development") {
     return true;
   }
-  // For production, allow multiple origins if comma-separated
   if (origin.includes(",")) {
     return origin.split(",").map((o) => o.trim());
   }
@@ -44,7 +36,6 @@ app.use(
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Device-Name"],
     maxAge: 86400,
->>>>>>> application-deployment-fix
   }),
 );
 
@@ -72,24 +63,11 @@ app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// ─── Routes ──────────────────────────────────────────────────────────────────
-// APK download
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// ─── APK Download ─────────────────────────────────────────────────────────────
 const publicPath = path.join(__dirname, "..", "public", "downloads");
 
 app.get("/api/apk/download", (req, res) => {
   const apkPath = path.join(publicPath, "sxb-vpn.apk");
-<<<<<<< HEAD
-  res.download(apkPath, "sxb-vpn.apk", (err) => {
-    if (err) {
-      console.error("APK download error:", err);
-      res.status(500).json({ success: false, message: "APK not available" });
-    }
-  });
-=======
   try {
     res.download(apkPath, "sxb-vpn.apk", (err) => {
       if (err) {
@@ -103,9 +81,9 @@ app.get("/api/apk/download", (req, res) => {
     logger.error({ err }, "APK endpoint error");
     res.status(500).json({ success: false, message: "APK download failed" });
   }
->>>>>>> application-deployment-fix
 });
 
+// ─── Routes ──────────────────────────────────────────────────────────────────
 app.use("/api", router);
 
 // ─── 404 ─────────────────────────────────────────────────────────────────────
