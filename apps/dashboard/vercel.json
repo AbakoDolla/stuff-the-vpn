@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "projectId": "prj_1iWhL9WWebmNVEz1CSzgOFDR0I17",
+  "name": "stuff-the-vpn-dashboard",
   "installCommand": "cd ../.. && npm install && cd apps/dashboard",
   "headers": [
     {
