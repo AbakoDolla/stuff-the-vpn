@@ -507,16 +507,45 @@ export async function activateLicense(req: Request, res: Response, next: NextFun
       ? await prisma.user.findUnique({ where: { id: license.userId } })
       : null;
 
-    if (!user) return sendError(res, "Aucun compte associé à cette licence", HTTP_STATUS.NOT_FOUND);
+    // Auto-create user if license doesn't have one but has a phone number
+    let effectiveUser = user;
+    if (!user && parsed.phone) {
+      // Find or create user by phone
+      effectiveUser = await prisma.user.findFirst({
+        where: { phone: parsed.phone, deletedAt: null }
+      });
+      
+      if (!effectiveUser) {
+        // Create new user with phone
+        effectiveUser = await prisma.user.create({
+          data: {
+            phone: parsed.phone,
+            username: `user_${parsed.phone}`,
+            role: "USER",
+            deviceLimit: 2,
+            quotaRemainingGB: license.dataLimitGB,
+            expireAt: license.expireAt,
+          }
+        });
+        
+        // Update license with userId
+        await prisma.license.update({
+          where: { id: license.id },
+          data: { userId: effectiveUser.id }
+        });
+      }
+    }
+
+    if (!effectiveUser) return sendError(res, "Aucun compte associé à cette licence", HTTP_STATUS.NOT_FOUND);
 
     // Créer une session pour que authMiddleware puisse la valider
     const session = await prisma.session.create({
-      data: { token: "tmp", userId: user.id, ipAddress: req.ip },
+      data: { token: "tmp", userId: effectiveUser.id, ipAddress: req.ip },
     });
 
     const jwtSecret = process.env["JWT_SECRET"]!;
     const accessToken = sign(
-      { userId: user.id, role: user.role, sessionId: session.id },
+      { userId: effectiveUser.id, role: effectiveUser.role, sessionId: session.id },
       jwtSecret,
       { expiresIn: "7d" }
     );
@@ -524,17 +553,17 @@ export async function activateLicense(req: Request, res: Response, next: NextFun
     // Mettre à jour la session avec le token final
     await prisma.session.update({ where: { id: session.id }, data: { token: accessToken } });
 
-    await audit({ action: "USER_LOGIN", userId: user.id, req,
+    await audit({ action: "USER_LOGIN", userId: effectiveUser.id, req,
       details: { method: "license", deviceId: parsed.deviceId } });
 
     sendSuccess(res, {
       accessToken,
       user: {
-        id: user.id, username: user.username, email: user.email,
-        role: user.role, status: user.status,
-        expireAt: user.expireAt,
-        quotaRemainingGB: user.quotaRemainingGB,
-        quotaUsedGB: user.quotaUsedGB,
+        id: effectiveUser.id, username: effectiveUser.username, email: effectiveUser.email,
+        role: effectiveUser.role, status: effectiveUser.status,
+        expireAt: effectiveUser.expireAt,
+        quotaRemainingGB: effectiveUser.quotaRemainingGB,
+        quotaUsedGB: effectiveUser.quotaUsedGB,
       },
       license: {
         token: license.token, expireAt: license.expireAt,
