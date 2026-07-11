@@ -509,18 +509,20 @@ export async function activateLicense(req: Request, res: Response, next: NextFun
 
     // Auto-create user if license doesn't have one but has a phone number
     let effectiveUser = user;
-    if (!user && parsed.phone) {
+    const phoneToUse = parsed.phone || license.phone;
+    
+    if (!user && phoneToUse) {
       // Find or create user by phone
       effectiveUser = await prisma.user.findFirst({
-        where: { phone: parsed.phone, deletedAt: null }
+        where: { phone: phoneToUse, deletedAt: null }
       });
       
       if (!effectiveUser) {
         // Create new user with phone
         effectiveUser = await prisma.user.create({
           data: {
-            phone: parsed.phone,
-            username: `user_${parsed.phone}`,
+            phone: phoneToUse,
+            username: `user_${phoneToUse}`,
             role: "USER",
             deviceLimit: 2,
             quotaRemainingGB: license.dataLimitGB,

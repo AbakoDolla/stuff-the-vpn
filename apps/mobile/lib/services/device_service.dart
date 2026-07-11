@@ -105,8 +105,8 @@ class DeviceService {
       final meta     = await _collectMetadata();
 
       final body = <String, dynamic>{
-        'deviceId': deviceId,
-        'token':    token,
+        'deviceId':   deviceId,
+        'token':      token,
         if (meta['deviceName']  != null) 'deviceName':  meta['deviceName'],
         if (meta['brand']       != null) 'brand':       meta['brand'],
         if (meta['model']       != null) 'model':       meta['model'],
@@ -114,12 +114,13 @@ class DeviceService {
         if (meta['androidId']   != null) 'androidId':   meta['androidId'],
         if (meta['fingerprint'] != null) 'fingerprint': meta['fingerprint'],
         if (appVersion          != null) 'appVersion':  appVersion,
-        if (phone               != null) 'phone':       phone,
-        if (email               != null) 'email':       email,
-        if (name                != null) 'name':        name,
+        // Always include phone for license activation (required by backend)
+        'phone': phone ?? '',
+        if (email               != null && email.isNotEmpty) 'email': email,
+        if (name                != null && name.isNotEmpty) 'name': name,
       };
 
-      final response = await _api.post(ApiEndpoints.deviceActivate, data: body);
+      final response = await _api.post(ApiEndpoints.loginLicense, data: body);
       final json     = response.data as Map<String, dynamic>;
       final result   = DeviceActivationResult.fromJson(json);
 
@@ -162,6 +163,8 @@ class DeviceService {
     if (msg.contains('TOKEN_REVOKED'))         return 'Token révoqué';
     if (msg.contains('LICENSE_NOT_FOUND'))     return 'Licence introuvable';
     if (msg.contains('LICENSE_EXPIRED'))       return 'Licence expirée';
+    if (msg.contains('Appareil non autorisé')) return 'Cet appareil n\'est pas autorisé';
+    if (msg.contains('Aucun compte associé'))  return 'Aucun compte associé à cette licence';
     if (msg.contains('401'))                   return 'Token incorrect';
     if (msg.contains('403'))                   return 'Accès refusé';
     if (msg.contains('SocketException'))       return 'Pas de connexion internet';
