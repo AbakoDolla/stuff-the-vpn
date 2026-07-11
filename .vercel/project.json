@@ -1,16 +1,4 @@
 {
-  "projectId": "prj_1iWhL9WWebmNVEz1CSzgOFDR0I17",
-  "orgId": "team_MK8WuSvAOMHOaji2laSYF6jy",
-  "projectName": "stuff-the-vpn-dashboard",
-  "settings": {
-    "createdAt": 1782123756150,
-    "framework": "nextjs",
-    "devCommand": null,
-    "installCommand": "npm install --legacy-peer-deps",
-    "buildCommand": "(cd packages/types && npm install && npm run build) && (cd apps/dashboard && npm install --legacy-peer-deps && npm run build)",
-    "outputDirectory": "apps/dashboard/.next",
-    "rootDirectory": null,
-    "directoryListing": false,
-    "nodeVersion": "24.x"
-  }
+  "projectId": "prj_amJx8h1rH0yTLBf439hHHiVV2rDA",
+  "orgId": "team_MK8WuSvAOMHOaji2laSYF6jy"
 }
