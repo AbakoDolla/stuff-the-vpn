@@ -47,7 +47,7 @@ class AppTheme {
         AppColors.textSecondary,
       ),
       elevatedButtonTheme: _buildElevatedButton(AppColors.primary, Colors.white),
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         color: AppColors.card,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -106,7 +106,7 @@ class AppTheme {
         AppColors.textSecLight,
       ),
       elevatedButtonTheme: _buildElevatedButton(AppColors.primary, Colors.white),
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         color: AppColors.surfaceLightCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
