@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Smartphone, Check, X, Settings, RefreshCw, Clock, Database, Shield, AlertCircle } from 'lucide-react';
+import { Smartphone, Check, X, Settings, RefreshCw, Clock, Database, Shield, AlertCircle, Plus, Copy, Key } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { apiFetch } from '@/lib/api';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -17,7 +17,7 @@ interface DeviceActivation {
   appVersion?: string;
   publicIp?: string;
   country?: string;
-  status: 'ACTIVE' | 'PENDING' | 'REJECTED';
+  status: 'ACTIVE' | 'PENDING' | 'DISABLED';
   activationCode: string;
   quotaMB: string;
   quotaUsedMB: string;
@@ -37,6 +37,9 @@ export default function AppActivationPage() {
   const [search, setSearch] = useState('');
   const [approving, setApproving] = useState<string | null>(null);
   const [quotaModal, setQuotaModal] = useState<{ device: DeviceActivation; quota: string; days: string } | null>(null);
+  const [createModal, setCreateModal] = useState<{ deviceId: string; deviceName: string; quotaMB: string; days: string } | null>(null);
+  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+  const [creatingDevice, setCreatingDevice] = useState(false);
 
   useEffect(() => {
     fetchDevices();
@@ -56,13 +59,42 @@ export default function AppActivationPage() {
     }
   };
 
+  const createAndGenerateToken = async () => {
+    if (!createModal?.deviceId.trim()) {
+      alert('Veuillez entrer un ID de appareil');
+      return;
+    }
+    setCreatingDevice(true);
+    try {
+      const result = await apiFetch<{ device: DeviceActivation; loginToken: string }>('/mobile-device', {
+        method: 'POST',
+        body: JSON.stringify({
+          deviceId: createModal.deviceId.trim(),
+          deviceName: createModal.deviceName.trim() || createModal.deviceId.trim(),
+          quotaMB: parseInt(createModal.quota) || 0,
+          expiresInDays: parseInt(createModal.days) || 30,
+        }),
+      });
+      setGeneratedToken(result.loginToken);
+      await fetchDevices();
+      setCreateModal(null);
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de la création');
+    } finally {
+      setCreatingDevice(false);
+    }
+  };
+
   const approveDevice = async (deviceId: string, quotaMB: number = 0, days: number = 30) => {
     setApproving(deviceId);
     try {
-      await apiFetch(`/mobile-device/${deviceId}/approve`, {
+      const result = await apiFetch<{ loginToken: string }>(`/mobile-device/${deviceId}/approve`, {
         method: 'POST',
         body: JSON.stringify({ quotaMB, expiresInDays: days }),
       });
+      if (result.loginToken) {
+        setGeneratedToken(result.loginToken);
+      }
       await fetchDevices();
     } catch (err: any) {
       alert(err.message || 'Erreur lors de l\'approbation');
@@ -106,6 +138,11 @@ export default function AppActivationPage() {
     }
   };
 
+  const copyToken = (token: string) => {
+    navigator.clipboard.writeText(token);
+    alert('Token copié !');
+  };
+
   const filteredDevices = devices.filter(d => {
     if (search) {
       const searchLower = search.toLowerCase();
@@ -142,7 +179,7 @@ export default function AppActivationPage() {
     const styles: Record<string, string> = {
       ACTIVE: 'bg-green-500/10 text-green-400 border-green-500/20',
       PENDING: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-      REJECTED: 'bg-red-500/10 text-red-400 border-red-500/20',
+      DISABLED: 'bg-red-500/10 text-red-400 border-red-500/20',
     };
     return `text-xs font-medium px-2 py-0.5 rounded-full border ${styles[status] || styles.PENDING}`;
   };
@@ -165,13 +202,22 @@ export default function AppActivationPage() {
               Gérez les appareils en attente d&apos;activation
             </p>
           </div>
-          <button
-            onClick={fetchDevices}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <RefreshCw size={18} />
-            Actualiser
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fetchDevices}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <RefreshCw size={18} />
+              Actualiser
+            </button>
+            <button
+              onClick={() => setCreateModal({ deviceId: '', deviceName: '', quotaMB: '0', days: '30' })}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Plus size={18} />
+              Créer Appareil
+            </button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -262,7 +308,7 @@ export default function AppActivationPage() {
             />
           </div>
           <div className="flex items-center gap-2">
-            {['ALL', 'PENDING', 'ACTIVE', 'REJECTED'].map((status) => (
+            {['ALL', 'PENDING', 'ACTIVE', 'DISABLED'].map((status) => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
@@ -459,6 +505,122 @@ export default function AppActivationPage() {
               >
                 <Check size={16} />
                 Approuver
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Create Device Modal */}
+      {createModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-dark-200 rounded-xl border border-surface-light w-full max-w-md p-6"
+          >
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Smartphone size={24} className="text-primary" />
+              Créer un nouvel appareil
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">ID de l&apos;appareil *</label>
+                <input
+                  type="text"
+                  value={createModal.deviceId}
+                  onChange={(e) => setCreateModal({ ...createModal, deviceId: e.target.value })}
+                  placeholder="ex: UTAS34.82-126-4"
+                  className="w-full bg-dark-300 border border-surface-light rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Nom de l&apos;appareil</label>
+                <input
+                  type="text"
+                  value={createModal.deviceName}
+                  onChange={(e) => setCreateModal({ ...createModal, deviceName: e.target.value })}
+                  placeholder="ex: Mon Téléphone"
+                  className="w-full bg-dark-300 border border-surface-light rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Quota (MB)</label>
+                <input
+                  type="number"
+                  value={createModal.quotaMB}
+                  onChange={(e) => setCreateModal({ ...createModal, quotaMB: e.target.value })}
+                  placeholder="0 = illimité"
+                  className="w-full bg-dark-300 border border-surface-light rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary"
+                />
+                <p className="text-xs text-gray-500 mt-1">0 = données illimitées</p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Durée (jours)</label>
+                <input
+                  type="number"
+                  value={createModal.days}
+                  onChange={(e) => setCreateModal({ ...createModal, days: e.target.value })}
+                  placeholder="30"
+                  className="w-full bg-dark-300 border border-surface-light rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={() => setCreateModal(null)}
+                className="flex-1 btn-secondary"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={createAndGenerateToken}
+                disabled={creatingDevice}
+                className="flex-1 btn-primary flex items-center justify-center gap-2"
+              >
+                {creatingDevice ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Key size={16} />
+                )}
+                Créer et Générer Token
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Token Display Modal */}
+      {generatedToken && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-dark-200 rounded-xl border border-surface-light w-full max-w-lg p-6"
+          >
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Key size={24} className="text-green-400" />
+              Token généré avec succès !
+            </h3>
+            <p className="text-gray-400 mb-4">
+              Copiez ce token et partagez-le avec l&apos;utilisateur pour activer son application mobile.
+            </p>
+            <div className="bg-dark-300 rounded-lg p-4 border border-surface-light">
+              <code className="text-green-400 text-sm break-all">{generatedToken}</code>
+            </div>
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={() => setGeneratedToken(null)}
+                className="flex-1 btn-secondary"
+              >
+                Fermer
+              </button>
+              <button
+                onClick={() => copyToken(generatedToken)}
+                className="flex-1 btn-primary flex items-center justify-center gap-2"
+              >
+                <Copy size={16} />
+                Copier le Token
               </button>
             </div>
           </motion.div>

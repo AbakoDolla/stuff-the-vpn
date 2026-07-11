@@ -28,6 +28,9 @@ router.post("/:deviceId/connect", activation.notifyConnection);
 // Liste des appareils (tous statuts)
 router.get("/", authenticateAdmin, activation.getPendingDevices);
 
+// Créer un appareil manuellement (avec token)
+router.post("/", authenticateAdmin, activation.createDevice);
+
 // Détails d'un appareil
 router.get("/:deviceId", authenticateAdmin, activation.getDeviceDetails);
 

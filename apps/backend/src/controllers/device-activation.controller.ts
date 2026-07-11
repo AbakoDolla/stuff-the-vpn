@@ -205,7 +205,7 @@ export async function getDeviceStatus(req: Request, res: Response, next: NextFun
 
     // Rejeté
     return sendSuccess(res, {
-      status: "REJECTED",
+      status: "DISABLED",
       needsApproval: true,
       message: "Appareil rejeté. Contactez l'administrateur.",
     }, "Appareil rejeté");
@@ -314,8 +314,8 @@ export async function getPendingDevices(req: Request, res: Response, next: NextF
     const where: any = {};
     if (status === "PENDING") where.status = "PENDING";
     else if (status === "ACTIVE") where.status = "ACTIVE";
-    else if (status === "REJECTED") where.status = "REJECTED";
-    else where.status = { in: ["PENDING", "ACTIVE", "REJECTED"] };
+    else if (status === "DISABLED" || status === "DISABLED") where.status = "DISABLED";
+    else where.status = { in: ["PENDING", "ACTIVE", "DISABLED"] };
 
     const [devices, total] = await Promise.all([
       prisma.deviceActivation.findMany({
@@ -425,6 +425,9 @@ export async function approveDevice(req: Request, res: Response, next: NextFunct
       { expiresIn: `${daysUntilExpiry}d` }
     );
 
+    // Générer un login token pour l'utilisateur
+    const loginToken = `SXB_${deviceId.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+
     // Mettre à jour l'activation
     const updated = await prisma.deviceActivation.update({
       where: { deviceId },
@@ -450,6 +453,7 @@ export async function approveDevice(req: Request, res: Response, next: NextFunct
       deviceId,
       status: "ACTIVE",
       accessToken,
+      loginToken,
       tokenExpiresAt: expiresAt,
       quotaMB: updated.quotaMB.toString(),
       vpnConfig: updated.vpnConfig ? "[Config assignée]" : null,
@@ -479,7 +483,7 @@ export async function rejectDevice(req: Request, res: Response, next: NextFuncti
 
     await prisma.deviceActivation.update({
       where: { deviceId },
-      data: { status: "REJECTED" },
+      data: { status: "DISABLED" },
     });
 
     await audit({
@@ -488,7 +492,7 @@ export async function rejectDevice(req: Request, res: Response, next: NextFuncti
       details: { deviceId, reason },
     });
 
-    sendSuccess(res, { deviceId, status: "REJECTED" }, "Appareil rejeté");
+    sendSuccess(res, { deviceId, status: "DISABLED" }, "Appareil rejeté");
 
   } catch (err) { next(err); }
 }
@@ -560,7 +564,7 @@ export async function revokeDevice(req: Request, res: Response, next: NextFuncti
     await prisma.deviceActivation.update({
       where: { deviceId },
       data: {
-        status: "REJECTED",
+        status: "DISABLED",
         accessToken: null,
         tokenExpiresAt: null,
       },
@@ -607,4 +611,91 @@ export async function deleteDevice(req: Request, res: Response, next: NextFuncti
     sendSuccess(res, null, "Appareil supprimé");
 
   } catch (err) { next(err); }
+}
+
+/**
+ * POST /mobile-device (Admin)
+ * Crée un appareil manuellement et génère un token de connexion
+ */
+export async function createDevice(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { deviceId, deviceName, quotaMB = 0, expiresInDays = 30 } = req.body;
+
+    if (!deviceId || typeof deviceId !== 'string' || deviceId.trim() === '') {
+      return sendError(res, "L'ID de l'appareil est requis", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const cleanDeviceId = deviceId.trim();
+
+    // Vérifier si l'appareil existe déjà
+    let activation = await prisma.deviceActivation.findUnique({
+      where: { deviceId: cleanDeviceId },
+    });
+
+    if (activation) {
+      // Mettre à jour l'existant
+      activation = await prisma.deviceActivation.update({
+        where: { deviceId: cleanDeviceId },
+        data: {
+          deviceName: deviceName || activation.deviceName || cleanDeviceId,
+          status: "ACTIVE",
+          quotaMB,
+          quotaUsedMB: 0,
+          tokenExpiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
+        },
+      });
+    } else {
+      // Créer nouveau
+      const activationCode = generateActivationCode();
+      activation = await prisma.deviceActivation.create({
+        data: {
+          deviceId: cleanDeviceId,
+          deviceName: deviceName || cleanDeviceId,
+          activationCode,
+          status: "ACTIVE",
+          quotaMB,
+          quotaUsedMB: 0,
+          approvedAt: new Date(),
+          tokenExpiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
+        },
+      });
+    }
+
+    // Générer le login token pour l'utilisateur
+    const loginToken = await generateLoginToken(cleanDeviceId);
+
+    await audit({
+      action: "DEVICE_CREATE",
+      req,
+      details: { deviceId: cleanDeviceId, quotaMB, expiresInDays },
+    });
+
+    sendSuccess(res, {
+      device: activation,
+      loginToken,
+    }, "Appareil créé et token généré");
+
+  } catch (err) { next(err); }
+}
+
+async function generateLoginToken(deviceId: string): Promise<string> {
+  // Trouver l'appareil
+  const activation = await prisma.deviceActivation.findUnique({
+    where: { deviceId },
+  });
+
+  if (!activation) {
+    throw new Error("Appareil non trouvé");
+  }
+
+  // Créer un token de connexion unique
+  const loginToken = `SXB_${deviceId.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+
+  // Stocker le token dans la base (optionnel - peut être utilisé pour tracking)
+  await prisma.deviceActivation.update({
+    where: { deviceId },
+    data: { accessToken: loginToken },
+  });
+
+  return loginToken;
 }
