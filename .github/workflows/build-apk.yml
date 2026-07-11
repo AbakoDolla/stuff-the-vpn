@@ -5,10 +5,12 @@ on:
     branches: [ main, sxb-vpn-redesign ]
     paths:
       - 'apps/mobile/**'
+      - '.github/workflows/build-apk.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'apps/mobile/**'
+      - '.github/workflows/build-apk.yml'
   workflow_dispatch:
 
 permissions:
@@ -38,6 +40,12 @@ jobs:
           cache: true
           cache-dependency-path: apps/mobile/pubspec.lock
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Accept licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
       - name: Install dependencies
         run: |
           cd apps/mobile
@@ -51,15 +59,12 @@ jobs:
           elif [ -f apps/dashboard/public/logo.png ]; then
             cp apps/dashboard/public/logo.png apps/mobile/assets/images/logo.png
           fi
-          ls -la apps/mobile/assets/images/ 2>/dev/null || echo "assets/images not found"
 
       - name: Build APK (release)
         run: |
           cd apps/mobile
           flutter build apk --release \
-            --dart-define=BACKEND_URL=https://vpnsxb.afrihall.com/api \
-            2>&1
-          ls -la build/app/outputs/flutter-apk/
+            --dart-define=BACKEND_URL=https://vpnsxb.afrihall.com/api
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
