@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Smartphone, Check, X, Settings, RefreshCw, Clock, Database, Shield, AlertCircle } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Api } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import { useLanguage } from '@/hooks/useLanguage';
 
 interface DeviceActivation {
@@ -46,10 +46,9 @@ export default function AppActivationPage() {
     setLoading(true);
     setError(null);
     try {
-      const params: any = { limit: 100 };
-      if (filter !== 'ALL') params.status = filter;
-      const result = await Api.get(`/admin/devices/pending`, params);
-      setDevices(result.data?.devices || []);
+      const queryParams = filter !== 'ALL' ? `?status=${filter}` : '';
+      const result = await apiFetch<{ devices: DeviceActivation[] }>(`/mobile-device${queryParams}`);
+      setDevices(result.devices || []);
     } catch (err: any) {
       setError(err.message || 'Erreur lors du chargement');
     } finally {
@@ -60,9 +59,9 @@ export default function AppActivationPage() {
   const approveDevice = async (deviceId: string, quotaMB: number = 0, days: number = 30) => {
     setApproving(deviceId);
     try {
-      await Api.post(`/admin/devices/${deviceId}/approve`, {
-        quotaMB,
-        expiresInDays: days,
+      await apiFetch(`/mobile-device/${deviceId}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({ quotaMB, expiresInDays: days }),
       });
       await fetchDevices();
     } catch (err: any) {
@@ -76,7 +75,7 @@ export default function AppActivationPage() {
   const rejectDevice = async (deviceId: string) => {
     if (!confirm('Voulez-vous vraiment rejeter cet appareil ?')) return;
     try {
-      await Api.post(`/admin/devices/${deviceId}/reject`, {});
+      await apiFetch(`/mobile-device/${deviceId}/reject`, { method: 'POST' });
       await fetchDevices();
     } catch (err: any) {
       alert(err.message || 'Erreur lors du rejet');
@@ -86,8 +85,9 @@ export default function AppActivationPage() {
   const updateQuota = async () => {
     if (!quotaModal) return;
     try {
-      await Api.patch(`/admin/devices/${quotaModal.device.deviceId}/quota`, {
-        quotaMB: parseInt(quotaModal.quotaMB) || 0,
+      await apiFetch(`/mobile-device/${quotaModal.device.deviceId}/quota`, {
+        method: 'PATCH',
+        body: JSON.stringify({ quotaMB: parseInt(quotaModal.quota) || 0 }),
       });
       await fetchDevices();
       setQuotaModal(null);
@@ -99,7 +99,7 @@ export default function AppActivationPage() {
   const revokeDevice = async (deviceId: string) => {
     if (!confirm('Voulez-vous vraiment révoquer l\'accès de cet appareil ?')) return;
     try {
-      await Api.post(`/admin/devices/${deviceId}/revoke`, {});
+      await apiFetch(`/mobile-device/${deviceId}/revoke`, { method: 'POST' });
       await fetchDevices();
     } catch (err: any) {
       alert(err.message || 'Erreur lors de la révocation');
@@ -211,6 +211,45 @@ export default function AppActivationPage() {
           </div>
         </div>
 
+        {/* Manual Device ID Entry */}
+        <div className="bg-dark-200 rounded-xl p-4 border border-surface-light">
+          <h3 className="text-sm font-medium text-gray-400 mb-3">Ajouter un appareil manuellement</h3>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              id="manual-device-id"
+              placeholder="Entrez l'ID de l'appareil (ex: UTAS34.82-126-4)"
+              className="flex-1 bg-dark-300 border border-surface-light rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const input = e.currentTarget;
+                  const deviceId = input.value.trim();
+                  if (deviceId) {
+                    setSearch(deviceId);
+                    input.value = '';
+                  }
+                }
+              }}
+            />
+            <button
+              onClick={() => {
+                const input = document.getElementById('manual-device-id') as HTMLInputElement;
+                const deviceId = input?.value.trim();
+                if (deviceId) {
+                  setSearch(deviceId);
+                  if (input) input.value = '';
+                }
+              }}
+              className="btn-primary px-4"
+            >
+              Rechercher
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Utilisez le code d&apos;activation SXB-XXXXXX ou l&apos;ID de l&apos;appareil pour rechercher
+          </p>
+        </div>
+
         {/* Filters */}
         <div className="flex items-center gap-4">
           <div className="flex-1">
@@ -218,7 +257,7 @@ export default function AppActivationPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par ID, nom, marque ou code..."
+              placeholder="Rechercher par ID, nom, marque ou code d'activation..."
               className="w-full bg-dark-200 border border-surface-light rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
             />
           </div>
