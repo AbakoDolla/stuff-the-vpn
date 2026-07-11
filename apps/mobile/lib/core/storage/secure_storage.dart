@@ -6,8 +6,12 @@ final secureStorageProvider = Provider<SecureStorageService>((ref) {
 });
 
 class SecureStorageService {
+  // encryptedSharedPreferences désactivé : cause des crashs natifs au premier
+  // lancement sur certains appareils/versions Android (bug connu du Keystore
+  // AndroidX Security). Le stockage reste chiffré via le Keystore par défaut
+  // du plugin (AES sur fichier), juste sans le wrapper EncryptedSharedPreferences.
   static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(),
   );
 
   static const _tokenKey          = 'auth_token';
@@ -18,46 +22,59 @@ class SecureStorageService {
   static const _activationTokenKey = 'activation_token'; // raw token user typed
 
   // ── JWT ──────────────────────────────────────────────────────────────────
-  Future<void> saveToken(String token) async =>
-      _storage.write(key: _tokenKey, value: token);
+  Future<void> saveToken(String token) async {
+    try { await _storage.write(key: _tokenKey, value: token); } catch (_) {}
+  }
 
-  Future<String?> getToken() async =>
-      _storage.read(key: _tokenKey);
+  Future<String?> getToken() async {
+    try { return await _storage.read(key: _tokenKey); } catch (_) { return null; }
+  }
 
-  Future<void> clearToken() async =>
-      _storage.delete(key: _tokenKey);
+  Future<void> clearToken() async {
+    try { await _storage.delete(key: _tokenKey); } catch (_) {}
+  }
 
   // ── User ─────────────────────────────────────────────────────────────────
-  Future<void> saveUserId(String id) async =>
-      _storage.write(key: _userIdKey, value: id);
+  Future<void> saveUserId(String id) async {
+    try { await _storage.write(key: _userIdKey, value: id); } catch (_) {}
+  }
 
-  Future<String?> getUserId() async =>
-      _storage.read(key: _userIdKey);
+  Future<String?> getUserId() async {
+    try { return await _storage.read(key: _userIdKey); } catch (_) { return null; }
+  }
 
-  Future<void> saveUserEmail(String email) async =>
-      _storage.write(key: _userEmailKey, value: email);
+  Future<void> saveUserEmail(String email) async {
+    try { await _storage.write(key: _userEmailKey, value: email); } catch (_) {}
+  }
 
-  Future<String?> getUserEmail() async =>
-      _storage.read(key: _userEmailKey);
+  Future<String?> getUserEmail() async {
+    try { return await _storage.read(key: _userEmailKey); } catch (_) { return null; }
+  }
 
   // ── Device ───────────────────────────────────────────────────────────────
-  Future<void> saveDeviceId(String id) async =>
-      _storage.write(key: _deviceIdKey, value: id);
+  Future<void> saveDeviceId(String id) async {
+    try { await _storage.write(key: _deviceIdKey, value: id); } catch (_) {}
+  }
 
-  Future<String?> getDeviceId() async =>
-      _storage.read(key: _deviceIdKey);
+  Future<String?> getDeviceId() async {
+    try { return await _storage.read(key: _deviceIdKey); } catch (_) { return null; }
+  }
 
-  Future<void> saveDeviceStatus(String status) async =>
-      _storage.write(key: _deviceStatusKey, value: status);
+  Future<void> saveDeviceStatus(String status) async {
+    try { await _storage.write(key: _deviceStatusKey, value: status); } catch (_) {}
+  }
 
-  Future<String?> getDeviceStatus() async =>
-      _storage.read(key: _deviceStatusKey);
+  Future<String?> getDeviceStatus() async {
+    try { return await _storage.read(key: _deviceStatusKey); } catch (_) { return null; }
+  }
 
-  Future<void> saveActivationToken(String token) async =>
-      _storage.write(key: _activationTokenKey, value: token);
+  Future<void> saveActivationToken(String token) async {
+    try { await _storage.write(key: _activationTokenKey, value: token); } catch (_) {}
+  }
 
-  Future<String?> getActivationToken() async =>
-      _storage.read(key: _activationTokenKey);
+  Future<String?> getActivationToken() async {
+    try { return await _storage.read(key: _activationTokenKey); } catch (_) { return null; }
+  }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   Future<bool> isAuthenticated() async {
@@ -71,5 +88,7 @@ class SecureStorageService {
     return status == 'ACTIVE' && token != null && token.isNotEmpty;
   }
 
-  Future<void> clearAll() async => _storage.deleteAll();
+  Future<void> clearAll() async {
+    try { await _storage.deleteAll(); } catch (_) {}
+  }
 }

@@ -27,7 +27,7 @@ if (flutterVersionName == null) {
 android {
     namespace "com.stuffthevpn.app"
     compileSdk 34
-    ndkVersion "25.1.8937393"
+    ndkVersion "26.1.10909125"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
