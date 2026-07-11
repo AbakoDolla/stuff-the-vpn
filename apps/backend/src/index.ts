@@ -4,17 +4,6 @@ import { prisma } from "./prisma/client.js";
 import { startTrafficSync, stopTrafficSync } from "./services/traffic-sync.service.js";
 import { startWireGuardSync, stopWireGuardSync } from "./services/wireguard-sync.service.js";
 
-<<<<<<< HEAD
-const rawPort = process.env["PORT"];
-
-if (!rawPort) {
-  throw new Error("PORT environment variable is required but was not provided.");
-}
-
-const port = Number(rawPort);
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-=======
 // Validate critical environment variables
 const requiredEnvVars = ["DATABASE_URL"];
 for (const envVar of requiredEnvVars) {
@@ -30,7 +19,6 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0 || port > 65535) {
   logger.error({ port: rawPort }, `Invalid PORT value: "${rawPort}". Using default 4000`);
   process.env["PORT"] = "4000";
->>>>>>> application-deployment-fix
 }
 
 // Auto-seed admin account on startup if requested
@@ -67,13 +55,10 @@ const server = app.listen(port, async (err?: Error) => {
   }
   logger.info({ port }, "Server listening");
   await autoSeed();
-
-  // Start V2Ray traffic sync loop (gracefully no-ops if V2Ray is unreachable)
   startTrafficSync();
   startWireGuardSync();
 });
 
-// Graceful shutdown
 function shutdown(signal: string) {
   logger.info({ signal }, "Shutdown signal received");
   stopTrafficSync();
@@ -84,24 +69,18 @@ function shutdown(signal: string) {
       process.exit(0);
     });
   });
-  // Force kill after 10 s
   setTimeout(() => process.exit(1), 10_000).unref();
 }
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
-<<<<<<< HEAD
-// APK download route
 app.get('/api/apk/download', (req, res) => {
-  const apkPath = '/home/ubuntu/sxbvpn-debug.apk';
-  res.download(apkPath, 'sxbvpn-debug.apk', (err) => {
+  const apkPath = '/home/ubuntu/stuff-the-vpn/apps/backend/public/downloads/sxb-vpn.apk';
+  res.download(apkPath, 'sxb-vpn.apk', (err) => {
     if (err) {
       console.error('APK download error:', err);
       res.status(500).json({ success: false, message: 'APK not available' });
     }
   });
 });
-=======
-
->>>>>>> application-deployment-fix
