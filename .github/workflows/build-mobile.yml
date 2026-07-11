@@ -11,9 +11,6 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/mobile
     
     steps:
       - name: Checkout repository
@@ -23,12 +20,12 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.6'
+          flutter-version: '3.24.0'
           channel: 'stable'
           cache: true
           cache-dependency-path: apps/mobile/pubspec.lock
@@ -40,10 +37,22 @@ jobs:
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Get dependencies
-        run: flutter pub get
+        run: |
+          cd apps/mobile
+          flutter pub get
+
+      - name: Ensure logo asset exists
+        run: |
+          mkdir -p apps/mobile/assets/images
+          if [ -f logo.png ]; then
+            cp logo.png apps/mobile/assets/images/logo.png
+          elif [ -f apps/dashboard/public/logo.png ]; then
+            cp apps/dashboard/public/logo.png apps/mobile/assets/images/logo.png
+          fi
 
       - name: Build APK
         run: |
+          cd apps/mobile
           flutter build apk --release \
             --dart-define=BACKEND_URL=https://vpnsxb.afrihall.com/api
 
