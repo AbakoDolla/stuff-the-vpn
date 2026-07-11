@@ -54,7 +54,7 @@ const UpdateUsageSchema = z.object({
 
 function generateActivationCode(): string {
   // Génère un code à 6 chiffres
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return "SXB-" + Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 function generateAccessToken(deviceId: string, expiresAt: Date): string {
