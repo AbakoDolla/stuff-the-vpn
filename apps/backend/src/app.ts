@@ -13,6 +13,7 @@ const app: Express = express();
 
 // ─── Security ────────────────────────────────────────────────────────────────
 app.use(helmet());
+<<<<<<< HEAD
 const corsOrigin = env.CORS_ORIGIN === "*" ? true : env.CORS_ORIGIN;
 
 app.use(
@@ -21,6 +22,29 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Device-Name"],
+=======
+
+// Configure CORS properly for both web and mobile clients
+const getCorsOrigin = () => {
+  const origin = env.CORS_ORIGIN;
+  if (origin === "*" || env.NODE_ENV === "development") {
+    return true;
+  }
+  // For production, allow multiple origins if comma-separated
+  if (origin.includes(",")) {
+    return origin.split(",").map((o) => o.trim());
+  }
+  return origin;
+};
+
+app.use(
+  cors({
+    origin: getCorsOrigin(),
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Device-Name"],
+    maxAge: 86400,
+>>>>>>> application-deployment-fix
   }),
 );
 
@@ -58,12 +82,28 @@ const publicPath = path.join(__dirname, "..", "public", "downloads");
 
 app.get("/api/apk/download", (req, res) => {
   const apkPath = path.join(publicPath, "sxb-vpn.apk");
+<<<<<<< HEAD
   res.download(apkPath, "sxb-vpn.apk", (err) => {
     if (err) {
       console.error("APK download error:", err);
       res.status(500).json({ success: false, message: "APK not available" });
     }
   });
+=======
+  try {
+    res.download(apkPath, "sxb-vpn.apk", (err) => {
+      if (err) {
+        logger.error({ err }, "APK download error");
+        if (!res.headersSent) {
+          res.status(500).json({ success: false, message: "APK not available" });
+        }
+      }
+    });
+  } catch (err) {
+    logger.error({ err }, "APK endpoint error");
+    res.status(500).json({ success: false, message: "APK download failed" });
+  }
+>>>>>>> application-deployment-fix
 });
 
 app.use("/api", router);

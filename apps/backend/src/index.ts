@@ -4,6 +4,7 @@ import { prisma } from "./prisma/client.js";
 import { startTrafficSync, stopTrafficSync } from "./services/traffic-sync.service.js";
 import { startWireGuardSync, stopWireGuardSync } from "./services/wireguard-sync.service.js";
 
+<<<<<<< HEAD
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {
@@ -13,6 +14,23 @@ if (!rawPort) {
 const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
+=======
+// Validate critical environment variables
+const requiredEnvVars = ["DATABASE_URL"];
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    logger.error({ envVar }, `Critical environment variable missing: ${envVar}`);
+    process.exit(1);
+  }
+}
+
+const rawPort = process.env["PORT"] || "4000";
+const port = Number(rawPort);
+
+if (Number.isNaN(port) || port <= 0 || port > 65535) {
+  logger.error({ port: rawPort }, `Invalid PORT value: "${rawPort}". Using default 4000`);
+  process.env["PORT"] = "4000";
+>>>>>>> application-deployment-fix
 }
 
 // Auto-seed admin account on startup if requested
@@ -73,6 +91,7 @@ function shutdown(signal: string) {
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
+<<<<<<< HEAD
 // APK download route
 app.get('/api/apk/download', (req, res) => {
   const apkPath = '/home/ubuntu/sxbvpn-debug.apk';
@@ -83,3 +102,6 @@ app.get('/api/apk/download', (req, res) => {
     }
   });
 });
+=======
+
+>>>>>>> application-deployment-fix
