@@ -1,0 +1,82 @@
+name: Build Mobile APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/build-mobile.yml'
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: 'stable'
+          cache: true
+          cache-dependency-path: apps/mobile/pubspec.lock
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Accept licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: |
+          flutter build apk --release \
+            --dart-define=BACKEND_URL=https://vpnsxb.afrihall.com/api
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sxb-vpn-apk
+          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+  deploy-apk:
+    needs: build-apk
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: sxb-vpn-apk
+          path: ./apk
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ubuntu
+          key: ${{ secrets.VPS_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          script: |
+            mkdir -p ~/stuff-the-vpn/apps/backend/public/downloads
+            cp ~/stuff-the-vpn/apps/backend/public/downloads/sxb-vpn.apk ~/stuff-the-vpn/apps/backend/public/downloads/sxb-vpn.apk.bak 2>/dev/null || true
+            # Copy APK to backend public folder
+            sudo cp ./apk/app-release.apk ~/stuff-the-vpn/apps/backend/public/downloads/sxb-vpn.apk
+            sudo chmod 644 ~/stuff-the-vpn/apps/backend/public/downloads/sxb-vpn.apk
+            echo "APK deployed successfully"
