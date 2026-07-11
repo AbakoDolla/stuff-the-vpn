@@ -50,9 +50,15 @@ app.use(cookieParser());
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
 // APK download
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const publicPath = path.join(__dirname, "..", "public", "downloads");
+
 app.get("/api/apk/download", (req, res) => {
-  const apkPath = "/home/ubuntu/sxbvpn-debug.apk";
-  res.download(apkPath, "sxbvpn-debug.apk", (err) => {
+  const apkPath = path.join(publicPath, "sxb-vpn.apk");
+  res.download(apkPath, "sxb-vpn.apk", (err) => {
     if (err) {
       console.error("APK download error:", err);
       res.status(500).json({ success: false, message: "APK not available" });
