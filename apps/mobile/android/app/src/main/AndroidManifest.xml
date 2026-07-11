@@ -24,7 +24,7 @@
 
         <!-- Main Flutter activity -->
         <activity
-            android:name=".MainActivity"
+            android:name="com.stuffthevpn.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
