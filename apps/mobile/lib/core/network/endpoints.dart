@@ -22,6 +22,12 @@ class ApiEndpoints {
   static const String me           = '/auth/me';
   static const String logout       = '/auth/logout';
 
+  // ── Simple Device Activation (NOUVEAU SYSTÈME) ────────────────────────────
+  static const String deviceRegister = '/mobile-device/register'; // App s'enregistre
+  static String deviceStatus(String deviceId) => '/mobile-device/$deviceId/status'; // Vérifier statut
+  static String deviceSync(String deviceId) => '/mobile-device/$deviceId/sync'; // Synchroniser
+  static String deviceConnect(String deviceId) => '/mobile-device/$deviceId/connect'; // Notifier connexion
+
   // ── Mobile API ────────────────────────────────────────────────────────────
   static const String mobileConfig       = '/mobile/config';
   static const String mobileSubscription = '/mobile/subscription';
