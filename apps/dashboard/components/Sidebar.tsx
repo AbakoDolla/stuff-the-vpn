@@ -30,6 +30,7 @@ const getNavItems = (tr: Record<string, string>): NavItem[] => [
   // Utilisateurs & Accès
   { labelKey: 'users', icon: <Users size={18} />, href: '/dashboard/users', section: 'users', permission: 'users.view' },
   { labelKey: 'devices', icon: <Smartphone size={18} />, href: '/dashboard/devices-list', section: 'users', permission: 'devices.view' },
+  { labelKey: 'appActivation', icon: <Smartphone size={18} />, href: '/dashboard/app-activation', section: 'users', permission: 'devices.view' },
   { labelKey: 'tokens', icon: <Key size={18} />, href: '/dashboard/tokens', section: 'users', permission: 'tokens.create' },
   { labelKey: 'quotas', icon: <HardDrive size={18} />, href: '/dashboard/quotas', section: 'users', permission: 'quotas.view' },
 
