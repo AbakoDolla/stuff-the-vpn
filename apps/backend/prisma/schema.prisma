@@ -693,3 +693,43 @@ model AuditLog {
   @@index([entityId])
   @@index([action])
 }
+
+// ─── Device Activation (Simple - Pour App Mobile) ─────────────────────
+model DeviceActivation {
+  id              String    @id @default(uuid())
+  deviceId        String    @unique
+  deviceName      String?
+  brand           String?
+  model           String?
+  osVersion       String?
+  appVersion      String?
+  androidId       String?
+  fingerprint     String?
+  publicIp        String?
+  country         String?
+  activationCode  String    // Code temporaire (6 chiffres) pour validation
+  status          DeviceStatus @default(PENDING) // PENDING, ACTIVE, REJECTED
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  approvedAt      DateTime?
+  approvedBy      String?   // Admin ID qui a approuvé
+  
+  // Token généré après approval
+  accessToken     String?   // JWT généré après approval
+  tokenExpiresAt  DateTime?
+  
+  // Quota назначенный par l'admin
+  quotaMB         BigInt    @default(0) // Quota en MB (0 = illimité)
+  quotaUsedMB     BigInt    @default(0)
+  
+  // Config VPN assignée
+  vpnConfig       String?   // Config cryptée JSON
+  configVersion   Int       @default(0)
+  
+  // Relation optionnelle à un user/admin
+  userId          String?
+  adminId         String?
+  
+  @@index([activationCode])
+  @@index([status])
+}

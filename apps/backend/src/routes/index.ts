@@ -24,6 +24,7 @@ import paymentsRouter from "./payments.routes.js";
 import tokensRouter from "./tokens.routes.js";
 import devicesRouter from "./devices.routes.js";
 import quotasRouter from "./quotas.routes.js";
+import deviceActivationRouter from "./device-activation.routes.js";
 
 const router: IRouter = Router();
 
@@ -52,5 +53,6 @@ router.use("/mobile",         mobileRouter);
 router.use("/tokens",         tokensRouter);
 router.use("/devices",        devicesRouter);
 router.use("/quotas",         quotasRouter);
+router.use("/mobile-device",  deviceActivationRouter);
 
 export default router;
