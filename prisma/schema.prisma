@@ -227,7 +227,7 @@ model User {
   deviceLimit          Int         @default(3)
   quotaUsedGB          Float       @default(0)
   quotaRemainingGB     Float       @default(0)
-  expireAt              DateTime?
+  expireAt             DateTime?
   createdBy            String?
   resellerId           String?
   createdAt            DateTime    @default(now())
