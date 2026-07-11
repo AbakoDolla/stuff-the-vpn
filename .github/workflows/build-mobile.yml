@@ -28,7 +28,6 @@ jobs:
           flutter-version: '3.24.0'
           channel: 'stable'
           cache: true
-          cache-dependency-path: apps/mobile/pubspec.lock
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
