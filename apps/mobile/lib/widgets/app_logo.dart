@@ -9,6 +9,7 @@ class AppLogo extends StatelessWidget {
       'assets/images/logo.png',
       width: 150,
       height: 150,
+      fit: BoxFit.contain,
     );
   }
 }
