@@ -260,7 +260,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Spacer(flex: 3),
+                const Spacer(flex: 2),
                 AnimatedBuilder(
                   animation: _logoEnterCtrl,
                   builder: (context, _) => Opacity(
@@ -292,8 +292,8 @@ class _SplashPageState extends ConsumerState<SplashPage>
                         ),
                         child: Image.asset(
                           'assets/images/logo.png',
-                          width: 130,
-                          height: 130,
+                          width: 150,
+                          height: 150,
                           fit: BoxFit.contain,
                         ),
                       ),
@@ -309,9 +309,9 @@ class _SplashPageState extends ConsumerState<SplashPage>
                     'SxBVPN',
                     style: TextStyle(
                       color: Colors.white,
-                      letterSpacing: 3,
+                      letterSpacing: 0.5,
                       fontWeight: FontWeight.w800,
-                      fontSize: 28,
+                      fontSize: 30,
                     ),
                   ),
                 )
@@ -331,7 +331,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                     fontSize: 13,
                   ),
                 ).animate().fadeIn(delay: 600.ms, duration: 500.ms),
-                const Spacer(flex: 2),
+                const Spacer(flex: 3),
                 SizedBox(
                   width: 28,
                   height: 28,
