@@ -6,13 +6,13 @@
 
 import { Router } from "express";
 import { prisma } from "../prisma/client.js";
-import { authenticateAdmin } from "../middleware/auth.middleware.js";
+import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
 import { logAudit } from "../lib/audit.js";
 
 const router = Router();
 
 // Toutes les routes nécessitent une authentification admin
-router.use(authenticateAdmin);
+router.use(authMiddleware, requireRole("ADMIN", "SUPER_ADMIN"));
 
 /**
  * GET /api/quotas
@@ -175,7 +175,7 @@ router.get("/:id/usage", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const { userId, deviceId, totalGB, policy, resetAt } = req.body;
-    const adminId = (req as any).adminId;
+    const adminId = (req as any).user?.userId;
 
     if (!userId || totalGB === undefined) {
       return res.status(400).json({ 
@@ -237,7 +237,7 @@ router.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { totalGB, policy, resetAt, addGB } = req.body;
-    const adminId = (req as any).adminId;
+    const adminId = (req as any).user?.userId;
 
     const quota = await prisma.quota.findUnique({
       where: { id },
@@ -318,7 +318,7 @@ router.post("/:id/reset", async (req, res) => {
   try {
     const { id } = req.params;
     const { newTotalGB } = req.body;
-    const adminId = (req as any).adminId;
+    const adminId = (req as any).user?.userId;
 
     const quota = await prisma.quota.findUnique({
       where: { id },
@@ -372,7 +372,7 @@ router.post("/:id/reset", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).adminId;
+    const adminId = (req as any).user?.userId;
 
     const quota = await prisma.quota.findUnique({
       where: { id },
