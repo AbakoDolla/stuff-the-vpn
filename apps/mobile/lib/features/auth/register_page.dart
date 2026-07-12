@@ -206,7 +206,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Rejoignez SXB VPN dès maintenant',
+                            'Rejoignez SxBVPN dès maintenant',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
