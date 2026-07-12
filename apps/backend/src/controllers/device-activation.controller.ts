@@ -52,7 +52,7 @@ const UpdateUsageSchema = z.object({
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-function generateActivationCode(): string {
+function generate6DigitCode(): string {
   // Génère un code à 6 chiffres
   return "SXB-" + Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -94,7 +94,7 @@ export async function registerDevice(req: Request, res: Response, next: NextFunc
       }
       
       // Sinon générer un nouveau code
-      const newCode = generateActivationCode();
+      const newCode = generate6DigitCode();
       activation = await prisma.deviceActivation.update({
         where: { deviceId: parsed.deviceId },
         data: {
@@ -113,7 +113,7 @@ export async function registerDevice(req: Request, res: Response, next: NextFunc
       });
     } else {
       // Créer une nouvelle activation
-      const activationCode = generateActivationCode();
+      const activationCode = generate6DigitCode();
       activation = await prisma.deviceActivation.create({
         data: {
           deviceId: parsed.deviceId,
@@ -636,7 +636,7 @@ export async function createDevice(req: Request, res: Response, next: NextFuncti
 
     if (activation) {
       // Générer un nouveau code d'activation
-      activationCode = generateActivationCode();
+      activationCode = generateUniqueCode();
       activation = await prisma.deviceActivation.update({
         where: { deviceId: cleanDeviceId },
         data: {
@@ -647,7 +647,7 @@ export async function createDevice(req: Request, res: Response, next: NextFuncti
       });
     } else {
       // Créer nouveau
-      activationCode = generateActivationCode();
+      activationCode = generateUniqueCode();
       activation = await prisma.deviceActivation.create({
         data: {
           deviceId: cleanDeviceId,
@@ -698,7 +698,7 @@ export async function generateActivationCode(req: Request, res: Response, next: 
       return sendError(res, "Appareil non trouvé", HTTP_STATUS.NOT_FOUND);
     }
 
-    const activationCode = generateActivationCode();
+    const activationCode = generateUniqueCode();
 
     await prisma.deviceActivation.update({
       where: { deviceId },
@@ -758,7 +758,7 @@ export async function reactivateDevice(req: Request, res: Response, next: NextFu
       return sendError(res, "Appareil non trouvé", HTTP_STATUS.NOT_FOUND);
     }
 
-    const activationCode = generateActivationCode();
+    const activationCode = generateUniqueCode();
 
     await prisma.deviceActivation.update({
       where: { deviceId },
@@ -782,7 +782,7 @@ export async function reactivateDevice(req: Request, res: Response, next: NextFu
 /**
  * Génère un code d'activation unique (format: SXB-XXXX-XXXX)
  */
-function generateActivationCode(): string {
+function generateUniqueCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = 'SXB-';
   for (let i = 0; i < 4; i++) {
