@@ -12,8 +12,11 @@ const router = Router();
 // Activation par token cryptographique (nouveau système)
 router.post("/device/activate", authRateLimit, mobile.activateDevice);
 
+// Alias: ancienne APK appelle /mobile/activate, on redirige vers activateDevice
+router.post("/activate",        authRateLimit, mobile.activateDevice);
+
 // Activation par licence (système legacy, utilisé par l'app Flutter)
-router.post("/activate",        authRateLimit, mobile.activateLicense);
+router.post("/activate-license", authRateLimit, mobile.activateLicense);
 
 /*
  * Routes protégées — JWT utilisateur standard requis
