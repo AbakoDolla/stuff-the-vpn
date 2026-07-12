@@ -6,13 +6,13 @@
 
 import { Router } from "express";
 import { prisma } from "../prisma/client.js";
-import { authenticateAdmin } from "../middleware/auth.middleware.js";
+import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
 import { logAudit } from "../lib/audit.js";
 
 const router = Router();
 
 // Toutes les routes nécessitent une authentification admin
-router.use(authenticateAdmin);
+router.use(authMiddleware, requireRole("ADMIN", "SUPER_ADMIN"));
 
 /**
  * GET /api/devices
@@ -157,7 +157,7 @@ router.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { status, deviceName, isCompromised } = req.body;
-    const adminId = (req as any).adminId;
+    const adminId = (req as any).user?.userId;
 
     const device = await prisma.device.findUnique({
       where: { id },
@@ -204,7 +204,7 @@ router.patch("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).adminId;
+    const adminId = (req as any).user?.userId;
 
     const device = await prisma.device.findUnique({
       where: { id },
@@ -243,7 +243,7 @@ router.post("/:id/block", async (req, res) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
-    const adminId = (req as any).adminId;
+    const adminId = (req as any).user?.userId;
 
     const device = await prisma.device.findUnique({
       where: { id },
