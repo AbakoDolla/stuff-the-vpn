@@ -10,13 +10,13 @@
 import { Router } from "express";
 import { prisma } from "../prisma/client.js";
 import { generateActivationToken, parseToken } from "../lib/token-generator.js";
-import { authenticateAdmin } from "../middleware/auth.middleware.js";
+import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
 import { logAudit } from "../lib/audit.js";
 
 const router = Router();
 
 // Toutes les routes nécessitent une authentification admin
-router.use(authenticateAdmin);
+router.use(authMiddleware, requireRole("ADMIN", "SUPER_ADMIN"));
 
 /**
  * GET /api/tokens
@@ -76,7 +76,7 @@ router.get("/", async (req, res) => {
 router.post("/generate", async (req, res) => {
   try {
     const { deviceId } = req.body;
-    const adminId = (req as any).adminId;
+    const adminId = (req as any).user?.userId;
 
     if (!deviceId || typeof deviceId !== "string") {
       return res.status(400).json({ 
@@ -171,7 +171,7 @@ router.post("/generate", async (req, res) => {
 router.post("/revoke/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).adminId;
+    const adminId = (req as any).user?.userId;
 
     const token = await prisma.activationToken.findUnique({
       where: { id },
@@ -218,7 +218,7 @@ router.post("/revoke/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).adminId;
+    const adminId = (req as any).user?.userId;
 
     await prisma.activationToken.delete({
       where: { id },
