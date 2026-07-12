@@ -75,43 +75,98 @@ const ConnectLogSchema = z.object({
   ping:     z.number().optional(),
 });
 
-// ── Activate device with cryptographic token ─────────────────────────────────
+// ── Activate device with cryptographic or short token ─────────────────────────────────
+
+/**
+ * Vérifie si le token est au format court (SXB_XXX)
+ */
+async function verifyShortToken(token: string, deviceId: string) {
+  // Format court: SXB_DEVICEID_TIMESTAMP_RANDOM
+  const shortTokenMatch = token.match(/^SXB_(.+)_(\d+)_.+$/);
+  if (!shortTokenMatch) return null;
+
+  const [, tokenDeviceId, timestamp] = shortTokenMatch;
+  
+  // Vérifier que le deviceId correspond
+  const normalizedDeviceId = deviceId.replace(/[^a-zA-Z0-9]/g, '');
+  const normalizedTokenDeviceId = tokenDeviceId.replace(/[^a-zA-Z0-9]/g, '');
+  
+  if (normalizedDeviceId !== normalizedTokenDeviceId) {
+    return { valid: false, error: "Device ID mismatch" };
+  }
+
+  // Vérifier expiration (7 jours par défaut)
+  const tokenTime = parseInt(timestamp, 10);
+  const sevenDays = 7 * 24 * 60 * 60 * 1000;
+  if (Date.now() > tokenTime + sevenDays) {
+    return { valid: false, error: "Token expiré" };
+  }
+
+  // Vérifier que le token existe dans deviceActivation
+  const activation = await prisma.deviceActivation.findUnique({
+    where: { deviceId },
+  });
+
+  if (!activation) {
+    return { valid: false, error: "Appareil non trouvé" };
+  }
+
+  if (activation.accessToken !== token) {
+    return { valid: false, error: "Token invalide" };
+  }
+
+  if (activation.status !== "ACTIVE") {
+    return { valid: false, error: `Appareil ${activation.status.toLowerCase()}` };
+  }
+
+  return { valid: true, deviceActivation: activation };
+}
 
 export async function activateDevice(req: Request, res: Response, next: NextFunction) {
   try {
     const parsed = DeviceActivateSchema.parse(req.body);
 
-    // 1. Vérifier le token cryptographique
+    let deviceActivation = null;
+    let dbToken = null;
+
+    // 1. Essayer d'abord le token cryptographique (format base64)
     const tokenVerification = verifyActivationToken(parsed.token, parsed.deviceId);
     
     if (!tokenVerification.valid) {
-      await audit({ 
-        action: "FRAUD_ATTEMPT", 
-        req,
-        details: { reason: tokenVerification.error, deviceId: parsed.deviceId } 
+      // 2. Essayer le format court (SXB_XXX)
+      const shortTokenResult = await verifyShortToken(parsed.token, parsed.deviceId);
+      
+      if (!shortTokenResult?.valid) {
+        await audit({ 
+          action: "FRAUD_ATTEMPT", 
+          req,
+          details: { reason: shortTokenResult?.error || tokenVerification.error, deviceId: parsed.deviceId } 
+        });
+        return sendError(res, shortTokenResult?.error || tokenVerification.error || "Token invalide", HTTP_STATUS.FORBIDDEN);
+      }
+      
+      deviceActivation = shortTokenResult.deviceActivation;
+    } else {
+      // Token cryptographique valide - vérifier en base
+      dbToken = await prisma.activationToken.findUnique({
+        where: { token: parsed.token },
       });
-      return sendError(res, tokenVerification.error || "Token invalide", HTTP_STATUS.FORBIDDEN);
-    }
 
-    // 2. Vérifier le token en base de données
-    const dbToken = await prisma.activationToken.findUnique({
-      where: { token: parsed.token },
-    });
+      if (!dbToken) {
+        return sendError(res, "Token introuvable", HTTP_STATUS.NOT_FOUND);
+      }
 
-    if (!dbToken) {
-      return sendError(res, "Token introuvable", HTTP_STATUS.NOT_FOUND);
-    }
+      if (dbToken.status !== "ACTIVE") {
+        return sendError(res, `Token ${dbToken.status.toLowerCase()}`, HTTP_STATUS.FORBIDDEN);
+      }
 
-    if (dbToken.status !== "ACTIVE") {
-      return sendError(res, `Token ${dbToken.status.toLowerCase()}`, HTTP_STATUS.FORBIDDEN);
-    }
-
-    if (dbToken.expiresAt < new Date()) {
-      await prisma.activationToken.update({
-        where: { id: dbToken.id },
-        data: { status: "EXPIRED" },
-      });
-      return sendError(res, "Token expiré", HTTP_STATUS.FORBIDDEN);
+      if (dbToken.expiresAt < new Date()) {
+        await prisma.activationToken.update({
+          where: { id: dbToken.id },
+          data: { status: "EXPIRED" },
+        });
+        return sendError(res, "Token expiré", HTTP_STATUS.FORBIDDEN);
+      }
     }
 
     // 3. Trouver ou créer l'utilisateur
@@ -214,14 +269,23 @@ export async function activateDevice(req: Request, res: Response, next: NextFunc
     });
 
     // 6. Marquer le token comme utilisé
-    await prisma.activationToken.update({
-      where: { id: dbToken.id },
-      data: {
-        status:       "USED",
-        usedAt:       new Date(),
-        usedByDevice: parsed.deviceId,
-      },
-    });
+    if (dbToken) {
+      // Token cryptographique
+      await prisma.activationToken.update({
+        where: { id: dbToken.id },
+        data: {
+          status:       "USED",
+          usedAt:       new Date(),
+          usedByDevice: parsed.deviceId,
+        },
+      });
+    } else if (deviceActivation) {
+      // Short token - marquer deviceActivation comme utilisé
+      await prisma.deviceActivation.update({
+        where: { deviceId: parsed.deviceId },
+        data: { status: "USED" },
+      });
+    }
 
     // 7. Incrémenter le compteur de connexions
     await prisma.device.update({
