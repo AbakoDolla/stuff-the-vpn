@@ -392,7 +392,7 @@ class _AppInfoCard extends StatelessWidget {
                   style:
                       TextStyle(color: AppColors.textMuted, fontSize: 11)),
               SizedBox(height: 2),
-              Text('SXB VPN v$version',
+              Text('SxBVPN v$version',
                   style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 13,
