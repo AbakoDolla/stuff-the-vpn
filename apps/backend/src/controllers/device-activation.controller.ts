@@ -665,7 +665,7 @@ export async function createDevice(req: Request, res: Response, next: NextFuncti
     const loginToken = await generateLoginToken(cleanDeviceId);
 
     await audit({
-      action: "DEVICE_CREATE",
+      action: "DEVICE_REGISTER",
       req,
       details: { deviceId: cleanDeviceId, quotaMB, expiresInDays },
     });

@@ -120,7 +120,7 @@ class DeviceService {
         if (name                != null && name.isNotEmpty) 'name': name,
       };
 
-      final response = await _api.post(ApiEndpoints.loginLicense, data: body);
+      final response = await _api.post(ApiEndpoints.deviceActivate, data: body);
       final json     = response.data as Map<String, dynamic>;
       final result   = DeviceActivationResult.fromJson(json);
 
