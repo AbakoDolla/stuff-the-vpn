@@ -13,7 +13,7 @@ class SxbVpnApp extends ConsumerWidget {
     final themeModeAsync = ref.watch(themeProvider);
     
     return MaterialApp.router(
-      title: 'SXB VPN',
+      title: 'SxBVPN',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
