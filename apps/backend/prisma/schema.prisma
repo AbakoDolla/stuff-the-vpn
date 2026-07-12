@@ -33,6 +33,7 @@ enum DeviceStatus {
   DISABLED
   BLOCKED
   PENDING
+  REJECTED
 }
 
 enum TokenStatus {
