@@ -12,6 +12,11 @@ on:
       - 'apps/mobile/**'
       - '.github/workflows/build-apk.yml'
   workflow_dispatch:
+    inputs:
+      backend_url:
+        description: 'Backend URL'
+        required: false
+        default: 'https://vpnsxb.afrihall.com/api'
 
 permissions:
   contents: read
@@ -59,15 +64,37 @@ jobs:
             cp apps/dashboard/public/logo.png apps/mobile/assets/images/logo.png
           fi
 
+      - name: Determine Backend URL
+        id: backend
+        run: |
+          if [ -n "${{ inputs.backend_url }}" ]; then
+            echo "url=${{ inputs.backend_url }}" >> $GITHUB_OUTPUT
+          else
+            echo "url=https://vpnsxb.afrihall.com/api" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build APK (release)
         run: |
           cd apps/mobile
           flutter build apk --release \
-            --dart-define=BACKEND_URL=https://vpnsxb.afrihall.com/api
+            --dart-define=BACKEND_URL=${{ steps.backend.outputs.url }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sxbvpn-release-apk
+          name: sxbvpn-release-apk-${{ github.run_number }}
           path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+      - name: Build debug APK for testing
+        run: |
+          cd apps/mobile
+          flutter build apk --debug \
+            --dart-define=BACKEND_URL=${{ steps.backend.outputs.url }}
+
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sxbvpn-debug-apk-${{ github.run_number }}
+          path: apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7

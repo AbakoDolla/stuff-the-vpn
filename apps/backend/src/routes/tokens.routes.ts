@@ -165,10 +165,10 @@ router.post("/generate", async (req, res) => {
 });
 
 /**
- * POST /api/tokens/revoke/:id
+ * POST /api/tokens/:id/revoke
  * Révoque un token
  */
-router.post("/revoke/:id", async (req, res) => {
+router.post("/:id/revoke", async (req, res) => {
   try {
     const { id } = req.params;
     const adminId = (req as any).user?.userId;

@@ -110,6 +110,7 @@ export function requireRole(...roles: string[]) {
 /**
  * Middleware d'authentification pour les admins du dashboard.
  * Ajoute adminId à la requête.
+ * Accepte les tokens avec type: "admin" OU les tokens "dashboard" d'utilisateurs avec rôle ADMIN/SUPER_ADMIN
  */
 export async function authenticateAdmin(
   req: AuthRequest,
@@ -126,8 +127,13 @@ export async function authenticateAdmin(
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as AuthPayload;
 
-    // Vérifier que c'est un token admin
-    if (payload.type !== "admin") {
+    // Vérifier que c'est un token admin ou dashboard avec rôle approprié
+    const isAdminToken = payload.type === "admin";
+    const isDashboardWithAdminRole = payload.type === "dashboard" && 
+      (payload.role === "ADMIN" || payload.role === "SUPER_ADMIN");
+    const isResellerToken = payload.type === "reseller";
+    
+    if (!isAdminToken && !isDashboardWithAdminRole && !isResellerToken) {
       sendError(res, "Admin token required", HTTP_STATUS.FORBIDDEN);
       return;
     }
