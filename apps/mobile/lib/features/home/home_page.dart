@@ -158,7 +158,7 @@ class _HomePageState extends ConsumerState<HomePage>
                 shaderCallback: (b) => const LinearGradient(
                   colors: [AppColors.primary, AppColors.accent],
                 ).createShader(b),
-                child: const Text('SXB VPN',
+                child: const Text('SxBVPN',
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 12,
