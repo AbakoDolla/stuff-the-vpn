@@ -670,8 +670,15 @@ export async function createDevice(req: Request, res: Response, next: NextFuncti
       details: { deviceId: cleanDeviceId, quotaMB, expiresInDays },
     });
 
+    // Convert BigInt to Number for JSON serialization
+    const serializableActivation = {
+      ...activation,
+      quotaMB: Number(activation.quotaMB),
+      quotaUsedMB: Number(activation.quotaUsedMB),
+    };
+
     sendSuccess(res, {
-      device: activation,
+      device: serializableActivation,
       loginToken,
     }, "Appareil créé et token généré");
 
