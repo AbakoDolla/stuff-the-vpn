@@ -22,7 +22,7 @@ import { verifyActivationToken } from "../lib/token-generator.js";
 // Schéma pour activation par token cryptographique (nouveau système)
 const DeviceActivateSchema = z.object({
   // Info appareil
-  deviceId:     z.string().uuid(),
+  deviceId:     z.string().min(1),
   deviceName:   z.string().optional(),
   brand:        z.string().optional(),
   model:        z.string().optional(),
