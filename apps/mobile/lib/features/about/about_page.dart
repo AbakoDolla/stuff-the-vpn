@@ -64,7 +64,7 @@ class AboutPage extends StatelessWidget {
                     colors: [AppColors.primary, AppColors.accent],
                   ).createShader(b),
                   child: const Text(
-                    'SXB VPN',
+                    'SxBVPN',
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 28,
@@ -106,7 +106,7 @@ class AboutPage extends StatelessWidget {
                     border: Border.all(color: AppColors.cardBorder),
                   ),
                   child: Column(children: [
-                    _InfoRow(label: 'Application', value: 'SXB VPN'),
+                    _InfoRow(label: 'Application', value: 'SxBVPN'),
                     const Divider(height: 24, color: AppColors.cardBorder),
                     _InfoRow(label: 'Version', value: '1.0.0 (build 1)'),
                     const Divider(height: 24, color: AppColors.cardBorder),
@@ -145,7 +145,7 @@ class AboutPage extends StatelessWidget {
                 ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.05, end: 0),
                 const SizedBox(height: 40),
                 const Text(
-                  '© 2024 SXB VPN — Afrihall\nTous droits réservés',
+                  '© 2024 SxBVPN — Afrihall\nTous droits réservés',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       color: AppColors.textMuted, fontSize: 12, height: 1.6),
