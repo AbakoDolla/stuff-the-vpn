@@ -615,11 +615,11 @@ export async function deleteDevice(req: Request, res: Response, next: NextFuncti
 
 /**
  * POST /mobile-device (Admin)
- * Crée un appareil manuellement et génère un token de connexion
+ * Crée un appareil manuellement et génère un code d'activation
  */
 export async function createDevice(req: Request, res: Response, next: NextFunction) {
   try {
-    const { deviceId, deviceName, quotaMB = 0, expiresInDays = 30 } = req.body;
+    const { deviceId, deviceName } = req.body;
 
     if (!deviceId || typeof deviceId !== 'string' || deviceId.trim() === '') {
       return sendError(res, "L'ID de l'appareil est requis", HTTP_STATUS.BAD_REQUEST);
@@ -632,77 +632,165 @@ export async function createDevice(req: Request, res: Response, next: NextFuncti
       where: { deviceId: cleanDeviceId },
     });
 
+    let activationCode: string;
+
     if (activation) {
-      // Mettre à jour l'existant
+      // Générer un nouveau code d'activation
+      activationCode = generateActivationCode();
       activation = await prisma.deviceActivation.update({
         where: { deviceId: cleanDeviceId },
         data: {
           deviceName: deviceName || activation.deviceName || cleanDeviceId,
-          status: "ACTIVE",
-          quotaMB,
-          quotaUsedMB: 0,
-          tokenExpiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
+          activationCode,
+          status: "PENDING",
         },
       });
     } else {
       // Créer nouveau
-      const activationCode = generateActivationCode();
+      activationCode = generateActivationCode();
       activation = await prisma.deviceActivation.create({
         data: {
           deviceId: cleanDeviceId,
           deviceName: deviceName || cleanDeviceId,
           activationCode,
-          status: "ACTIVE",
-          quotaMB,
+          status: "PENDING",
+          quotaMB: 0,
           quotaUsedMB: 0,
-          approvedAt: new Date(),
-          tokenExpiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
         },
       });
     }
 
-    // Générer le login token pour l'utilisateur
-    const loginToken = await generateLoginToken(cleanDeviceId);
-
     await audit({
       action: "DEVICE_REGISTER",
       req,
-      details: { deviceId: cleanDeviceId, quotaMB, expiresInDays },
+      details: { deviceId: cleanDeviceId },
     });
 
-    // Convert BigInt to Number for JSON serialization
-    const serializableActivation = {
-      ...activation,
-      quotaMB: Number(activation.quotaMB),
-      quotaUsedMB: Number(activation.quotaUsedMB),
-    };
-
     sendSuccess(res, {
-      device: serializableActivation,
-      loginToken,
-    }, "Appareil créé et token généré");
+      device: {
+        id: activation.id,
+        deviceId: activation.deviceId,
+        deviceName: activation.deviceName,
+        status: activation.status,
+        quotaMB: Number(activation.quotaMB),
+        quotaUsedMB: Number(activation.quotaUsedMB),
+        createdAt: activation.createdAt,
+      },
+      activationCode,
+    }, "Appareil inscrit et code d'activation généré");
 
   } catch (err) { next(err); }
 }
 
-async function generateLoginToken(deviceId: string): Promise<string> {
-  // Trouver l'appareil
-  const activation = await prisma.deviceActivation.findUnique({
-    where: { deviceId },
-  });
+/**
+ * POST /mobile-device/:deviceId/code (Admin)
+ * Génère un nouveau code d'activation pour un appareil existant
+ */
+export async function generateActivationCode(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { deviceId } = req.params;
 
-  if (!activation) {
-    throw new Error("Appareil non trouvé");
+    const activation = await prisma.deviceActivation.findUnique({
+      where: { deviceId },
+    });
+
+    if (!activation) {
+      return sendError(res, "Appareil non trouvé", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const activationCode = generateActivationCode();
+
+    await prisma.deviceActivation.update({
+      where: { deviceId },
+      data: { activationCode },
+    });
+
+    sendSuccess(res, { activationCode }, "Code d'activation généré");
+
+  } catch (err) { next(err); }
+}
+
+/**
+ * POST /mobile-device/:deviceId/suspend (Admin)
+ * Suspend un appareil
+ */
+export async function suspendDevice(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { deviceId } = req.params;
+
+    const activation = await prisma.deviceActivation.findUnique({
+      where: { deviceId },
+    });
+
+    if (!activation) {
+      return sendError(res, "Appareil non trouvé", HTTP_STATUS.NOT_FOUND);
+    }
+
+    await prisma.deviceActivation.update({
+      where: { deviceId },
+      data: { status: "SUSPENDED" },
+    });
+
+    await audit({
+      action: "DEVICE_BLOCK",
+      req,
+      details: { deviceId },
+    });
+
+    sendSuccess(res, null, "Appareil suspendu");
+
+  } catch (err) { next(err); }
+}
+
+/**
+ * POST /mobile-device/:deviceId/reactivate (Admin)
+ * Réactive un appareil
+ */
+export async function reactivateDevice(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { deviceId } = req.params;
+
+    const activation = await prisma.deviceActivation.findUnique({
+      where: { deviceId },
+    });
+
+    if (!activation) {
+      return sendError(res, "Appareil non trouvé", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const activationCode = generateActivationCode();
+
+    await prisma.deviceActivation.update({
+      where: { deviceId },
+      data: { 
+        status: "ACTIVE",
+        activationCode,
+      },
+    });
+
+    await audit({
+      action: "DEVICE_ACTIVATE",
+      req,
+      details: { deviceId },
+    });
+
+    sendSuccess(res, { activationCode }, "Appareil réactivé avec nouveau code");
+
+  } catch (err) { next(err); }
+}
+
+/**
+ * Génère un code d'activation unique (format: SXB-XXXX-XXXX)
+ */
+function generateActivationCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'SXB-';
+  for (let i = 0; i < 4; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-
-  // Créer un token de connexion unique
-  const loginToken = `SXB_${deviceId.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-
-  // Stocker le token dans la base (optionnel - peut être utilisé pour tracking)
-  await prisma.deviceActivation.update({
-    where: { deviceId },
-    data: { accessToken: loginToken },
-  });
-
-  return loginToken;
+  code += '-';
+  for (let i = 0; i < 4; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
 }

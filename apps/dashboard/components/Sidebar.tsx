@@ -25,28 +25,17 @@ interface NavItem {
 const getNavItems = (tr: Record<string, string>): NavItem[] => [
   // Vue d'ensemble
   { labelKey: 'dashboard', icon: <LayoutDashboard size={18} />, href: '/dashboard', section: 'overview', permission: 'admin.dashboard' },
-  { labelKey: 'analytics', icon: <BarChart2 size={18} />, href: '/analytics', section: 'overview', permission: 'statistics.view' },
 
-  // Utilisateurs & Accès
+  // Utilisateurs & Appareils
   { labelKey: 'users', icon: <Users size={18} />, href: '/dashboard/users', section: 'users', permission: 'users.view' },
-  { labelKey: 'devices', icon: <Smartphone size={18} />, href: '/dashboard/devices-list', section: 'users', permission: 'devices.view' },
-  { labelKey: 'appActivation', icon: <Smartphone size={18} />, href: '/dashboard/app-activation', section: 'users', permission: 'devices.view' },
-  { labelKey: 'tokens', icon: <Key size={18} />, href: '/dashboard/tokens', section: 'users', permission: 'tokens.create' },
-  { labelKey: 'quotas', icon: <HardDrive size={18} />, href: '/dashboard/quotas', section: 'users', permission: 'quotas.view' },
+  { labelKey: 'devices', icon: <Smartphone size={18} />, href: '/dashboard/app-activation', section: 'users', permission: 'devices.view' },
 
   // VPN
+  { labelKey: 'servers', icon: <Server size={18} />, href: '/dashboard/servers', section: 'vpn', permission: 'servers.view' },
   { labelKey: 'inbounds', icon: <Globe size={18} />, href: '/dashboard/inbounds', section: 'vpn', permission: 'inbounds.view' },
   { labelKey: 'vpnProfiles', icon: <Shield size={18} />, href: '/dashboard/vpn', section: 'vpn', permission: 'vpn_profiles.view' },
-  { labelKey: 'servers', icon: <Server size={18} />, href: '/dashboard/servers', section: 'vpn', permission: 'servers.view' },
-
-  // Commercial
-  { labelKey: 'licenses', icon: <Key size={18} />, href: '/licenses', section: 'commercial', permission: 'licenses.view' },
-  { labelKey: 'vouchers', icon: <Ticket size={18} />, href: '/vouchers', section: 'commercial', permission: 'vouchers.view' },
-  { labelKey: 'payments', icon: <CreditCard size={18} />, href: '/dashboard/payments', section: 'commercial', permission: 'payments.view' },
 
   // Admin
-  { labelKey: 'tickets', icon: <MessageSquare size={18} />, href: '/dashboard/tickets', section: 'admin', permission: 'support.tickets' },
-  { labelKey: 'audit', icon: <FileText size={18} />, href: '/dashboard/audit', section: 'admin', permission: 'audit_logs.view' },
   { labelKey: 'settings', icon: <Settings size={18} />, href: '/dashboard/settings', section: 'admin', permission: 'settings.view' },
 ];
 

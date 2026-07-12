@@ -78,10 +78,32 @@ const ConnectLogSchema = z.object({
 // ── Activate device with cryptographic or short token ─────────────────────────────────
 
 /**
- * Vérifie si le token est au format court (SXB_XXX)
+ * Vérifie si le token est au format court (SXB_XXX ou SXB-XXXX-XXXX)
  */
 async function verifyShortToken(token: string, deviceId: string) {
-  // Format court: SXB_DEVICEID_TIMESTAMP_RANDOM
+  // Format nouveau: SXB-XXXX-XXXX (code d'activation)
+  const activationCodeMatch = token.match(/^SXB-[A-Z0-9]{4}-[A-Z0-9]{4}$/i);
+  if (activationCodeMatch) {
+    // Chercher l'appareil par le code d'activation
+    const activation = await prisma.deviceActivation.findFirst({
+      where: { activationCode: token.toUpperCase() },
+    });
+
+    if (!activation) {
+      return { valid: false, error: "Code d'activation invalide" };
+    }
+
+    // Le code d'activation peut être utilisé par n'importe quel appareil
+    // (le code est lié à l'appareil lors de sa création dans le dashboard)
+    
+    if (activation.status === "SUSPENDED") {
+      return { valid: false, error: "Appareil suspendu" };
+    }
+
+    return { valid: true, deviceActivation: activation, usesNewFormat: true };
+  }
+
+  // Format ancien: SXB_DEVICEID_TIMESTAMP_RANDOM
   const shortTokenMatch = token.match(/^SXB_(.+)_(\d+)_.+$/);
   if (!shortTokenMatch) return null;
 

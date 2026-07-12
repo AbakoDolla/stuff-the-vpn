@@ -28,11 +28,14 @@ router.post("/:deviceId/connect", activation.notifyConnection);
 // Liste des appareils (tous statuts)
 router.get("/", authenticateAdmin, activation.getPendingDevices);
 
-// Créer un appareil manuellement (avec token)
+// Créer un appareil et générer un code d'activation
 router.post("/", authenticateAdmin, activation.createDevice);
 
 // Détails d'un appareil
 router.get("/:deviceId", authenticateAdmin, activation.getDeviceDetails);
+
+// Générer un nouveau code d'activation
+router.post("/:deviceId/code", authenticateAdmin, activation.generateActivationCode);
 
 // Approuver un appareil
 router.post("/:deviceId/approve", authenticateAdmin, activation.approveDevice);
@@ -45,6 +48,12 @@ router.patch("/:deviceId/quota", authenticateAdmin, activation.updateDeviceQuota
 
 // Révoquer l'accès
 router.post("/:deviceId/revoke", authenticateAdmin, activation.revokeDevice);
+
+// Suspendre un appareil
+router.post("/:deviceId/suspend", authenticateAdmin, activation.suspendDevice);
+
+// Réactiver un appareil
+router.post("/:deviceId/reactivate", authenticateAdmin, activation.reactivateDevice);
 
 // Supprimer un appareil
 router.delete("/:deviceId", authenticateAdmin, activation.deleteDevice);
