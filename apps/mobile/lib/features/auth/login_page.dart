@@ -87,7 +87,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
         await ref.read(authStateProvider.notifier).loginWithToken(
           token: _tokenController.text.trim(),
           deviceId: _deviceIdController.text.trim(),
-          deviceName: 'SXB VPN Android',
+          deviceName: 'SxBVPN Android',
         );
       }
     }
@@ -99,7 +99,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
           token: _tokenController.text.trim(),
           phone: _phoneController.text.trim(),
           deviceId: _deviceIdController.text.trim(),
-          deviceName: 'SXB VPN Android',
+          deviceName: 'SxBVPN Android',
         );
       }
     }
