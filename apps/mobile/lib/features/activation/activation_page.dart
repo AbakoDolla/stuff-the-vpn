@@ -169,7 +169,7 @@ class _ActivationPageState extends ConsumerState<ActivationPage>
                           colors: [AppColors.primary, AppColors.accent],
                         ).createShader(bounds),
                         child: const Text(
-                          'SXB VPN',
+                          'SxBVPN',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 28,
@@ -217,7 +217,7 @@ class _ActivationPageState extends ConsumerState<ActivationPage>
                       const SizedBox(height: 32),
                       // Info text
                       const Text(
-                        'Votre jeton d\'activation vous a été fourni par\nvotre administrateur SXB VPN.',
+                        'Votre jeton d\'activation vous a été fourni par\nvotre administrateur SxBVPN.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.textMuted,
