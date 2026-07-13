@@ -3,17 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/server_model.dart';
 import '../models/vpn_config_model.dart';
 import '../services/vpn_service.dart';
+import '../core/vpn/v2ray_engine.dart';
+import '../core/vpn/vpn_link_builder.dart';
 
-enum VpnStatus { disconnected, connecting, connected }
+enum VpnStatus {
+  disconnected,
+  connecting,
+  connected,
+  permissionDenied,
+  unsupportedProtocol,
+  noServerAvailable,
+  error,
+}
 
 class VpnState {
   final VpnStatus status;
   final ServerModel? currentServer;
   final VpnConfigModel? config;
   final Duration connectedDuration;
-  final double downloadSpeed;
-  final double uploadSpeed;
+  final double downloadSpeed; // bytes/sec
+  final double uploadSpeed;   // bytes/sec
   final List<VpnConfigModel> availableProfiles;
+  final String? errorMessage;
 
   const VpnState({
     this.status = VpnStatus.disconnected,
@@ -23,6 +34,7 @@ class VpnState {
     this.downloadSpeed = 0,
     this.uploadSpeed = 0,
     this.availableProfiles = const [],
+    this.errorMessage,
   });
 
   bool get isConnected  => status == VpnStatus.connected;
@@ -37,6 +49,7 @@ class VpnState {
     double? downloadSpeed,
     double? uploadSpeed,
     List<VpnConfigModel>? availableProfiles,
+    String? errorMessage,
   }) {
     return VpnState(
       status:            status            ?? this.status,
@@ -46,17 +59,20 @@ class VpnState {
       downloadSpeed:     downloadSpeed     ?? this.downloadSpeed,
       uploadSpeed:       uploadSpeed       ?? this.uploadSpeed,
       availableProfiles: availableProfiles ?? this.availableProfiles,
+      errorMessage:      errorMessage,
     );
   }
 }
 
 class VpnNotifier extends StateNotifier<VpnState> {
   final VpnService _vpnService;
-  VpnNotifier(this._vpnService) : super(const VpnState());
-
-  int _generation = 0;
-  Timer? _timer;
+  final V2RayEngine _engine = V2RayEngine.instance;
+  StreamSubscription<RealVpnStatus>? _engineSub;
   DateTime? _connectedAt;
+
+  VpnNotifier(this._vpnService) : super(const VpnState()) {
+    _engineSub = _engine.statusStream.listen(_onEngineStatus);
+  }
 
   // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -67,59 +83,74 @@ class VpnNotifier extends StateNotifier<VpnState> {
     }
   }
 
+  /// Choisit le meilleur profil disponible parmi les inbounds actifs
+  /// (priorité aux protocoles supportés nativement par le tunnel réel).
+  VpnConfigModel? _pickProfile(List<VpnConfigModel> profiles, ServerModel? server) {
+    final candidates = server != null
+        ? profiles.where((p) => p.host == server.host || p.remark == server.name).toList()
+        : profiles;
+    final pool = candidates.isNotEmpty ? candidates : profiles;
+
+    // Priorité : protocoles avec tunnel réel disponible
+    final supported = pool.where((p) => isProtocolSupported(p.protocol)).toList();
+    if (supported.isNotEmpty) return supported.first;
+
+    // Sinon, retourne le premier quand même (pour affichage du message
+    // "protocole non supporté" avec le bon nom de protocole)
+    return pool.isNotEmpty ? pool.first : null;
+  }
+
   Future<void> connect({ServerModel? server}) async {
-    final generation = ++_generation;
+    state = state.copyWith(status: VpnStatus.connecting, currentServer: server, errorMessage: null);
 
-    state = state.copyWith(status: VpnStatus.connecting, currentServer: server);
     final result = await _vpnService.getMobileConfig();
+    final profiles = result?.profiles ?? state.availableProfiles;
 
-    if (generation != _generation) return;
+    if (profiles.isEmpty) {
+      state = state.copyWith(
+        status: VpnStatus.noServerAvailable,
+        errorMessage: 'Aucun serveur disponible actuellement',
+      );
+      return;
+    }
 
-    final profile = result?.profiles.firstOrNull;
+    final profile = _pickProfile(profiles, server);
+    if (profile == null) {
+      state = state.copyWith(
+        status: VpnStatus.noServerAvailable,
+        errorMessage: 'Aucun serveur disponible actuellement',
+      );
+      return;
+    }
 
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    if (generation != _generation) return;
+    final shareLink = buildShareLink(profile);
+    if (shareLink == null) {
+      // Protocole pas encore supporté pour une connexion VPN réelle
+      // (WireGuard / SSH / OpenVPN) — on ne simule JAMAIS une connexion.
+      state = state.copyWith(
+        status: VpnStatus.unsupportedProtocol,
+        config: profile,
+        availableProfiles: profiles,
+        errorMessage:
+            'Le protocole ${profile.protocolLabel} n\'est pas encore pris en charge pour une connexion directe sur cette version de l\'app.',
+      );
+      return;
+    }
 
-    _connectedAt = DateTime.now();
-    _startTimer();
+    state = state.copyWith(config: profile, availableProfiles: profiles);
 
-    state = state.copyWith(
-      status:            VpnStatus.connected,
-      currentServer:     server,
-      config:            profile,
-      availableProfiles: result?.profiles ?? state.availableProfiles,
-      downloadSpeed:     0,
-      uploadSpeed:       0,
+    // Déclenche la vraie demande de permission VPN Android puis le tunnel réel.
+    // requestPermission() affiche la boîte de dialogue système
+    // "Autoriser SxBVPN à configurer une connexion VPN ?"
+    await _engine.connect(
+      shareLink: shareLink,
+      remark: profile.remark,
     );
-
-    _vpnService.postConnectionLog(
-      event:    'CONNECT',
-      protocol: profile?.protocolLabel,
-      server:   profile?.host,
-    ).ignore();
+    // Le statut réel (connecté / refusé / erreur) arrive via _onEngineStatus
   }
 
   Future<void> disconnect() async {
-    final wasConnected = state.isConnected;
-    final duration     = _connectedAt != null
-        ? DateTime.now().difference(_connectedAt!).inSeconds
-        : 0;
-    final protocol     = state.config?.protocolLabel;
-    final server       = state.config?.host;
-
-    _generation++;
-    _stopTimer();
-    _connectedAt = null;
-    state = const VpnState(status: VpnStatus.disconnected);
-
-    if (wasConnected) {
-      _vpnService.postConnectionLog(
-        event:    'DISCONNECT',
-        protocol: protocol,
-        server:   server,
-        duration: duration,
-      ).ignore();
-    }
+    await _engine.disconnect();
   }
 
   Future<void> toggle() async {
@@ -130,27 +161,73 @@ class VpnNotifier extends StateNotifier<VpnState> {
     }
   }
 
-  // ── Timer ──────────────────────────────────────────────────────────────────
+  // ── Réception du statut réel émis par le moteur natif ────────────────────────
 
-  void _startTimer() {
-    _stopTimer();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      final elapsed = _connectedAt != null
-          ? DateTime.now().difference(_connectedAt!)
-          : state.connectedDuration + const Duration(seconds: 1);
-      state = state.copyWith(connectedDuration: elapsed);
-    });
-  }
+  void _onEngineStatus(RealVpnStatus s) {
+    if (!mounted) return;
 
-  void _stopTimer() {
-    _timer?.cancel();
-    _timer = null;
+    switch (s.state) {
+      case RealVpnState.connecting:
+        state = state.copyWith(status: VpnStatus.connecting);
+        break;
+
+      case RealVpnState.connected:
+        _connectedAt ??= DateTime.now();
+        state = state.copyWith(
+          status: VpnStatus.connected,
+          connectedDuration: s.duration,
+          uploadSpeed: s.uploadSpeedBps.toDouble(),
+          downloadSpeed: s.downloadSpeedBps.toDouble(),
+        );
+        break;
+
+      case RealVpnState.disconnected:
+        final wasConnected = state.isConnected;
+        final duration = _connectedAt != null
+            ? DateTime.now().difference(_connectedAt!).inSeconds
+            : 0;
+        _connectedAt = null;
+        state = VpnState(
+          status: VpnStatus.disconnected,
+          availableProfiles: state.availableProfiles,
+        );
+        if (wasConnected) {
+          _vpnService.postConnectionLog(
+            event:    'DISCONNECT',
+            protocol: state.config?.protocolLabel,
+            server:   state.config?.host,
+            duration: duration,
+          ).ignore();
+        }
+        break;
+
+      case RealVpnState.permissionDenied:
+        state = state.copyWith(
+          status: VpnStatus.permissionDenied,
+          errorMessage: s.errorMessage ?? 'Permission VPN refusée',
+        );
+        break;
+
+      case RealVpnState.error:
+        state = state.copyWith(
+          status: VpnStatus.error,
+          errorMessage: s.errorMessage ?? 'Erreur de connexion VPN',
+        );
+        break;
+    }
+
+    if (s.state == RealVpnState.connected) {
+      _vpnService.postConnectionLog(
+        event:    'CONNECT',
+        protocol: state.config?.protocolLabel,
+        server:   state.config?.host,
+      ).ignore();
+    }
   }
 
   @override
   void dispose() {
-    _stopTimer();
+    _engineSub?.cancel();
     super.dispose();
   }
 }
