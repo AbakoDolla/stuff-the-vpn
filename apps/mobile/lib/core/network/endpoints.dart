@@ -29,8 +29,8 @@ class ApiEndpoints {
   static String deviceConnect(String deviceId) => '/mobile-device/$deviceId/connect'; // Notifier connexion
   
   // ── VPN Config Sync (NOUVEAU SYSTÈME) ────────────────────────────────────
-  static String deviceVpnConfigs(String deviceId) => '/mobile-device/$deviceId/vpn-configs'; // Liste configs
-  static String deviceFullSync(String deviceId) => '/mobile-device/$deviceId/full-sync'; // Sync complet configs
+  static String deviceVpnConfigs(String deviceId) => '/mobile-device/$deviceId/vpn-configs';
+  static String deviceFullSync(String deviceId) => '/mobile-device/$deviceId/full-sync';
 
   // ── Mobile API ────────────────────────────────────────────────────────────
   static const String mobileConfig       = '/mobile/config';
