@@ -56,6 +56,7 @@ android {
         // Pick first for all conflicting libraries from VPN plugins
         jniLibs {
             pickFirsts += [
+                // OpenVPN libraries
                 'lib/arm64-v8a/libtun2socks.so',
                 'lib/armeabi-v7a/libtun2socks.so',
                 'lib/x86/libtun2socks.so',
@@ -64,6 +65,11 @@ android {
                 'lib/armeabi-v7a/libopenvpn.so',
                 'lib/x86/libopenvpn.so',
                 'lib/x86_64/libopenvpn.so',
+                // WireGuard libraries
+                'lib/arm64-v8a/libwg.so',
+                'lib/armeabi-v7a/libwg.so',
+                'lib/x86/libwg.so',
+                'lib/x86_64/libwg.so',
                 'lib/arm64-v8a/libwg-go.so',
                 'lib/armeabi-v7a/libwg-go.so',
                 'lib/x86/libwg-go.so',
@@ -72,6 +78,7 @@ android {
                 'lib/armeabi-v7a/libwg-quick.so',
                 'lib/x86/libwg-quick.so',
                 'lib/x86_64/libwg-quick.so',
+                // Common libraries
                 'lib/arm64-v8a/libapp.so',
                 'lib/armeabi-v7a/libapp.so',
                 'lib/x86/libapp.so',
