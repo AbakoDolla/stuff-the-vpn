@@ -212,7 +212,7 @@ model Admin {
   activationTokens ActivationToken[]
   vpnProfiles      VpnProfile[]
   auditLogs        AuditLog[]
-  sxbTokens        SxbToken[]         @relation("SxbTokenCreatedBy")
+  createdSxbTokens SxbToken[] @relation("SxbTokenCreatedBy")
 }
 
 // ─── User (Application Mobile) ────────────────────────────────────
@@ -734,7 +734,7 @@ model SxbToken {
   lastUsedAt      DateTime?      // Dernière utilisation
   // Traçabilité
   createdBy       String?        // Admin qui a créé le token
-  admin           Admin?         @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  creator         Admin?         @relation("SxbTokenCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
