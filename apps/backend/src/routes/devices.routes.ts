@@ -8,6 +8,7 @@ import { Router } from "express";
 import { prisma } from "../prisma/client.js";
 import { authenticateAdmin } from "../middleware/auth.middleware.js";
 import { logAudit } from "../lib/audit.js";
+import { sendSuccess, sendError } from "../utils/response.js";
 
 const router = Router();
 
@@ -62,16 +63,15 @@ router.get("/", async (req, res) => {
       prisma.device.count({ where }),
     ]);
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       data: devices,
       total,
       limit: Number(limit),
       offset: Number(offset),
-    });
+    }, "Devices listed successfully");
   } catch (error) {
     console.error("Error listing devices:", error);
-    res.status(500).json({ success: false, error: "Failed to list devices" });
+    sendError(res, "Failed to list devices", 500);
   }
 });
 
@@ -100,13 +100,13 @@ router.get("/:id", async (req, res) => {
     });
 
     if (!device) {
-      return res.status(404).json({ success: false, error: "Device not found" });
+      return sendError(res, "Device not found", 404);
     }
 
-    res.json({ success: true, data: device });
+    sendSuccess(res, device, "Device retrieved successfully");
   } catch (error) {
     console.error("Error getting device:", error);
-    res.status(500).json({ success: false, error: "Failed to get device" });
+    sendError(res, "Failed to get device", 500);
   }
 });
 
@@ -124,7 +124,7 @@ router.get("/:id/history", async (req, res) => {
     });
 
     if (!device) {
-      return res.status(404).json({ success: false, error: "Device not found" });
+      return sendError(res, "Device not found", 404);
     }
 
     const [activations, syncLogs] = await Promise.all([
@@ -139,13 +139,10 @@ router.get("/:id/history", async (req, res) => {
       }),
     ]);
 
-    res.json({
-      success: true,
-      data: { activations, syncLogs },
-    });
+    sendSuccess(res, { activations, syncLogs }, "Device history retrieved successfully");
   } catch (error) {
     console.error("Error getting device history:", error);
-    res.status(500).json({ success: false, error: "Failed to get device history" });
+    sendError(res, "Failed to get device history", 500);
   }
 });
 
@@ -164,7 +161,7 @@ router.patch("/:id", async (req, res) => {
     });
 
     if (!device) {
-      return res.status(404).json({ success: false, error: "Device not found" });
+      return sendError(res, "Device not found", 404);
     }
 
     const updateData: any = {};
@@ -190,10 +187,10 @@ router.patch("/:id", async (req, res) => {
       ipAddress: req.ip,
     });
 
-    res.json({ success: true, data: updatedDevice });
+    sendSuccess(res, updatedDevice, "Device updated successfully");
   } catch (error) {
     console.error("Error updating device:", error);
-    res.status(500).json({ success: false, error: "Failed to update device" });
+    sendError(res, "Failed to update device", 500);
   }
 });
 
@@ -211,7 +208,7 @@ router.delete("/:id", async (req, res) => {
     });
 
     if (!device) {
-      return res.status(404).json({ success: false, error: "Device not found" });
+      return sendError(res, "Device not found", 404);
     }
 
     // Supprimer l'appareil (cascade supprimera les relations)
@@ -228,10 +225,10 @@ router.delete("/:id", async (req, res) => {
       ipAddress: req.ip,
     });
 
-    res.json({ success: true });
+    sendSuccess(res, null, "Device deleted successfully");
   } catch (error) {
     console.error("Error deleting device:", error);
-    res.status(500).json({ success: false, error: "Failed to delete device" });
+    sendError(res, "Failed to delete device", 500);
   }
 });
 
@@ -250,7 +247,7 @@ router.post("/:id/block", async (req, res) => {
     });
 
     if (!device) {
-      return res.status(404).json({ success: false, error: "Device not found" });
+      return sendError(res, "Device not found", 404);
     }
 
     const updatedDevice = await prisma.device.update({
@@ -280,10 +277,10 @@ router.post("/:id/block", async (req, res) => {
       ipAddress: req.ip,
     });
 
-    res.json({ success: true, data: updatedDevice });
+    sendSuccess(res, updatedDevice, "Device blocked successfully");
   } catch (error) {
     console.error("Error blocking device:", error);
-    res.status(500).json({ success: false, error: "Failed to block device" });
+    sendError(res, "Failed to block device", 500);
   }
 });
 
