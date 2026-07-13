@@ -31,6 +31,8 @@ dependencies:
   url_launcher: ^6.2.5
   uuid: ^4.4.0
   flutter_v2ray_client: ^2.0.0
+  axevpn_flutter: ^1.0.0  # OpenVPN + WireGuard support
+  cryptography: ^2.7.0    # X25519 keypair generation for WireGuard
 
 dependency_overrides:
   app_links: 6.3.3
