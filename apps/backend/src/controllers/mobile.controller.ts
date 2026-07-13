@@ -272,10 +272,11 @@ export async function activateDevice(req: Request, res: Response, next: NextFunc
     }
 
     // 5. Créer l'activation permanente
+    // Use Device.id (UUID) not deviceId (string) for the foreign key
     await prisma.activation.upsert({
-      where: { deviceId: parsed.deviceId },
+      where: { deviceId: device.id },
       create: {
-        deviceId:    parsed.deviceId,
+        deviceId:    device.id,
         userId:      user.id,
         status:      "ACTIVATED",
         tokenUsed:   parsed.token,
