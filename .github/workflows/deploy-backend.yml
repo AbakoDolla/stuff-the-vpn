@@ -1,34 +1,94 @@
-name: Deploy Backend
+name: Deploy Backend to VPS
 
 on:
   push:
     branches: [main]
     paths:
       - 'apps/backend/**'
+      - 'prisma/**'
       - 'docker-compose.yml'
-      - '.env.example'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+    inputs:
+      skip_migrate:
+        description: 'Skip database migration'
+        required: false
+        default: 'false'
 
 jobs:
   deploy:
-    name: Deploy to VPS
+    name: Deploy Backend to VPS
     runs-on: ubuntu-latest
-    # Skipped if VPS secrets are not configured
     if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+    
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          cd apps/backend
+          npm ci
+
+      - name: Generate Prisma Client
+        run: |
+          cd apps/backend
+          npx prisma generate
+
+      - name: Build Backend
+        run: |
+          cd apps/backend
+          npm run build
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
+            set -e
+            
+            echo "=== Deploying Backend to VPS ==="
+            
+            # Navigate to project directory
             cd ~/stuff-the-vpn
-            git pull
+            
+            # Pull latest changes
+            git pull origin main
+            
+            # Install dependencies
             cd apps/backend
-            npm install
-            npx prisma migrate deploy
+            npm ci --production
+            
+            # Generate Prisma client
+            npx prisma generate
+            
+            # Run migrations if not skipped
+            if [ "${{ inputs.skip_migrate }}" != "true" ]; then
+              echo "Running database migrations..."
+              npx prisma migrate deploy
+            else
+              echo "Skipping database migrations..."
+            fi
+            
+            # Build the project
+            npm run build
+            
+            # Restart with PM2
             pm2 restart sxbvpn-backend || pm2 start dist/index.mjs --name sxbvpn-backend
+            
+            # Save PM2 state
+            pm2 save
+            
+            echo "=== Deployment Complete ==="
+            pm2 status
