@@ -12,6 +12,7 @@ import { prisma } from "../prisma/client.js";
 import { generateActivationToken, parseToken } from "../lib/token-generator.js";
 import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
 import { logAudit } from "../lib/audit.js";
+import { sendSuccess, sendError } from "../utils/response.js";
 
 const router = Router();
 
@@ -55,16 +56,15 @@ router.get("/", async (req, res) => {
       };
     });
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       data: tokensWithParsedInfo,
       total,
       limit: Number(limit),
       offset: Number(offset),
-    });
+    }, "Tokens listed successfully");
   } catch (error) {
     console.error("Error listing tokens:", error);
-    res.status(500).json({ success: false, error: "Failed to list tokens" });
+    sendError(res, "Failed to list tokens", 500);
   }
 });
 
@@ -79,19 +79,13 @@ router.post("/generate", async (req, res) => {
     const adminId = (req as any).user?.userId;
 
     if (!deviceId || typeof deviceId !== "string") {
-      return res.status(400).json({ 
-        success: false, 
-        error: "deviceId is required" 
-      });
+      return sendError(res, "deviceId is required", 400);
     }
 
     // Valider le format UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(deviceId)) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "deviceId must be a valid UUID" 
-      });
+      return sendError(res, "deviceId must be a valid UUID", 400);
     }
 
     // Vérifier si un token actif existe déjà pour cet appareil
@@ -106,16 +100,12 @@ router.post("/generate", async (req, res) => {
       // Retourner le token existant s'il est encore valide
       const parsed = parseToken(existingToken.token);
       if (parsed && parsed.expiresAt > new Date()) {
-        return res.json({
-          success: true,
-          data: {
-            ...existingToken,
-            parsedDeviceId: parsed.deviceId,
-            parsedExpiresAt: parsed.expiresAt,
-            reused: true,
-          },
-          message: "Existing valid token returned",
-        });
+        return sendSuccess(res, {
+          ...existingToken,
+          parsedDeviceId: parsed.deviceId,
+          parsedExpiresAt: parsed.expiresAt,
+          reused: true,
+        }, "Existing valid token returned", 200);
       }
     }
 
@@ -150,17 +140,14 @@ router.post("/generate", async (req, res) => {
       userAgent: req.get("user-agent"),
     });
 
-    res.status(201).json({
-      success: true,
-      data: {
-        ...token,
-        parsedDeviceId: deviceId,
-        parsedExpiresAt: tokenData.expiresAt,
-      },
-    });
+    sendSuccess(res, {
+      ...token,
+      parsedDeviceId: deviceId,
+      parsedExpiresAt: tokenData.expiresAt,
+    }, "Token generated successfully", 201);
   } catch (error) {
     console.error("Error generating token:", error);
-    res.status(500).json({ success: false, error: "Failed to generate token" });
+    sendError(res, "Failed to generate token", 500);
   }
 });
 
@@ -178,14 +165,11 @@ router.post("/:id/revoke", async (req, res) => {
     });
 
     if (!token) {
-      return res.status(404).json({ success: false, error: "Token not found" });
+      return sendError(res, "Token not found", 404);
     }
 
     if (token.status !== "ACTIVE") {
-      return res.status(400).json({ 
-        success: false, 
-        error: `Token is already ${token.status.toLowerCase()}` 
-      });
+      return sendError(res, `Token is already ${token.status.toLowerCase()}`, 400);
     }
 
     const updatedToken = await prisma.activationToken.update({
@@ -204,10 +188,10 @@ router.post("/:id/revoke", async (req, res) => {
       userAgent: req.get("user-agent"),
     });
 
-    res.json({ success: true, data: updatedToken });
+    sendSuccess(res, updatedToken, "Token revoked successfully");
   } catch (error) {
     console.error("Error revoking token:", error);
-    res.status(500).json({ success: false, error: "Failed to revoke token" });
+    sendError(res, "Failed to revoke token", 500);
   }
 });
 
@@ -233,10 +217,10 @@ router.delete("/:id", async (req, res) => {
       ipAddress: req.ip,
     });
 
-    res.json({ success: true });
+    sendSuccess(res, null, "Token deleted successfully");
   } catch (error) {
     console.error("Error deleting token:", error);
-    res.status(500).json({ success: false, error: "Failed to delete token" });
+    sendError(res, "Failed to delete token", 500);
   }
 });
 
