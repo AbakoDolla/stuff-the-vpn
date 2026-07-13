@@ -3,9 +3,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/server_model.dart';
 import '../models/vpn_config_model.dart';
 import '../services/vpn_service.dart';
-import '../core/vpn/v2ray_engine.dart';
-import '../core/vpn/openvpn_engine.dart';
+import '../core/vpn/v2ray_engine.dart' as v2ray;
+import '../core/vpn/openvpn_engine.dart' as openvpn;
 import '../core/vpn/vpn_link_builder.dart';
+
+// Unified VPN state enum (used by both engines)
+enum UnifiedVpnState { disconnected, connecting, connected, permissionDenied, error }
+
+// Unified VPN status model
+class UnifiedVpnStatus {
+  final UnifiedVpnState state;
+  final int uploadSpeedBps;
+  final int downloadSpeedBps;
+  final Duration duration;
+  final String? errorMessage;
+
+  const UnifiedVpnStatus({
+    this.state = UnifiedVpnState.disconnected,
+    this.uploadSpeedBps = 0,
+    this.downloadSpeedBps = 0,
+    this.duration = Duration.zero,
+    this.errorMessage,
+  });
+}
 
 enum VpnStatus {
   disconnected,
@@ -70,16 +90,16 @@ enum VpnEngineType { v2ray, openvpn }
 
 class VpnNotifier extends StateNotifier<VpnState> {
   final VpnService _vpnService;
-  final V2RayEngine _v2rayEngine = V2RayEngine.instance;
-  final OpenVpnEngine _openvpnEngine = OpenVpnEngine.instance;
-  StreamSubscription<RealVpnStatus>? _v2raySub;
-  StreamSubscription<RealVpnStatus>? _openvpnSub;
+  final v2ray.V2RayEngine _v2rayEngine = v2ray.V2RayEngine.instance;
+  final openvpn.OpenVpnEngine _openvpnEngine = openvpn.OpenVpnEngine.instance;
+  StreamSubscription<v2ray.RealVpnStatus>? _v2raySub;
+  StreamSubscription<openvpn.RealVpnStatus>? _openvpnSub;
   DateTime? _connectedAt;
   VpnEngineType? _activeEngine;
 
   VpnNotifier(this._vpnService) : super(const VpnState()) {
-    _v2raySub = _v2rayEngine.statusStream.listen((s) => _onEngineStatus(s, VpnEngineType.v2ray));
-    _openvpnSub = _openvpnEngine.statusStream.listen((s) => _onEngineStatus(s, VpnEngineType.openvpn));
+    _v2raySub = _v2rayEngine.statusStream.listen((s) => _onV2RayStatus(s));
+    _openvpnSub = _openvpnEngine.statusStream.listen((s) => _onOpenVpnStatus(s));
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -94,8 +114,11 @@ class VpnNotifier extends StateNotifier<VpnState> {
   /// Choisit le meilleur profil disponible parmi les inbounds actifs
   /// (priorité aux protocoles supportés nativement par le tunnel réel).
   VpnConfigModel? _pickProfile(List<VpnConfigModel> profiles, ServerModel? server) {
+    // Server filtering - use country/city as fallback since ServerModel doesn't have host/name
     final candidates = server != null
-        ? profiles.where((p) => p.host == server.host || p.remark == server.name).toList()
+        ? profiles.where((p) => 
+            p.host.toLowerCase().contains(server.country.toLowerCase()) ||
+            p.host.toLowerCase().contains(server.city.toLowerCase())).toList()
         : profiles;
     final pool = candidates.isNotEmpty ? candidates : profiles;
 
@@ -154,7 +177,6 @@ class VpnNotifier extends StateNotifier<VpnState> {
       }
     } else if (protocol == 'WIREGUARD') {
       // WireGuard - retourne non supporté pour l'instant
-      // (nécessite axevpn_flutter avec config WireGuard spécifique)
       state = state.copyWith(
         status: VpnStatus.unsupportedProtocol,
         errorMessage: 'Le protocole WireGuard sera disponible dans une prochaine mise à jour.',
@@ -216,17 +238,91 @@ verb 3
     }
   }
 
-  // ── Réception du statut réel émis par le moteur natif ────────────────────────
+  // ── Status handlers ──────────────────────────────────────────────────────────
 
-  void _onEngineStatus(RealVpnStatus s, VpnEngineType engine) {
+  void _onV2RayStatus(v2ray.RealVpnStatus s) {
+    if (!mounted) return;
+    _handleEngineStatus(_mapV2RayState(s));
+  }
+
+  void _onOpenVpnStatus(openvpn.RealVpnStatus s) {
+    if (!mounted) return;
+    _handleEngineStatus(_mapOpenVpnState(s));
+  }
+
+  UnifiedVpnStatus _mapV2RayState(v2ray.RealVpnStatus s) {
+    // Map from V2Ray RealVpnState to unified state
+    v2ray.RealVpnState state;
+    try {
+      state = s.state;
+    } catch (_) {
+      return const UnifiedVpnStatus(state: UnifiedVpnState.disconnected);
+    }
+    
+    if (state == v2ray.RealVpnState.connecting) {
+      return UnifiedVpnStatus(state: UnifiedVpnState.connecting);
+    } else if (state == v2ray.RealVpnState.connected) {
+      return UnifiedVpnStatus(
+        state: UnifiedVpnState.connected,
+        uploadSpeedBps: s.uploadSpeedBps,
+        downloadSpeedBps: s.downloadSpeedBps,
+        duration: s.duration,
+      );
+    } else if (state == v2ray.RealVpnState.permissionDenied) {
+      return UnifiedVpnStatus(
+        state: UnifiedVpnState.permissionDenied,
+        errorMessage: s.errorMessage,
+      );
+    } else if (state == v2ray.RealVpnState.error) {
+      return UnifiedVpnStatus(
+        state: UnifiedVpnState.error,
+        errorMessage: s.errorMessage,
+      );
+    }
+    return const UnifiedVpnStatus(state: UnifiedVpnState.disconnected);
+  }
+
+  UnifiedVpnStatus _mapOpenVpnState(openvpn.RealVpnStatus s) {
+    // Map from OpenVPN RealVpnState to unified state
+    openvpn.RealVpnState state;
+    try {
+      state = s.state;
+    } catch (_) {
+      return const UnifiedVpnStatus(state: UnifiedVpnState.disconnected);
+    }
+    
+    if (state == openvpn.RealVpnState.connecting) {
+      return UnifiedVpnStatus(state: UnifiedVpnState.connecting);
+    } else if (state == openvpn.RealVpnState.connected) {
+      return UnifiedVpnStatus(
+        state: UnifiedVpnState.connected,
+        uploadSpeedBps: s.uploadSpeedBps,
+        downloadSpeedBps: s.downloadSpeedBps,
+        duration: s.duration,
+      );
+    } else if (state == openvpn.RealVpnState.permissionDenied) {
+      return UnifiedVpnStatus(
+        state: UnifiedVpnState.permissionDenied,
+        errorMessage: s.errorMessage,
+      );
+    } else if (state == openvpn.RealVpnState.error) {
+      return UnifiedVpnStatus(
+        state: UnifiedVpnState.error,
+        errorMessage: s.errorMessage,
+      );
+    }
+    return const UnifiedVpnStatus(state: UnifiedVpnState.disconnected);
+  }
+
+  void _handleEngineStatus(UnifiedVpnStatus s) {
     if (!mounted) return;
 
     switch (s.state) {
-      case RealVpnState.connecting:
+      case UnifiedVpnState.connecting:
         state = state.copyWith(status: VpnStatus.connecting);
         break;
 
-      case RealVpnState.connected:
+      case UnifiedVpnState.connected:
         _connectedAt ??= DateTime.now();
         state = state.copyWith(
           status: VpnStatus.connected,
@@ -236,7 +332,7 @@ verb 3
         );
         break;
 
-      case RealVpnState.disconnected:
+      case UnifiedVpnState.disconnected:
         final wasConnected = state.isConnected;
         final duration = _connectedAt != null
             ? DateTime.now().difference(_connectedAt!).inSeconds
@@ -256,14 +352,14 @@ verb 3
         }
         break;
 
-      case RealVpnState.permissionDenied:
+      case UnifiedVpnState.permissionDenied:
         state = state.copyWith(
           status: VpnStatus.permissionDenied,
           errorMessage: s.errorMessage ?? 'Permission VPN refusée',
         );
         break;
 
-      case RealVpnState.error:
+      case UnifiedVpnState.error:
         state = state.copyWith(
           status: VpnStatus.error,
           errorMessage: s.errorMessage ?? 'Erreur de connexion VPN',
@@ -271,7 +367,7 @@ verb 3
         break;
     }
 
-    if (s.state == RealVpnState.connected) {
+    if (s.state == UnifiedVpnState.connected) {
       _vpnService.postConnectionLog(
         event:    'CONNECT',
         protocol: state.config?.protocolLabel,
