@@ -67,6 +67,27 @@ class _HomePageState extends ConsumerState<HomePage>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<VpnState>(vpnProvider, (previous, next) {
+      final msg = switch (next.status) {
+        VpnStatus.permissionDenied =>
+          'Permission VPN refusée. Autorisez SxBVPN dans les paramètres Android pour vous connecter.',
+        VpnStatus.unsupportedProtocol => next.errorMessage,
+        VpnStatus.noServerAvailable => next.errorMessage ?? 'Aucun serveur disponible actuellement.',
+        VpnStatus.error => next.errorMessage ?? 'Erreur de connexion VPN.',
+        _ => null,
+      };
+      if (msg != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
+
     final vpnState = ref.watch(vpnProvider);
     final activationState = ref.watch(activationProvider).valueOrNull;
     final sub = ref.watch(_homeSubProvider);
