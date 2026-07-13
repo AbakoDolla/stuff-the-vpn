@@ -13,16 +13,6 @@ const app: Express = express();
 
 // ─── Security ────────────────────────────────────────────────────────────────
 app.use(helmet());
-<<<<<<< HEAD
-const corsOrigin = env.CORS_ORIGIN === "*" ? true : env.CORS_ORIGIN;
-
-app.use(
-  cors({
-    origin: corsOrigin,
-    credentials: true,
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Device-Name"],
-=======
 
 // Configure CORS properly for both web and mobile clients
 const getCorsOrigin = () => {
@@ -44,7 +34,6 @@ app.use(
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Device-Name"],
     maxAge: 86400,
->>>>>>> application-deployment-fix
   }),
 );
 
@@ -82,14 +71,6 @@ const publicPath = path.join(__dirname, "..", "public", "downloads");
 
 app.get("/api/apk/download", (req, res) => {
   const apkPath = path.join(publicPath, "sxb-vpn.apk");
-<<<<<<< HEAD
-  res.download(apkPath, "sxb-vpn.apk", (err) => {
-    if (err) {
-      console.error("APK download error:", err);
-      res.status(500).json({ success: false, message: "APK not available" });
-    }
-  });
-=======
   try {
     res.download(apkPath, "sxb-vpn.apk", (err) => {
       if (err) {
@@ -103,7 +84,6 @@ app.get("/api/apk/download", (req, res) => {
     logger.error({ err }, "APK endpoint error");
     res.status(500).json({ success: false, message: "APK download failed" });
   }
->>>>>>> application-deployment-fix
 });
 
 app.use("/api", router);
