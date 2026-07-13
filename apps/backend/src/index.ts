@@ -75,6 +75,7 @@ function shutdown(signal: string) {
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
+// APK download route
 app.get('/api/apk/download', (req, res) => {
   const apkPath = '/home/ubuntu/stuff-the-vpn/apps/backend/public/downloads/sxb-vpn.apk';
   res.download(apkPath, 'sxb-vpn.apk', (err) => {
