@@ -61,12 +61,12 @@ class V2RayEngine {
   /// essaie plusieurs noms de champ possibles (variables selon version du
   /// plugin) et retourne 0 si aucun n'existe, sans jamais planter.
   int _tryReadInt(dynamic obj, List<String> fieldNames) {
-    for (final _ in fieldNames) {
+    for (final fieldName in fieldNames) {
       try {
         // Accès dynamique : si le champ n'existe pas, NoSuchMethodError
         // est levée à l'exécution (et interceptée ici), pas à la
         // compilation — donc aucun risque d'échec de build.
-        final dynamic value = _readDynamicField(obj, _);
+        final dynamic value = _readDynamicField(obj, fieldName);
         if (value is int) return value;
         if (value is double) return value.toInt();
       } catch (_) {
