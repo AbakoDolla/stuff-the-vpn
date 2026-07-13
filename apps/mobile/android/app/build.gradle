@@ -26,8 +26,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.stuffthevpn.app"
-    compileSdk 36
-    ndkVersion "27.0.12077973"
+    compileSdk 34
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -44,20 +43,13 @@ android {
 
     defaultConfig {
         applicationId "com.stuffthevpn.app"
-        minSdkVersion 24
-        targetSdkVersion 35
+        minSdkVersion 21
+        targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
     }
     
-    // Fix duplicate native library conflicts between axevpn_flutter and flutter_v2ray_client
-    packaging {
-        // Pick first for all conflicting .so files to avoid native library conflicts
-        jniLibs {
-            pickFirst '**/*.so'
-        }
-    }
 
     buildTypes {
         release {
@@ -75,3 +67,4 @@ flutter {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }
+
