@@ -124,12 +124,12 @@ export default function DevicesPage() {
 
   return (
     <DashboardLayout>
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="show"
-      className="space-y-6"
-    >
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="space-y-6"
+      >
       {/* Header */}
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
@@ -323,7 +323,7 @@ export default function DevicesPage() {
           </div>
         )}
       </motion.div>
-    </motion.div>
+      </motion.div>
     </DashboardLayout>
   );
 }
