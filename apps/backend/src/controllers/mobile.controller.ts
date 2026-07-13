@@ -85,7 +85,7 @@ async function verifyShortToken(token: string, deviceId: string) {
   const activationCodeMatch = token.match(/^SXB-[A-Z0-9]{4}-[A-Z0-9]{4}$/i);
   if (activationCodeMatch) {
     // Chercher l'appareil par le code d'activation
-    const activation = await prisma.deviceActivation.findFirst({
+    const activation = await prisma.activation.findFirst({
       where: { activationCode: token.toUpperCase() },
     });
 
@@ -125,7 +125,7 @@ async function verifyShortToken(token: string, deviceId: string) {
   }
 
   // Vérifier que le token existe dans deviceActivation
-  const activation = await prisma.deviceActivation.findUnique({
+  const activation = await prisma.activation.findUnique({
     where: { deviceId },
   });
 

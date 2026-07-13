@@ -77,7 +77,7 @@ export async function registerDevice(req: Request, res: Response, next: NextFunc
     const parsed = RegisterDeviceSchema.parse(req.body);
 
     // Vérifier si l'appareil existe déjà
-    let activation = await prisma.deviceActivation.findUnique({
+    let activation = await prisma.activation.findUnique({
       where: { deviceId: parsed.deviceId },
     });
 
@@ -95,7 +95,7 @@ export async function registerDevice(req: Request, res: Response, next: NextFunc
       
       // Sinon générer un nouveau code
       const newCode = generate6DigitCode();
-      activation = await prisma.deviceActivation.update({
+      activation = await prisma.activation.update({
         where: { deviceId: parsed.deviceId },
         data: {
           activationCode: newCode,
@@ -114,7 +114,7 @@ export async function registerDevice(req: Request, res: Response, next: NextFunc
     } else {
       // Créer une nouvelle activation
       const activationCode = generate6DigitCode();
-      activation = await prisma.deviceActivation.create({
+      activation = await prisma.activation.create({
         data: {
           deviceId: parsed.deviceId,
           deviceName: parsed.deviceName,
@@ -159,7 +159,7 @@ export async function getDeviceStatus(req: Request, res: Response, next: NextFun
   try {
     const { deviceId } = req.params;
 
-    const activation = await prisma.deviceActivation.findUnique({
+    const activation = await prisma.activation.findUnique({
       where: { deviceId },
     });
 
@@ -222,7 +222,7 @@ export async function syncDevice(req: Request, res: Response, next: NextFunction
     const { deviceId } = req.params;
     const parsed = UpdateUsageSchema.parse(req.body);
 
-    const activation = await prisma.deviceActivation.findUnique({
+    const activation = await prisma.activation.findUnique({
       where: { deviceId },
     });
 
@@ -239,7 +239,7 @@ export async function syncDevice(req: Request, res: Response, next: NextFunction
     const uploadMB = parsed.uploadMB ?? 0;
     const downloadMB = parsed.downloadMB ?? 0;
     
-    await prisma.deviceActivation.update({
+    await prisma.activation.update({
       where: { deviceId },
       data: {
         quotaUsedMB: { increment: uploadMB + downloadMB },
@@ -254,7 +254,7 @@ export async function syncDevice(req: Request, res: Response, next: NextFunction
     });
 
     // Vérifier si le quota est épuisé
-    const updated = await prisma.deviceActivation.findUnique({ where: { deviceId } });
+    const updated = await prisma.activation.findUnique({ where: { deviceId } });
     const quotaRemaining = Number(updated!.quotaMB) - Number(updated!.quotaUsedMB);
     
     if (updated!.quotaMB > 0 && quotaRemaining <= 0) {
@@ -282,7 +282,7 @@ export async function notifyConnection(req: Request, res: Response, next: NextFu
     const { deviceId } = req.params;
     const { event, serverIp, duration } = req.body;
 
-    const activation = await prisma.deviceActivation.findUnique({
+    const activation = await prisma.activation.findUnique({
       where: { deviceId },
     });
 
@@ -318,13 +318,13 @@ export async function getPendingDevices(req: Request, res: Response, next: NextF
     else where.status = { in: ["PENDING", "ACTIVE", "DISABLED"] };
 
     const [devices, total] = await Promise.all([
-      prisma.deviceActivation.findMany({
+      prisma.activation.findMany({
         where,
         orderBy: { createdAt: "desc" },
         take: Number(limit),
         skip: Number(offset),
       }),
-      prisma.deviceActivation.count({ where }),
+      prisma.activation.count({ where }),
     ]);
 
     sendSuccess(res, {
@@ -364,7 +364,7 @@ export async function getDeviceDetails(req: Request, res: Response, next: NextFu
   try {
     const { deviceId } = req.params;
 
-    const activation = await prisma.deviceActivation.findUnique({
+    const activation = await prisma.activation.findUnique({
       where: { deviceId },
     });
 
@@ -401,7 +401,7 @@ export async function approveDevice(req: Request, res: Response, next: NextFunct
     const parsed = ApproveDeviceSchema.parse(req.body);
     const adminId = (req as any).adminId;
 
-    const activation = await prisma.deviceActivation.findUnique({
+    const activation = await prisma.activation.findUnique({
       where: { deviceId },
     });
 
@@ -429,7 +429,7 @@ export async function approveDevice(req: Request, res: Response, next: NextFunct
     const loginToken = `SXB_${deviceId.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 
     // Mettre à jour l'activation
-    const updated = await prisma.deviceActivation.update({
+    const updated = await prisma.activation.update({
       where: { deviceId },
       data: {
         status: "ACTIVE",
@@ -473,7 +473,7 @@ export async function rejectDevice(req: Request, res: Response, next: NextFuncti
     const { reason } = req.body;
     const adminId = (req as any).adminId;
 
-    const activation = await prisma.deviceActivation.findUnique({
+    const activation = await prisma.activation.findUnique({
       where: { deviceId },
     });
 
@@ -481,7 +481,7 @@ export async function rejectDevice(req: Request, res: Response, next: NextFuncti
       return sendError(res, "Appareil non trouvé", HTTP_STATUS.NOT_FOUND);
     }
 
-    await prisma.deviceActivation.update({
+    await prisma.activation.update({
       where: { deviceId },
       data: { status: "DISABLED" },
     });
@@ -507,7 +507,7 @@ export async function updateDeviceQuota(req: Request, res: Response, next: NextF
     const parsed = UpdateQuotaSchema.parse(req.body);
     const adminId = (req as any).adminId;
 
-    const activation = await prisma.deviceActivation.findUnique({
+    const activation = await prisma.activation.findUnique({
       where: { deviceId },
     });
 
@@ -515,7 +515,7 @@ export async function updateDeviceQuota(req: Request, res: Response, next: NextF
       return sendError(res, "Appareil non trouvé ou inactif", HTTP_STATUS.NOT_FOUND);
     }
 
-    const updated = await prisma.deviceActivation.update({
+    const updated = await prisma.activation.update({
       where: { deviceId },
       data: {
         quotaMB: BigInt(parsed.quotaMB),
@@ -553,7 +553,7 @@ export async function revokeDevice(req: Request, res: Response, next: NextFuncti
     const { reason } = req.body;
     const adminId = (req as any).adminId;
 
-    const activation = await prisma.deviceActivation.findUnique({
+    const activation = await prisma.activation.findUnique({
       where: { deviceId },
     });
 
@@ -561,7 +561,7 @@ export async function revokeDevice(req: Request, res: Response, next: NextFuncti
       return sendError(res, "Appareil non trouvé", HTTP_STATUS.NOT_FOUND);
     }
 
-    await prisma.deviceActivation.update({
+    await prisma.activation.update({
       where: { deviceId },
       data: {
         status: "DISABLED",
@@ -590,7 +590,7 @@ export async function deleteDevice(req: Request, res: Response, next: NextFuncti
     const { deviceId } = req.params;
     const adminId = (req as any).adminId;
 
-    const activation = await prisma.deviceActivation.findUnique({
+    const activation = await prisma.activation.findUnique({
       where: { deviceId },
     });
 
@@ -598,7 +598,7 @@ export async function deleteDevice(req: Request, res: Response, next: NextFuncti
       return sendError(res, "Appareil non trouvé", HTTP_STATUS.NOT_FOUND);
     }
 
-    await prisma.deviceActivation.delete({
+    await prisma.activation.delete({
       where: { deviceId },
     });
 
@@ -628,7 +628,7 @@ export async function createDevice(req: Request, res: Response, next: NextFuncti
     const cleanDeviceId = deviceId.trim();
 
     // Vérifier si l'appareil existe déjà
-    let activation = await prisma.deviceActivation.findUnique({
+    let activation = await prisma.activation.findUnique({
       where: { deviceId: cleanDeviceId },
     });
 
@@ -637,7 +637,7 @@ export async function createDevice(req: Request, res: Response, next: NextFuncti
     if (activation) {
       // Générer un nouveau code d'activation
       activationCode = generateUniqueCode();
-      activation = await prisma.deviceActivation.update({
+      activation = await prisma.activation.update({
         where: { deviceId: cleanDeviceId },
         data: {
           deviceName: deviceName || activation.deviceName || cleanDeviceId,
@@ -648,7 +648,7 @@ export async function createDevice(req: Request, res: Response, next: NextFuncti
     } else {
       // Créer nouveau
       activationCode = generateUniqueCode();
-      activation = await prisma.deviceActivation.create({
+      activation = await prisma.activation.create({
         data: {
           deviceId: cleanDeviceId,
           deviceName: deviceName || cleanDeviceId,
@@ -690,7 +690,7 @@ export async function generateActivationCode(req: Request, res: Response, next: 
   try {
     const { deviceId } = req.params;
 
-    const activation = await prisma.deviceActivation.findUnique({
+    const activation = await prisma.activation.findUnique({
       where: { deviceId },
     });
 
@@ -700,7 +700,7 @@ export async function generateActivationCode(req: Request, res: Response, next: 
 
     const activationCode = generateUniqueCode();
 
-    await prisma.deviceActivation.update({
+    await prisma.activation.update({
       where: { deviceId },
       data: { activationCode },
     });
@@ -718,7 +718,7 @@ export async function suspendDevice(req: Request, res: Response, next: NextFunct
   try {
     const { deviceId } = req.params;
 
-    const activation = await prisma.deviceActivation.findUnique({
+    const activation = await prisma.activation.findUnique({
       where: { deviceId },
     });
 
@@ -726,7 +726,7 @@ export async function suspendDevice(req: Request, res: Response, next: NextFunct
       return sendError(res, "Appareil non trouvé", HTTP_STATUS.NOT_FOUND);
     }
 
-    await prisma.deviceActivation.update({
+    await prisma.activation.update({
       where: { deviceId },
       data: { status: "SUSPENDED" },
     });
@@ -750,7 +750,7 @@ export async function reactivateDevice(req: Request, res: Response, next: NextFu
   try {
     const { deviceId } = req.params;
 
-    const activation = await prisma.deviceActivation.findUnique({
+    const activation = await prisma.activation.findUnique({
       where: { deviceId },
     });
 
@@ -760,7 +760,7 @@ export async function reactivateDevice(req: Request, res: Response, next: NextFu
 
     const activationCode = generateUniqueCode();
 
-    await prisma.deviceActivation.update({
+    await prisma.activation.update({
       where: { deviceId },
       data: { 
         status: "ACTIVE",
