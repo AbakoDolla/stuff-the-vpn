@@ -7,13 +7,11 @@
 ///
 /// Protocoles gérés nativement par le tunnel VPN réel :
 ///   VLESS, VLESS_REALITY, VMESS, TROJAN, TROJAN_GO,
-///   SHADOWSOCKS, SHADOWSOCKS_R
+///   SHADOWSOCKS, SHADOWSOCKS_R, OPENVPN
 ///
 /// Protocoles NON encore supportés pour une connexion VPN réelle sur
 /// mobile (nécessitent un plugin natif dédié différent) :
-///   WIREGUARD, SSH*, OPENVPN
-/// Pour ceux-ci, [buildShareLink] retourne `null` — l'appelant doit
-/// gérer ce cas explicitement plutôt que de simuler une connexion.
+///   WIREGUARD, SSH*, SLOWDNS
 library;
 
 import 'dart:convert';
@@ -28,10 +26,15 @@ const Set<String> supportedRealVpnProtocols = {
   'TROJAN_GO',
   'SHADOWSOCKS',
   'SHADOWSOCKS_R',
+  'OPENVPN', // OpenVPN via axevpn_flutter
 };
 
 bool isProtocolSupported(String protocol) =>
     supportedRealVpnProtocols.contains(protocol.toUpperCase());
+
+/// Vérifie si le protocole est OpenVPN (nécessite un traitement spécial)
+bool isOpenVpnProtocol(String protocol) =>
+    protocol.toUpperCase() == 'OPENVPN';
 
 /// Construit le lien de partage adapté au protocole, ou `null` si le
 /// protocole n'est pas encore supporté pour une connexion VPN réelle.
@@ -49,8 +52,11 @@ String? buildShareLink(VpnConfigModel c) {
     case 'SHADOWSOCKS':
     case 'SHADOWSOCKS_R':
       return _buildShadowsocks(c);
+    case 'OPENVPN':
+      // OpenVPN utilise ovpnConfig directement, pas de share link
+      return null;
     default:
-      return null; // WIREGUARD / SSH* / OPENVPN — pas de tunnel réel encore
+      return null; // WIREGUARD / SSH* / SLOWDNS — pas de tunnel réel encore
   }
 }
 

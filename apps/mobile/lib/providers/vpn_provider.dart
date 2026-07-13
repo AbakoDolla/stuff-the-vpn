@@ -4,6 +4,7 @@ import '../models/server_model.dart';
 import '../models/vpn_config_model.dart';
 import '../services/vpn_service.dart';
 import '../core/vpn/v2ray_engine.dart';
+import '../core/vpn/openvpn_engine.dart';
 import '../core/vpn/vpn_link_builder.dart';
 
 enum VpnStatus {
@@ -64,14 +65,21 @@ class VpnState {
   }
 }
 
+/// Enum des types de moteur VPN disponibles
+enum VpnEngineType { v2ray, openvpn }
+
 class VpnNotifier extends StateNotifier<VpnState> {
   final VpnService _vpnService;
-  final V2RayEngine _engine = V2RayEngine.instance;
-  StreamSubscription<RealVpnStatus>? _engineSub;
+  final V2RayEngine _v2rayEngine = V2RayEngine.instance;
+  final OpenVpnEngine _openvpnEngine = OpenVpnEngine.instance;
+  StreamSubscription<RealVpnStatus>? _v2raySub;
+  StreamSubscription<RealVpnStatus>? _openvpnSub;
   DateTime? _connectedAt;
+  VpnEngineType? _activeEngine;
 
   VpnNotifier(this._vpnService) : super(const VpnState()) {
-    _engineSub = _engine.statusStream.listen(_onEngineStatus);
+    _v2raySub = _v2rayEngine.statusStream.listen((s) => _onEngineStatus(s, VpnEngineType.v2ray));
+    _openvpnSub = _openvpnEngine.statusStream.listen((s) => _onEngineStatus(s, VpnEngineType.openvpn));
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -123,34 +131,81 @@ class VpnNotifier extends StateNotifier<VpnState> {
       return;
     }
 
-    final shareLink = buildShareLink(profile);
-    if (shareLink == null) {
-      // Protocole pas encore supporté pour une connexion VPN réelle
-      // (WireGuard / SSH / OpenVPN) — on ne simule JAMAIS une connexion.
-      state = state.copyWith(
-        status: VpnStatus.unsupportedProtocol,
-        config: profile,
-        availableProfiles: profiles,
-        errorMessage:
-            'Le protocole ${profile.protocolLabel} n\'est pas encore pris en charge pour une connexion directe sur cette version de l\'app.',
-      );
-      return;
-    }
-
     state = state.copyWith(config: profile, availableProfiles: profiles);
 
-    // Déclenche la vraie demande de permission VPN Android puis le tunnel réel.
-    // requestPermission() affiche la boîte de dialogue système
-    // "Autoriser SxBVPN à configurer une connexion VPN ?"
-    await _engine.connect(
-      shareLink: shareLink,
-      remark: profile.remark,
-    );
-    // Le statut réel (connecté / refusé / erreur) arrive via _onEngineStatus
+    // Détermine le type de protocole et connecte avec le bon moteur
+    final protocol = profile.protocol.toUpperCase();
+    
+    if (protocol == 'OPENVPN') {
+      // OpenVPN via OpenVpnEngine
+      _activeEngine = VpnEngineType.openvpn;
+      if (profile.ovpnConfig != null && profile.ovpnConfig!.isNotEmpty) {
+        await _openvpnEngine.connect(
+          ovpnConfig: profile.ovpnConfig!,
+          remark: profile.remark,
+        );
+      } else {
+        // Génère la config OpenVPN basique
+        final ovpnConfig = _generateOpenVpnConfig(profile);
+        await _openvpnEngine.connect(
+          ovpnConfig: ovpnConfig,
+          remark: profile.remark,
+        );
+      }
+    } else if (protocol == 'WIREGUARD') {
+      // WireGuard - retourne non supporté pour l'instant
+      // (nécessite axevpn_flutter avec config WireGuard spécifique)
+      state = state.copyWith(
+        status: VpnStatus.unsupportedProtocol,
+        errorMessage: 'Le protocole WireGuard sera disponible dans une prochaine mise à jour.',
+      );
+    } else if (protocol == 'SSH' || protocol == 'SSH_TLS' || protocol == 'SSH_SLOWDNS') {
+      // SSH tunnels - retourne non supporté pour l'instant
+      state = state.copyWith(
+        status: VpnStatus.unsupportedProtocol,
+        errorMessage: 'Le protocole SSH sera disponible dans une prochaine mise à jour.',
+      );
+    } else {
+      // VLESS, VMess, Trojan, Shadowsocks via V2Ray
+      _activeEngine = VpnEngineType.v2ray;
+      final shareLink = buildShareLink(profile);
+      if (shareLink == null) {
+        state = state.copyWith(
+          status: VpnStatus.unsupportedProtocol,
+          errorMessage: 'Le protocole ${profile.protocolLabel} n\'est pas encore pris en charge.',
+        );
+        return;
+      }
+      await _v2rayEngine.connect(
+        shareLink: shareLink,
+        remark: profile.remark,
+      );
+    }
+  }
+
+  /// Génère une config OpenVPN basique à partir du profil
+  String _generateOpenVpnConfig(VpnConfigModel c) {
+    return '''
+client
+dev tun
+proto tcp
+remote ${c.host} ${c.port}
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+cipher AES-256-GCM
+auth SHA256
+verb 3
+''';
   }
 
   Future<void> disconnect() async {
-    await _engine.disconnect();
+    if (_activeEngine == VpnEngineType.openvpn) {
+      await _openvpnEngine.disconnect();
+    } else {
+      await _v2rayEngine.disconnect();
+    }
   }
 
   Future<void> toggle() async {
@@ -163,7 +218,7 @@ class VpnNotifier extends StateNotifier<VpnState> {
 
   // ── Réception du statut réel émis par le moteur natif ────────────────────────
 
-  void _onEngineStatus(RealVpnStatus s) {
+  void _onEngineStatus(RealVpnStatus s, VpnEngineType engine) {
     if (!mounted) return;
 
     switch (s.state) {
@@ -227,7 +282,8 @@ class VpnNotifier extends StateNotifier<VpnState> {
 
   @override
   void dispose() {
-    _engineSub?.cancel();
+    _v2raySub?.cancel();
+    _openvpnSub?.cancel();
     super.dispose();
   }
 }
