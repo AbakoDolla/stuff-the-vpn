@@ -212,6 +212,7 @@ model Admin {
   activationTokens ActivationToken[]
   vpnProfiles      VpnProfile[]
   auditLogs        AuditLog[]
+  sxbTokens        SxbToken[]         @relation("SxbTokenCreatedBy")
 }
 
 // ─── User (Application Mobile) ────────────────────────────────────
@@ -251,6 +252,7 @@ model User {
   quotas           Quota[]
   activations      Activation[]
   vpnUserProfiles  VpnUserProfile[]
+  sxbTokens        SxbToken[]
 }
 
 model License {
@@ -706,7 +708,7 @@ model SxbToken {
   id              String         @id @default(uuid())
   token           String         @unique  // Format: SXB-XXXX-XXXX-XXXX
   userId          String?        // Utilisateur associé (optionnel pour tokens publics)
-  user            User?          @relation(fields: [userId], references: [id])
+  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   // Configuration VPN chiffrée
   encryptedConfig String         // Configuration VPN chiffrée (AES-256)
   configHash      String         // Hash de la config pour validation
@@ -732,7 +734,7 @@ model SxbToken {
   lastUsedAt      DateTime?      // Dernière utilisation
   // Traçabilité
   createdBy       String?        // Admin qui a créé le token
-  admin           Admin?         @relation(fields: [createdBy], references: [id])
+  admin           Admin?         @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
