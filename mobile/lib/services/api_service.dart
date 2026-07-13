@@ -389,6 +389,76 @@ class ApiService {
       'updateAvailable': false,
     };
   }
+
+  // ============ SXB TOKEN IMPORT ============
+
+  /// Import SXB token and get VPN configuration
+  Future<Map<String, dynamic>> importSxbToken({
+    required String token,
+    required String deviceId,
+    String? deviceName,
+    String? deviceBrand,
+    String? deviceModel,
+    String? osVersion,
+  }) async {
+    return _withRetry(() async {
+      final response = await http.post(
+        Uri.parse('$_mobileBase/../sxb/import'),
+        headers: _headers,
+        body: jsonEncode({
+          'token': token,
+          'deviceId': deviceId,
+          'deviceName': deviceName,
+          'deviceBrand': deviceBrand,
+          'deviceModel': deviceModel,
+          'osVersion': osVersion,
+        }),
+      );
+      
+      return await _handleResponse(response);
+    });
+  }
+
+  /// Check SXB token status (public endpoint)
+  Future<Map<String, dynamic>> checkSxbTokenStatus(String token) async {
+    return _withRetry(() async {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/sxb/status/$token'),
+        headers: _headers,
+      );
+      
+      return await _handleResponse(response);
+    });
+  }
+
+  /// Get VPN configuration for imported SXB token
+  Future<Map<String, dynamic>> getSxbConfig(String token) async {
+    return _withRetry(() async {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/sxb/config/$token'),
+        headers: _headers,
+      );
+      
+      return await _handleResponse(response);
+    });
+  }
+
+  /// Update usage for imported SXB token
+  Future<void> updateSxbUsage({
+    required String token,
+    double? uploadMB,
+    double? downloadMB,
+  }) async {
+    await http.post(
+      Uri.parse('$_baseUrl/sxb/usage'),
+      headers: _headers,
+      body: jsonEncode({
+        'token': token,
+        if (uploadMB != null) 'uploadMB': uploadMB,
+        if (downloadMB != null) 'downloadMB': downloadMB,
+      }),
+    );
+  }
 }
 
 /// Custom API Exception

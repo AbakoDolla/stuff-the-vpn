@@ -6,7 +6,6 @@ import '../../core/theme/app_typography.dart';
 import '../../services/services.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/crash_service.dart';
-import '../activation/activation_screen.dart';
 import '../home/home_screen.dart';
 
 /// SXB VPN Splash Screen
@@ -266,39 +265,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-    // Check if device is authorized
-    try {
-      final deviceId = await StorageService.instance.getDeviceId();
-      final deviceToken = await StorageService.instance.getDeviceToken();
-
-      if (deviceId != null && deviceToken != null) {
-        final device = await StorageService.instance.getDevice();
-        if (device != null && device.isActive) {
-          // Device is authorized, go to home
-          if (!mounted) return;
-          Navigator.of(context).pushReplacement(
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) =>
-                  const HomeScreen(),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-              transitionDuration: const Duration(milliseconds: 500),
-            ),
-          );
-          return;
-        }
-      }
-    } catch (e) {
-      // Continue to activation
-    }
-
-    // Device not authorized, go to activation
-    if (!mounted) return;
+    // NO ACTIVATION REQUIRED - Direct access to home
+    // Users can import a token directly from the home screen
+    
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            const ActivationScreen(),
+            const HomeScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },

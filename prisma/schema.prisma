@@ -692,3 +692,53 @@ model AuditLog {
   @@index([entityId])
   @@index([action])
 }
+
+
+// ─── SXB Token (Token d'import pour l'application mobile) ─────────────────────
+enum SxbTokenStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  REVOKED
+}
+
+model SxbToken {
+  id              String         @id @default(uuid())
+  token           String         @unique  // Format: SXB-XXXX-XXXX-XXXX
+  userId          String?        // Utilisateur associé (optionnel pour tokens publics)
+  user            User?          @relation(fields: [userId], references: [id])
+  // Configuration VPN chiffrée
+  encryptedConfig String         // Configuration VPN chiffrée (AES-256)
+  configHash      String         // Hash de la config pour validation
+  // Métadonnées
+  protocol        String         // VLESS, VMESS, SSH, etc.
+  remark          String?        // Nom/description du serveur
+  serverHost      String?        // Host du serveur (chiffré)
+  // Quotas et limites
+  quotaMB         Float          @default(0)  // Quota en MB (0 = illimité)
+  quotaUsedMB     Float          @default(0)
+  deviceLimit     Int            @default(1)  // Nombre max d'appareils
+  deviceCount     Int            @default(0)  // Appareils actuellement liés
+  // Cycle de vie
+  status          SxbTokenStatus @default(ACTIVE)
+  expiresAt       DateTime?      // Expiration du token
+  usedAt          DateTime?      // Première utilisation
+  // Appareil actuel (après import)
+  deviceId        String?        // Device ID de l'appareil qui a importé
+  deviceName      String?        // Nom de l'appareil
+  importedAt      DateTime?      // Date d'import
+  // Statistiques
+  usageCount      Int            @default(0)  // Nombre total d'utilisations
+  lastUsedAt      DateTime?      // Dernière utilisation
+  // Traçabilité
+  createdBy       String?        // Admin qui a créé le token
+  admin           Admin?         @relation(fields: [createdBy], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([token])
+  @@index([status])
+  @@index([userId])
+  @@index([deviceId])
+  @@index([expiresAt])
+}

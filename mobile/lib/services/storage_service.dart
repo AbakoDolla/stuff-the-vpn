@@ -60,6 +60,45 @@ class StorageService {
 
   // ============ DEVICE ============
 
+  /// Get or create a device ID
+  Future<String> getOrCreateDeviceId() async {
+    try {
+      if (!_initialized) await initialize();
+      String? deviceId = await _secureStorage.read(key: _keyDeviceId);
+      
+      if (deviceId == null) {
+        // Generate a unique device ID
+        deviceId = _generateDeviceId();
+        await _secureStorage.write(key: _keyDeviceId, value: deviceId);
+        _crashService.logInfo('[Storage] Created new device ID: $deviceId');
+      }
+      
+      return deviceId;
+    } catch (e) {
+      _crashService.logError('[Storage] Failed to get/create device ID', e, null);
+      rethrow;
+    }
+  }
+
+  /// Generate a unique device ID
+  String _generateDeviceId() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = List.generate(8, (i) => (timestamp % 16).toRadixString(16)).join();
+    return 'DEV-$random-$timestamp';
+  }
+
+  /// Get device information for API
+  Future<Map<String, String>> getDeviceInfo() async {
+    // In a real app, this would get actual device info
+    // For now, return placeholder values
+    return {
+      'deviceName': 'SXB Device',
+      'brand': 'Android',
+      'model': 'Unknown',
+      'osVersion': 'Android',
+    };
+  }
+
   /// Save device ID
   Future<void> saveDeviceId(String deviceId) async {
     try {
@@ -187,12 +226,62 @@ class StorageService {
 
   // ============ VPN CONFIG ============
 
-  /// Save VPN configuration
-  Future<void> saveVpnConfig(VpnConfig config) async {
+  /// Save VPN configuration (as Map)
+  Future<void> saveVpnConfig(Map<String, dynamic> config) async {
+    try {
+      if (!_initialized) await initialize();
+      await _secureStorage.write(key: _keyVpnConfig, value: jsonEncode(config));
+      _crashService.logInfo('[Storage] VPN config saved');
+    } catch (e) {
+      _crashService.logError('[Storage] Failed to save VPN config', e, null);
+      rethrow;
+    }
+  }
+
+  /// Get VPN configuration (as Map)
+  Future<Map<String, dynamic>?> getVpnConfigMap() async {
+    try {
+      if (!_initialized) await initialize();
+      final data = await _secureStorage.read(key: _keyVpnConfig);
+      if (data != null) {
+        return jsonDecode(data) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      _crashService.logError('[Storage] Failed to read VPN config', e, null);
+      return null;
+    }
+  }
+
+  /// Check if VPN config has been imported
+  Future<bool> hasImportedConfig() async {
+    final config = await getVpnConfigMap();
+    return config != null && config.containsKey('token') && config.containsKey('config');
+  }
+
+  /// Get imported token
+  Future<String?> getImportedToken() async {
+    final config = await getVpnConfigMap();
+    return config?['token'] as String?;
+  }
+
+  /// Clear VPN configuration
+  Future<void> clearVpnConfig() async {
+    try {
+      if (!_initialized) await initialize();
+      await _secureStorage.delete(key: _keyVpnConfig);
+      _crashService.logInfo('[Storage] VPN config cleared');
+    } catch (e) {
+      _crashService.logError('[Storage] Failed to clear VPN config', e, null);
+    }
+  }
+
+  /// Save VPN configuration (as VpnConfig object - legacy)
+  Future<void> saveVpnConfigOld(VpnConfig config) async {
     await _secureStorage.write(key: _keyVpnConfig, value: jsonEncode(config.toJson()));
   }
 
-  /// Get VPN configuration
+  /// Get VPN configuration (as VpnConfig object - legacy)
   Future<VpnConfig?> getVpnConfig() async {
     final data = await _secureStorage.read(key: _keyVpnConfig);
     if (data != null) {

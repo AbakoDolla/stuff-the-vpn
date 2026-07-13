@@ -9,6 +9,7 @@ import '../account/account_screen.dart';
 import '../history/history_screen.dart';
 import '../settings/settings_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../import/import_config_screen.dart';
 
 /// SXB VPN Home Screen
 /// Main dashboard with VPN connection controls
@@ -484,6 +485,86 @@ class _HomeContentState extends State<_HomeContent>
               ),
             
             const SizedBox(height: AppSpacing.lg),
+            
+            // Import Config Button (if no config imported)
+            FutureBuilder<bool>(
+              future: StorageService.instance.hasImportedConfig(),
+              builder: (context, snapshot) {
+                final hasConfig = snapshot.data ?? false;
+                if (hasConfig) return const SizedBox.shrink();
+                
+                return Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                        border: Border.all(
+                          color: AppColors.warning.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                color: AppColors.warning,
+                                size: 24,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  'Aucune configuration importée',
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color: AppColors.warning,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'Importez un token SXB pour vous connecter au VPN',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final result = await Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const ImportConfigScreen(),
+                                  ),
+                                );
+                                if (result == true) {
+                                  parentState?._syncData();
+                                }
+                              },
+                              icon: const Icon(Icons.download),
+                              label: const Text('Importer une configuration'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: AppSpacing.sm,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                );
+              },
+            ),
             
             // Sync Button
             SxbButton(
