@@ -53,8 +53,17 @@ const UpdateUsageSchema = z.object({
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 function generate6DigitCode(): string {
-  // Génère un code à 6 chiffres
-  return "SXB-" + Math.floor(100000 + Math.random() * 900000).toString();
+  // Génère un code au format SXB-XXXX-XXXX
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'SXB-';
+  for (let i = 0; i < 4; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  code += '-';
+  for (let i = 0; i < 4; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
 }
 
 function generateAccessToken(deviceId: string, expiresAt: Date): string {
