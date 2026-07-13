@@ -303,11 +303,8 @@ export async function activateDevice(req: Request, res: Response, next: NextFunc
         },
       });
     } else if (deviceActivation) {
-      // Short token - marquer deviceActivation comme utilisé
-      await prisma.deviceActivation.update({
-        where: { deviceId: parsed.deviceId },
-        data: { status: "USED" },
-      });
+      // Short token from dashboard - no need to update DeviceActivation
+      // The Activation table already tracks the activation
     }
 
     // 7. Incrémenter le compteur de connexions
