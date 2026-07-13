@@ -50,6 +50,14 @@ android {
         versionName flutterVersionName
         multiDexEnabled true
     }
+    
+    // Fix duplicate native library conflicts between axevpn_flutter and flutter_v2ray_client
+    packagingOptions {
+        pickFirst 'lib/arm64-v8a/libtun2socks.so'
+        pickFirst 'lib/armeabi-v7a/libtun2socks.so'
+        pickFirst 'lib/x86/libtun2socks.so'
+        pickFirst 'lib/x86_64/libtun2socks.so'
+    }
 
     buildTypes {
         release {
