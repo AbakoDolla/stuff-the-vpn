@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Key, Smartphone, Server,
   FileText, Settings, LogOut, HardDrive, Globe,
   Shield, BarChart2, CreditCard, MessageSquare, X,
-  Ticket, Zap,
+  Ticket, Zap, Download,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -29,6 +29,7 @@ const getNavItems = (tr: Record<string, string>): NavItem[] => [
   // Utilisateurs & Appareils
   { labelKey: 'users', icon: <Users size={18} />, href: '/dashboard/users', section: 'users', permission: 'users.view' },
   { labelKey: 'devices', icon: <Smartphone size={18} />, href: '/dashboard/app-activation', section: 'users', permission: 'devices.view' },
+  { labelKey: 'vpnDeviceConfig', icon: <Download size={18} />, href: '/dashboard/device-vpn-config', section: 'users', permission: 'devices.view' },
 
   // VPN
   { labelKey: 'servers', icon: <Server size={18} />, href: '/dashboard/servers', section: 'vpn', permission: 'servers.view' },

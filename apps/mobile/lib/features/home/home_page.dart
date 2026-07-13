@@ -10,6 +10,7 @@ import '../../providers/activation_provider.dart';
 import '../../providers/vpn_provider.dart';
 import '../../services/user_service.dart';
 import '../../services/vpn_service.dart';
+import '../../services/config_sync_service.dart';
 import '../../widgets/glass_card.dart';
 
 final _homeSubProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
@@ -144,6 +145,7 @@ class _HomePageState extends ConsumerState<HomePage>
 
   Widget _buildAppBar(BuildContext context, ActivationState? activation) {
     final name = activation?.user?.name ?? '';
+    final deviceId = activation?.device?.deviceId ?? '';
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(
@@ -162,6 +164,10 @@ class _HomePageState extends ConsumerState<HomePage>
               ),
           ]),
           const Spacer(),
+          // Sync button
+          if (deviceId.isNotEmpty)
+            _SyncButton(deviceId: deviceId),
+          const SizedBox(width: 8),
           // Shield status indicator
           Container(
             padding:
@@ -778,4 +784,128 @@ class _ArcPainter extends CustomPainter {
   @override
   bool shouldRepaint(_ArcPainter old) =>
       old.color != color || old.opacity != opacity;
+}
+
+class _SyncButton extends ConsumerStatefulWidget {
+  final String deviceId;
+
+  const _SyncButton({required this.deviceId});
+
+  @override
+  ConsumerState<_SyncButton> createState() => _SyncButtonState();
+}
+
+class _SyncButtonState extends ConsumerState<_SyncButton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  bool _isSyncing = false;
+  int _configCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+    _loadConfigCount();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadConfigCount() async {
+    final service = ref.read(configSyncServiceProvider);
+    final configs = await service.getStoredConfigs();
+    if (mounted) {
+      setState(() => _configCount = configs.length);
+    }
+  }
+
+  Future<void> _handleSync() async {
+    if (_isSyncing) return;
+    
+    setState(() => _isSyncing = true);
+    _controller.repeat();
+
+    try {
+      final service = ref.read(configSyncServiceProvider);
+      final result = await service.fullSync(widget.deviceId);
+      
+      if (mounted) {
+        if (result.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur: ${result.error}'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          setState(() => _configCount = result.configs.length);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${result.configs.length} configuration(s) synchronisée(s)'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        _controller.stop();
+        setState(() => _isSyncing = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _handleSync,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RotationTransition(
+              turns: _controller,
+              child: const Icon(
+                Icons.sync_rounded,
+                color: AppColors.primary,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              _configCount > 0 ? '$_configCount' : 'Sync',
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

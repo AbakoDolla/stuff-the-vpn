@@ -615,6 +615,43 @@ model TicketReply {
   updatedAt DateTime @updatedAt
 }
 
+// ─── Device VPN Configuration ─────────────────────────────────────────
+// Stocke les configurations VPN assignées à chaque appareil
+model DeviceVpnConfig {
+  id              String   @id @default(uuid())
+  deviceId        String   // Référence à activation.deviceId
+  profileId       String?  // ID du profil VPN assigné
+  configName      String   // Nom de la config (ex: "Serveur France Premium")
+  protocol        String   // VLESS, VMess, Trojan, WireGuard, etc.
+  serverHost      String   // Host du serveur
+  serverPort      Int      // Port
+  serverCountry   String   // Pays du serveur
+  serverFlag      String   @default("🏳️") // Drapeau
+  
+  // Configuration cryptée (stockée chiffrée, déchiffrée côté app uniquement)
+  encryptedConfig String   // Configuration JSON chiffrée (AES-256-GCM)
+  configIV        String   // Vecteur d'initialisation pour le déchiffrement
+  configVersion   Int      @default(1) // Version pour invalidate cache
+  
+  // Paramètres de validité
+  validFrom       DateTime @default(now())
+  validUntil      DateTime? // null = jamais expiré
+  isActive        Boolean  @default(true)
+  
+  // Métadonnées
+  assignedBy      String?  // Admin ID qui a assigné
+  assignedAt      DateTime @default(now())
+  syncedAt        DateTime? // Dernière synchro par l'app
+  syncCount       Int      @default(0) // Nombre de fois syncronisé
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([deviceId, profileId])
+  @@index([deviceId])
+  @@index([configVersion])
+}
+
 model Notification {
   id        String           @id @default(uuid())
   userId    String

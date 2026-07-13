@@ -25,6 +25,7 @@ import tokensRouter from "./tokens.routes.js";
 import devicesRouter from "./devices.routes.js";
 import quotasRouter from "./quotas.routes.js";
 import deviceActivationRouter from "./device-activation.routes.js";
+import deviceVpnConfigRouter from "./device-vpn-config.routes.js";
 
 const router: IRouter = Router();
 
@@ -54,5 +55,6 @@ router.use("/tokens",         tokensRouter);
 router.use("/devices",        devicesRouter);
 router.use("/quotas",         quotasRouter);
 router.use("/mobile-device",  deviceActivationRouter);
+router.use("/mobile-device",  deviceVpnConfigRouter);
 
 export default router;
