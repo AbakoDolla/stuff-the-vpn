@@ -10,7 +10,8 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { clearAuth, useDashboardStore, type Role } from '@/lib/store';
+import { useDashboardStore, type Role } from '@/lib/store';
+import { clearAuth } from '@/lib/auth';
 import { useLanguage } from '@/hooks/useLanguage';
 import { canAccessPage, type Permission } from '@/lib/permissions';
 
