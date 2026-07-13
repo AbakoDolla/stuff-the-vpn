@@ -31,7 +31,7 @@ dependencies:
   url_launcher: ^6.2.5
   uuid: ^4.4.0
   flutter_v2ray_client: ^2.0.0
-  cryptography: ^2.7.0    # X25519 keypair generation for WireGuard
+  cryptography: ^2.7.0
 
 dependency_overrides:
   app_links: 6.3.3
