@@ -1,38 +1,21 @@
 /// vpn_link_builder.dart
 ///
-/// Convertit un [VpnConfigModel] (reçu du backend, un par inbound actif)
-/// en lien de partage V2Ray/Xray standard (vless://, vmess://, trojan://,
-/// ss://) que flutter_v2ray_client sait parser nativement via
-/// `V2ray.parseFromURL()`.
-///
-/// Protocoles gérés nativement par le tunnel VPN réel :
-///   VLESS, VLESS_REALITY, VMESS, TROJAN, TROJAN_GO,
-///   SHADOWSOCKS, SHADOWSOCKS_R
-///
-/// Protocoles NON encore supportés pour une connexion VPN réelle sur
-/// mobile (nécessitent un plugin natif dédié différent) :
-///   OPENVPN, WIREGUARD, SSH*, SLOWDNS
+/// Convertit un [VpnConfigModel] en lien de partage V2Ray/Xray standard
+/// (vless://, vmess://, trojan://, ss://) que flutter_v2ray_client parse
+/// nativement via `V2ray.parseFromURL()`.
 library;
 
 import 'dart:convert';
 import '../../models/vpn_config_model.dart';
 
-/// Protocoles pour lesquels une vraie connexion VPN est actuellement possible.
 const Set<String> supportedRealVpnProtocols = {
-  'VLESS',
-  'VLESS_REALITY',
-  'VMESS',
-  'TROJAN',
-  'TROJAN_GO',
-  'SHADOWSOCKS',
-  'SHADOWSOCKS_R',
+  'VLESS', 'VLESS_REALITY', 'VMESS', 'TROJAN', 'TROJAN_GO',
+  'SHADOWSOCKS', 'SHADOWSOCKS_R',
 };
 
 bool isProtocolSupported(String protocol) =>
     supportedRealVpnProtocols.contains(protocol.toUpperCase());
 
-/// Construit le lien de partage adapté au protocole, ou `null` si le
-/// protocole n'est pas encore supporté pour une connexion VPN réelle.
 String? buildShareLink(VpnConfigModel c) {
   final protocol = c.protocol.toUpperCase();
   switch (protocol) {
@@ -48,7 +31,7 @@ String? buildShareLink(VpnConfigModel c) {
     case 'SHADOWSOCKS_R':
       return _buildShadowsocks(c);
     default:
-      return null; // OPENVPN / WIREGUARD / SSH* / SLOWDNS — pas de tunnel réel encore
+      return null;
   }
 }
 
@@ -73,19 +56,11 @@ String _buildVless(VpnConfigModel c, {required bool isReality}) {
 
 String _buildVmess(VpnConfigModel c) {
   final vmessObj = {
-    'v': '2',
-    'ps': c.remark,
-    'add': c.host,
-    'port': c.port.toString(),
-    'id': c.uuid,
-    'aid': '0',
-    'scy': 'auto',
-    'net': c.network ?? 'tcp',
-    'type': 'none',
-    'host': c.sni ?? '',
-    'path': c.path ?? '',
-    'tls': c.tls ? 'tls' : '',
-    'sni': c.sni ?? '',
+    'v': '2', 'ps': c.remark, 'add': c.host, 'port': c.port.toString(),
+    'id': c.uuid, 'aid': '0', 'scy': 'auto',
+    'net': c.network ?? 'tcp', 'type': 'none',
+    'host': c.sni ?? '', 'path': c.path ?? '',
+    'tls': c.tls ? 'tls' : '', 'sni': c.sni ?? '',
   };
   final b64 = base64.encode(utf8.encode(jsonEncode(vmessObj)));
   return 'vmess://$b64';
