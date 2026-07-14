@@ -183,10 +183,13 @@ class _HomeScreenState extends State<HomeScreen>
     });
 
     try {
-      // Récupère la vraie configuration VPN (importée via token SXB)
-      final config = await ApiService.instance.getVpnConfig();
+      // Récupère la config VPN stockée localement lors de l'import du
+      // token SXB (jamais un appel réseau : le token n'établit pas de
+      // session JWT, la config décryptée est stockée une fois pour toutes
+      // à l'import).
+      final stored = await StorageService.instance.getVpnConfigMap();
 
-      if (config == null) {
+      if (stored == null) {
         setState(() {
           _vpnStatus = VpnStatus.error;
           _vpnError = 'Aucune configuration VPN importée. Importez votre token SXB.';
@@ -194,15 +197,16 @@ class _HomeScreenState extends State<HomeScreen>
         return;
       }
 
-      if (!isProtocolSupported(config.protocol)) {
+      final protocol = stored['protocol']?.toString();
+      if (!isProtocolSupported(protocol)) {
         setState(() {
           _vpnStatus = VpnStatus.error;
-          _vpnError = 'Protocole ${config.protocol ?? "inconnu"} non encore supporté sur cette version.';
+          _vpnError = 'Protocole ${protocol ?? "inconnu"} non encore supporté sur cette version.';
         });
         return;
       }
 
-      final shareLink = buildShareLink(config);
+      final shareLink = buildShareLink(stored);
       if (shareLink == null) {
         setState(() {
           _vpnStatus = VpnStatus.error;
@@ -215,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen>
       // vrai tunnel. Le statut réel arrive ensuite via _onVpnEngineStatus.
       await _vpnEngine.connect(
         shareLink: shareLink,
-        remark: config.remark ?? 'SxBVPN',
+        remark: stored['remark']?.toString() ?? 'SxBVPN',
       );
     } catch (e) {
       if (mounted) {
