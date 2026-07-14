@@ -99,12 +99,68 @@ npm run dev          # dans apps/dashboard/
 
 ## 🌐 Déploiement VPS
 
-→ **Voir [DEPLOY.md](./DEPLOY.md)** pour le guide complet.
+### Installation rapide
 
 ```bash
-cp .env.example .env    # Configurer les secrets
-docker compose up -d --build
+# Connectez-vous au VPS
+ssh ubuntu@141.95.112.93
+
+# Clonez le repository
+cd /home/ubuntu
+git clone https://github.com/AbakoDolla/stuff-the-vpn.git sxb-vpn
+
+# Exécutez le script d'installation
+cd sxb-vpn/scripts
+chmod +x install.sh
+sudo ./install.sh
 ```
+
+### Mise à jour
+
+```bash
+cd /home/ubuntu/sxb-vpn/scripts
+chmod +x deploy.sh
+sudo ./deploy.sh
+```
+
+### Sauvegarde
+
+```bash
+cd /home/ubuntu/sxb-vpn/scripts
+chmod +x backup.sh
+sudo ./backup.sh
+```
+
+### URLs de production
+
+- **Dashboard**: https://vpnsxb.afrihall.com
+- **API Backend**: https://vpnsxb.afrihall.com/api
+- **X-UI Panel**: http://141.95.112.93:18790/SgYIH3ik8PvAoTL0yr
+
+### Comptes administrateur
+
+| Service | Identifiants |
+|---------|---------------|
+| Dashboard | admin@sxbvpn.com / AdminSXB2024! |
+| X-UI | Mvwe3tDRVh / ch4F8zA5BK |
+
+### Commandes de maintenance
+
+```bash
+# Redémarrer le backend
+pm2 restart sxb-backend
+
+# Voir les logs
+pm2 logs sxb-backend
+
+# Statut des services
+systemctl status nginx postgresql x-ui
+
+# Redémarrer X-UI
+sudo systemctl restart x-ui
+```
+
+→ **Voir [DEPLOY.md](./DEPLOY.md)** pour le guide complet.
 
 ---
 
