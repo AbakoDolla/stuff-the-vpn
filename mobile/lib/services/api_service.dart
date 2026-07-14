@@ -12,7 +12,7 @@ class ApiService {
   static String get _baseUrl {
     final url = const String.fromEnvironment(
       'BACKEND_URL',
-      defaultValue: 'https://vpnsxb.afrihall.com/api',
+      defaultValue: 'https://api.sxbvpn.afrihall.com',
     );
     return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }

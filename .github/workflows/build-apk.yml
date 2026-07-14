@@ -16,7 +16,7 @@ on:
       backend_url:
         description: 'Backend URL'
         required: false
-        default: 'https://vpnsxb.afrihall.com/api'
+        default: 'https://api.sxbvpn.afrihall.com'
 
 permissions:
   contents: read
@@ -70,7 +70,7 @@ jobs:
           if [ -n "${{ inputs.backend_url }}" ]; then
             echo "url=${{ inputs.backend_url }}" >> $GITHUB_OUTPUT
           else
-            echo "url=https://vpnsxb.afrihall.com/api" >> $GITHUB_OUTPUT
+            echo "url=https://api.sxbvpn.afrihall.com" >> $GITHUB_OUTPUT
           fi
 
       - name: Build APK (release)
