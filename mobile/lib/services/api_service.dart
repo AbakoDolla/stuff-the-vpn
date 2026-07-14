@@ -396,7 +396,6 @@ class ApiService {
   }) async {
     return _withRetry(() async {
       final response = await http.post(
-        Uri.parse('$_baseUrl/sxb/import'),
         Uri.parse('$_baseUrl/api/sxb/token/import'),
         headers: _headers,
         body: jsonEncode({

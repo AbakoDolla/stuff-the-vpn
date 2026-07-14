@@ -28,9 +28,9 @@ class _HomeScreenState extends State<HomeScreen>
   int _currentIndex = 0;
 
   // VPN State - Use real VPN service
-  VpnConnectionStatus _vpnStatus = VpnConnectionStatus.disconnected;
-  DateTime? _connectedAt;
-  String _publicIp = '--';
+  VpnConnectionStatus vpnStatus = VpnConnectionStatus.disconnected;
+  DateTime? connectedAt;
+  String publicIp = '--';
   final V2RayEngine _vpnEngine = V2RayEngine.instance;
   StreamSubscription<RealVpnStatus>? _vpnEngineSub;
   String? _vpnError;
@@ -40,16 +40,16 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Data
   User? _user;
-  Quota? _quota;
-  bool _isSyncing = false;
-  DateTime? _lastSync;
-  bool _hasConfig = false;
+  Quota? quota;
+  bool isSyncing = false;
+  DateTime? lastSync;
+  bool hasConfig = false;
 
   // Animation
   late AnimationController _connectionAnimationController;
 
   final List<Widget> _screens = [];
-  StreamSubscription<VpnConnectionStatus>? _vpnStatusSubscription;
+  StreamSubscription<VpnConnectionStatus>? vpnStatusSubscription;
 
   @override
   void initState() {
@@ -62,7 +62,18 @@ class _HomeScreenState extends State<HomeScreen>
     );
 
     _screens.addAll([
-      const _HomeContent(),
+      _HomeContent(
+        onSync: _syncData,
+        onImport: _syncData,
+        onToggle: onToggle,
+        lastSync: lastSync,
+        vpnStatus: vpnStatus,
+        connectedAt: connectedAt,
+        publicIp: publicIp,
+        quota: quota,
+        isSyncing: isSyncing,
+        hasConfig: hasConfig,
+      ),
       const HistoryScreen(),
       const AccountScreen(),
       const SettingsScreen(),
@@ -76,26 +87,26 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() {
       switch (s.state) {
         case RealVpnState.connecting:
-          _vpnStatus = VpnStatus.connecting;
+          vpnStatus = VpnStatus.connecting;
           _vpnError = null;
           break;
         case RealVpnState.connected:
-          _vpnStatus = VpnStatus.connected;
-          _connectedAt ??= DateTime.now();
+          vpnStatus = VpnStatus.connected;
+          connectedAt ??= DateTime.now();
           _vpnError = null;
           break;
         case RealVpnState.disconnected:
-          _vpnStatus = VpnStatus.disconnected;
-          _connectedAt = null;
+          vpnStatus = VpnStatus.disconnected;
+          connectedAt = null;
           break;
         case RealVpnState.permissionDenied:
-          _vpnStatus = VpnStatus.error;
-          _connectedAt = null;
+          vpnStatus = VpnStatus.error;
+          connectedAt = null;
           _vpnError = "Permission VPN refusée. Autorisez SxBVPN dans les paramètres Android.";
           break;
         case RealVpnState.error:
-          _vpnStatus = VpnStatus.error;
-          _connectedAt = null;
+          vpnStatus = VpnStatus.error;
+          connectedAt = null;
           _vpnError = s.errorMessage ?? "Erreur de connexion VPN";
           break;
       }
@@ -106,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen>
       );
 
     // Listen to VPN status changes
-    _vpnStatusSubscription = VpnService.instance.statusStream.listen(_onVpnStatusChanged);
+    vpnStatusSubscription = VpnService.instance.statusStream.listen(_onVpnStatusChanged);
 
     _loadData();
   }
@@ -114,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _vpnStatusSubscription?.cancel();
+    vpnStatusSubscription?.cancel();
     _connectionAnimationController.dispose();
     super.dispose();
   }
@@ -129,13 +140,13 @@ class _HomeScreenState extends State<HomeScreen>
   void _onVpnStatusChanged(VpnConnectionStatus status) {
     if (mounted) {
       setState(() {
-        _vpnStatus = status;
+        vpnStatus = status;
         if (status == VpnConnectionStatus.connected) {
-          _connectedAt = VpnService.instance.connectedAt;
+          connectedAt = VpnService.instance.connectedAt;
           _serverIp = VpnService.instance.serverIp;
           _protocol = VpnService.instance.protocol;
         } else if (status == VpnConnectionStatus.disconnected) {
-          _connectedAt = null;
+          connectedAt = null;
           _serverIp = '';
         }
       });
@@ -153,9 +164,9 @@ class _HomeScreenState extends State<HomeScreen>
       if (mounted) {
         setState(() {
           _user = cachedUser;
-          _quota = cachedQuota;
-          _lastSync = lastSync;
-          _hasConfig = hasConfig;
+          quota = cachedQuota;
+          lastSync = lastSync;
+          hasConfig = hasConfig;
         });
       }
 
@@ -167,10 +178,10 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _syncData() async {
-    if (_isSyncing) return;
+    if (isSyncing) return;
 
     setState(() {
-      _isSyncing = true;
+      isSyncing = true;
     });
 
     try {
@@ -179,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen>
 
       if (mounted) {
         setState(() {
-          _hasConfig = hasConfig;
+          hasConfig = hasConfig;
         });
       }
 
@@ -207,8 +218,8 @@ class _HomeScreenState extends State<HomeScreen>
 
             if (mounted) {
               setState(() {
-                _quota = quota;
-                _lastSync = DateTime.now();
+                quota = quota;
+                lastSync = DateTime.now();
               });
             }
           }
@@ -222,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen>
         final ip = await ApiService.instance.getPublicIp();
         if (mounted) {
           setState(() {
-            _publicIp = ip;
+            publicIp = ip;
           });
         }
       } catch (e) {
@@ -231,28 +242,28 @@ class _HomeScreenState extends State<HomeScreen>
 
       if (mounted) {
         setState(() {
-          _isSyncing = false;
-          _lastSync ??= DateTime.now();
+          isSyncing = false;
+          lastSync ??= DateTime.now();
         });
       }
     } catch (e) {
       debugPrint('Sync error: $e');
       if (mounted) {
         setState(() {
-          _isSyncing = false;
+          isSyncing = false;
         });
       }
     }
   }
 
-  void _toggleVpnConnection() {
-    if (_vpnStatus == VpnConnectionStatus.connecting ||
-        _vpnStatus == VpnConnectionStatus.disconnecting) {
+  void onToggle() {
+    if (vpnStatus == VpnConnectionStatus.connecting ||
+        vpnStatus == VpnConnectionStatus.disconnecting) {
       return;
     }
 
-    if (_vpnStatus == VpnConnectionStatus.disconnected ||
-        _vpnStatus == VpnConnectionStatus.error) {
+    if (vpnStatus == VpnConnectionStatus.disconnected ||
+        vpnStatus == VpnConnectionStatus.error) {
       _connect();
     } else {
       _disconnect();
@@ -260,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _connect() async {
-    if (!_hasConfig) {
+    if (!hasConfig) {
       // Navigate to import screen
       final result = await Navigator.of(context).push(
         MaterialPageRoute(
@@ -269,7 +280,7 @@ class _HomeScreenState extends State<HomeScreen>
       );
       if (result == true) {
         setState(() {
-          _hasConfig = true;
+          hasConfig = true;
         });
         // Retry connection
         await _connect();
@@ -278,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     setState(() {
-      _vpnStatus = VpnStatus.connecting;
+      vpnStatus = VpnStatus.connecting;
       _vpnError = null;
     });
 
@@ -291,7 +302,7 @@ class _HomeScreenState extends State<HomeScreen>
 
       if (stored == null) {
         setState(() {
-          _vpnStatus = VpnStatus.error;
+          vpnStatus = VpnStatus.error;
           _vpnError = 'Aucune configuration VPN importée. Importez votre token SXB.';
         });
         return;
@@ -300,7 +311,7 @@ class _HomeScreenState extends State<HomeScreen>
       final protocol = stored['protocol']?.toString();
       if (!isProtocolSupported(protocol)) {
         setState(() {
-          _vpnStatus = VpnStatus.error;
+          vpnStatus = VpnStatus.error;
           _vpnError = 'Protocole ${protocol ?? "inconnu"} non encore supporté sur cette version.';
         });
         return;
@@ -309,7 +320,7 @@ class _HomeScreenState extends State<HomeScreen>
       final shareLink = buildShareLink(stored);
       if (shareLink == null) {
         setState(() {
-          _vpnStatus = VpnStatus.error;
+          vpnStatus = VpnStatus.error;
           _vpnError = 'Configuration VPN invalide.';
         });
         return;
@@ -324,9 +335,9 @@ class _HomeScreenState extends State<HomeScreen>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _vpnStatus = VpnStatus.error;
+          vpnStatus = VpnStatus.error;
           _vpnError = 'Erreur de connexion: $e';
-      _vpnStatus = VpnConnectionStatus.connecting;
+      vpnStatus = VpnConnectionStatus.connecting;
     });
 
     try {
@@ -343,14 +354,14 @@ class _HomeScreenState extends State<HomeScreen>
 
       if (!success && mounted) {
         setState(() {
-          _vpnStatus = VpnConnectionStatus.error;
+          vpnStatus = VpnConnectionStatus.error;
         });
       }
     } catch (e) {
       debugPrint('Connection error: $e');
       if (mounted) {
         setState(() {
-          _vpnStatus = VpnConnectionStatus.error;
+          vpnStatus = VpnConnectionStatus.error;
         });
       }
     }
@@ -358,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _disconnect() async {
     setState(() {
-      _vpnStatus = VpnConnectionStatus.disconnecting;
+      vpnStatus = VpnConnectionStatus.disconnecting;
     });
     await _vpnEngine.disconnect();
     // L'état final (disconnected) arrive via _onVpnEngineStatus
@@ -386,7 +397,7 @@ class _HomeScreenState extends State<HomeScreen>
       debugPrint('Disconnect error: $e');
       if (mounted) {
         setState(() {
-          _vpnStatus = VpnConnectionStatus.disconnected;
+          vpnStatus = VpnConnectionStatus.disconnected;
         });
       }
     }
@@ -477,7 +488,30 @@ class _HomeScreenState extends State<HomeScreen>
 
 /// Home Content Screen
 class _HomeContent extends StatefulWidget {
-  const _HomeContent();
+  final VoidCallback onSync;
+  final VoidCallback onImport;
+  final VoidCallback onToggle;
+  final DateTime? lastSync;
+  final VpnConnectionStatus vpnStatus;
+  final DateTime? connectedAt;
+  final String publicIp;
+  final Quota? quota;
+  final bool isSyncing;
+  final bool hasConfig;
+
+  const _HomeContent({
+    super.key,
+    required this.onSync,
+    required this.onImport,
+    required this.onToggle,
+    required this.lastSync,
+    required this.vpnStatus,
+    required this.connectedAt,
+    required this.publicIp,
+    required this.quota,
+    required this.isSyncing,
+    required this.hasConfig,
+  });
 
   @override
   State<_HomeContent> createState() => _HomeContentState();
@@ -532,17 +566,14 @@ class _HomeContentState extends State<_HomeContent>
 
   @override
   Widget build(BuildContext context) {
-    // Access parent state through context
-    final parentState = context.findAncestorStateOfType<_HomeScreenState>();
-    if (parentState == null) return const SizedBox.shrink();
-
-    final vpnStatus = parentState._vpnStatus;
-    final connectedAt = parentState._connectedAt;
-    final publicIp = parentState._publicIp;
-    final quota = parentState._quota;
-    final isSyncing = parentState._isSyncing;
-    final lastSync = parentState._lastSync;
-    final hasConfig = parentState._hasConfig;
+    // Use widget properties directly
+    final vpnStatus = widget.vpnStatus;
+    final connectedAt = widget.connectedAt;
+    final publicIp = widget.publicIp;
+    final quota = widget.quota;
+    final isSyncing = widget.isSyncing;
+    final lastSync = widget.lastSync;
+    final hasConfig = widget.hasConfig;
 
     // Update duration timer when connected
     if (vpnStatus == VpnConnectionStatus.connected && connectedAt != null) {
@@ -623,7 +654,7 @@ class _HomeContentState extends State<_HomeContent>
             ScaleTransition(
               scale: _pulseAnimation,
               child: GestureDetector(
-                onTap: parentState._toggleVpnConnection,
+                onTap: widget.onToggle,
                 child: Container(
                   width: 160,
                   height: 160,
@@ -758,7 +789,7 @@ class _HomeContentState extends State<_HomeContent>
                             ),
                           );
                           if (result == true) {
-                            parentState._syncData();
+                            widget.onSync();
                           }
                         },
                         icon: const Icon(Icons.download),
@@ -781,7 +812,7 @@ class _HomeContentState extends State<_HomeContent>
             // Sync Button
             SxbButton(
               text: isSyncing ? 'Synchronisation...' : 'Synchroniser',
-              onPressed: isSyncing ? null : parentState._syncData,
+              onPressed: isSyncing ? null : widget.onSync,
               isLoading: isSyncing,
               isOutlined: true,
               icon: Icons.sync,
