@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -10,6 +11,8 @@ import '../history/history_screen.dart';
 import '../settings/settings_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../import/import_config_screen.dart';
+import '../../core/vpn/v2ray_engine.dart';
+import '../../core/vpn/vpn_link_builder.dart';
 
 /// SXB VPN Home Screen
 /// Main dashboard with VPN connection controls
@@ -28,6 +31,9 @@ class _HomeScreenState extends State<HomeScreen>
   VpnStatus _vpnStatus = VpnStatus.disconnected;
   DateTime? _connectedAt;
   String _publicIp = '--';
+  final V2RayEngine _vpnEngine = V2RayEngine.instance;
+  StreamSubscription<RealVpnStatus>? _vpnEngineSub;
+  String? _vpnError;
   
   // Data
   User? _user;
@@ -53,7 +59,44 @@ class _HomeScreenState extends State<HomeScreen>
       const AccountScreen(),
       const SettingsScreen(),
     ]);
+    _vpnEngineSub = _vpnEngine.statusStream.listen(_onVpnEngineStatus);
     _loadData();
+  }
+
+  void _onVpnEngineStatus(RealVpnStatus s) {
+    if (!mounted) return;
+    setState(() {
+      switch (s.state) {
+        case RealVpnState.connecting:
+          _vpnStatus = VpnStatus.connecting;
+          _vpnError = null;
+          break;
+        case RealVpnState.connected:
+          _vpnStatus = VpnStatus.connected;
+          _connectedAt ??= DateTime.now();
+          _vpnError = null;
+          break;
+        case RealVpnState.disconnected:
+          _vpnStatus = VpnStatus.disconnected;
+          _connectedAt = null;
+          break;
+        case RealVpnState.permissionDenied:
+          _vpnStatus = VpnStatus.error;
+          _connectedAt = null;
+          _vpnError = "Permission VPN refusée. Autorisez SxBVPN dans les paramètres Android.";
+          break;
+        case RealVpnState.error:
+          _vpnStatus = VpnStatus.error;
+          _connectedAt = null;
+          _vpnError = s.errorMessage ?? "Erreur de connexion VPN";
+          break;
+      }
+    });
+    if (_vpnError != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_vpnError!), backgroundColor: Colors.redAccent),
+      );
+    }
   }
 
   Future<void> _loadData() async {
@@ -136,36 +179,65 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _connect() async {
     setState(() {
       _vpnStatus = VpnStatus.connecting;
+      _vpnError = null;
     });
 
-    // Simulate connection delay
-    await Future.delayed(const Duration(seconds: 2));
-    
-    // In a real app, this would establish the actual VPN connection
-    // using platform-specific VPN APIs
-    
-    setState(() {
-      _vpnStatus = VpnStatus.connected;
-      _connectedAt = DateTime.now();
-    });
+    try {
+      // Récupère la vraie configuration VPN (importée via token SXB)
+      final config = await ApiService.instance.getVpnConfig();
+
+      if (config == null) {
+        setState(() {
+          _vpnStatus = VpnStatus.error;
+          _vpnError = 'Aucune configuration VPN importée. Importez votre token SXB.';
+        });
+        return;
+      }
+
+      if (!isProtocolSupported(config.protocol)) {
+        setState(() {
+          _vpnStatus = VpnStatus.error;
+          _vpnError = 'Protocole ${config.protocol ?? "inconnu"} non encore supporté sur cette version.';
+        });
+        return;
+      }
+
+      final shareLink = buildShareLink(config);
+      if (shareLink == null) {
+        setState(() {
+          _vpnStatus = VpnStatus.error;
+          _vpnError = 'Configuration VPN invalide.';
+        });
+        return;
+      }
+
+      // Déclenche la vraie demande de permission VPN Android, puis le
+      // vrai tunnel. Le statut réel arrive ensuite via _onVpnEngineStatus.
+      await _vpnEngine.connect(
+        shareLink: shareLink,
+        remark: config.remark ?? 'SxBVPN',
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _vpnStatus = VpnStatus.error;
+          _vpnError = 'Erreur de connexion: $e';
+        });
+      }
+    }
   }
 
   Future<void> _disconnect() async {
     setState(() {
       _vpnStatus = VpnStatus.disconnecting;
     });
-
-    // Simulate disconnection
-    await Future.delayed(const Duration(seconds: 1));
-    
-    setState(() {
-      _vpnStatus = VpnStatus.disconnected;
-      _connectedAt = null;
-    });
+    await _vpnEngine.disconnect();
+    // L'état final (disconnected) arrive via _onVpnEngineStatus
   }
 
   @override
   void dispose() {
+    _vpnEngineSub?.cancel();
     _connectionAnimationController.dispose();
     super.dispose();
   }
