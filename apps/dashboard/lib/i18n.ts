@@ -7,21 +7,13 @@ const LANG_KEY = 'sxb_lang';
 
 export function getLang(): Lang {
   if (typeof window === 'undefined') return 'fr';
-  try {
-    return (localStorage.getItem(LANG_KEY) as Lang) ?? 'fr';
-  } catch {
-    return 'fr';
-  }
+  return (localStorage.getItem(LANG_KEY) as Lang) ?? 'fr';
 }
 
 export function setLang(lang: Lang) {
   if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(LANG_KEY, lang);
-    window.dispatchEvent(new CustomEvent('lang-change', { detail: lang }));
-  } catch {
-    // Silently fail if localStorage is not available
-  }
+  localStorage.setItem(LANG_KEY, lang);
+  window.dispatchEvent(new CustomEvent('lang-change', { detail: lang }));
 }
 
 export const t: Record<Lang, Record<string, string>> = {
@@ -30,7 +22,6 @@ export const t: Record<Lang, Record<string, string>> = {
     analytics: 'Statistiques',
     users: 'Utilisateurs',
     devices: 'Appareils',
-    appActivation: 'Activation App',
     tokens: 'Tokens mobiles',
     quotas: 'Quotas & Données',
     inbounds: 'Inbounds VPN',
@@ -167,7 +158,6 @@ export const t: Record<Lang, Record<string, string>> = {
     analytics: 'Analytics',
     users: 'Users',
     devices: 'Devices',
-    appActivation: 'App Activation',
     tokens: 'Mobile Tokens',
     quotas: 'Quotas & Data',
     inbounds: 'VPN Inbounds',

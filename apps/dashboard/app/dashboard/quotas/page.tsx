@@ -35,16 +35,8 @@ export default function QuotasPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await Api.getQuotas({ limit: 100 });
-      // Handle different response formats: { quotas: [] } or { data: [] } or direct array
-      const quotasData = Array.isArray(response) 
-        ? response 
-        : Array.isArray(response?.quotas) 
-          ? response.quotas 
-          : Array.isArray(response?.data) 
-            ? response.data 
-            : [];
-      setQuotas(quotasData);
+      const data = await Api.getQuotas({ limit: 100 });
+      setQuotas(data.quotas || data || []);
     } catch (err: any) {
       setError(err.message || 'Erreur lors du chargement des quotas');
     } finally {

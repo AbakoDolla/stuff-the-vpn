@@ -5,40 +5,46 @@ import {
   LayoutDashboard, Users, Key, Smartphone, Server,
   FileText, Settings, LogOut, HardDrive, Globe,
   Shield, BarChart2, CreditCard, MessageSquare, X,
-  Ticket, Zap, Download,
+  Ticket, Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useDashboardStore, type Role } from '@/lib/store';
 import { clearAuth } from '@/lib/auth';
 import { useLanguage } from '@/hooks/useLanguage';
-import { canAccessPage, type Permission } from '@/lib/permissions';
 
 interface NavItem {
   labelKey: string;
   icon: React.ReactNode;
   href: string;
   section?: string;
-  permission?: Permission;
 }
 
 const getNavItems = (tr: Record<string, string>): NavItem[] => [
   // Vue d'ensemble
-  { labelKey: 'dashboard', icon: <LayoutDashboard size={18} />, href: '/dashboard', section: 'overview', permission: 'admin.dashboard' },
+  { labelKey: 'dashboard', icon: <LayoutDashboard size={18} />, href: '/dashboard', section: 'overview' },
+  { labelKey: 'analytics', icon: <BarChart2 size={18} />, href: '/analytics', section: 'overview' },
 
-  // Utilisateurs & Appareils
-  { labelKey: 'users', icon: <Users size={18} />, href: '/dashboard/users', section: 'users', permission: 'users.view' },
-  { labelKey: 'devices', icon: <Smartphone size={18} />, href: '/dashboard/app-activation', section: 'users', permission: 'devices.view' },
-  { labelKey: 'vpnDeviceConfig', icon: <Download size={18} />, href: '/dashboard/device-vpn-config', section: 'users', permission: 'devices.view' },
+  // Utilisateurs & Accès
+  { labelKey: 'users', icon: <Users size={18} />, href: '/dashboard/users', section: 'users' },
+  { labelKey: 'devices', icon: <Smartphone size={18} />, href: '/dashboard/devices-list', section: 'users' },
+  { labelKey: 'tokens', icon: <Key size={18} />, href: '/dashboard/tokens', section: 'users' },
+  { labelKey: 'quotas', icon: <HardDrive size={18} />, href: '/dashboard/quotas', section: 'users' },
 
   // VPN
-  { labelKey: 'servers', icon: <Server size={18} />, href: '/dashboard/servers', section: 'vpn', permission: 'servers.view' },
-  { labelKey: 'inbounds', icon: <Globe size={18} />, href: '/dashboard/inbounds', section: 'vpn', permission: 'inbounds.view' },
-  { labelKey: 'vpnProfiles', icon: <Shield size={18} />, href: '/dashboard/vpn', section: 'vpn', permission: 'vpn_profiles.view' },
+  { labelKey: 'inbounds', icon: <Globe size={18} />, href: '/dashboard/inbounds', section: 'vpn' },
+  { labelKey: 'vpnProfiles', icon: <Shield size={18} />, href: '/dashboard/vpn', section: 'vpn' },
+  { labelKey: 'servers', icon: <Server size={18} />, href: '/dashboard/servers', section: 'vpn' },
+
+  // Commercial
+  { labelKey: 'licenses', icon: <Key size={18} />, href: '/licenses', section: 'commercial' },
+  { labelKey: 'vouchers', icon: <Ticket size={18} />, href: '/vouchers', section: 'commercial' },
+  { labelKey: 'payments', icon: <CreditCard size={18} />, href: '/dashboard/payments', section: 'commercial' },
 
   // Admin
-  { labelKey: 'settings', icon: <Settings size={18} />, href: '/dashboard/settings', section: 'admin', permission: 'settings.view' },
+  { labelKey: 'tickets', icon: <MessageSquare size={18} />, href: '/dashboard/tickets', section: 'admin' },
+  { labelKey: 'audit', icon: <FileText size={18} />, href: '/dashboard/audit', section: 'admin' },
+  { labelKey: 'settings', icon: <Settings size={18} />, href: '/dashboard/settings', section: 'admin' },
 ];
 
 const sectionLabels: Record<string, Record<string, string>> = {
@@ -68,24 +74,14 @@ export function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
   const pathname = currentPath;
   const router = useRouter();
   const { lang, tr } = useLanguage();
-  const user = useDashboardStore((s) => s.user);
-  
-  const userRole = user?.role as Role | undefined;
-  const userPermissions = user?.permissions || [];
-
-  // Filtrer les items selon les permissions
-  const allNavItems = getNavItems(tr);
-  const navItems = allNavItems.filter(item => {
-    if (!item.permission) return true;
-    return userPermissions.includes(item.permission);
-  });
+  const navItems = getNavItems(tr);
 
   const handleLogout = () => {
     clearAuth();
     router.push('/login');
   };
 
-  // Grouper par section
+  // Group nav items by section
   const sections = [...new Set(navItems.map(i => i.section))];
 
   const SidebarContent = () => (
@@ -98,12 +94,7 @@ export function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
           </div>
           <div>
             <h1 className="text-sm font-bold text-white leading-tight">SXB VPN</h1>
-            <p className="text-[10px] text-gray-500 leading-tight">
-              {user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 
-               user?.role === 'ADMIN' ? 'Admin' :
-               user?.role === 'SUPPORT' ? 'Support' :
-               user?.role === 'RESELLER' ? 'Revendeur' : 'Utilisateur'}
-            </p>
+            <p className="text-[10px] text-gray-500 leading-tight">Control Center</p>
           </div>
         </div>
         <button
@@ -119,8 +110,6 @@ export function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4 scrollbar-thin">
         {sections.map(section => {
           const items = navItems.filter(i => i.section === section);
-          if (items.length === 0) return null;
-          
           return (
             <div key={section}>
               <p className="px-2 mb-1 text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
@@ -159,25 +148,6 @@ export function Sidebar({ isOpen, currentPath, onClose }: SidebarProps) {
           );
         })}
       </nav>
-
-      {/* User info */}
-      <div className="px-3 py-2 border-t border-white/5 shrink-0">
-        <div className="flex items-center gap-2 px-2">
-          <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center">
-            <span className="text-xs font-medium text-blue-400">
-              {(user?.username || user?.email || 'U').charAt(0).toUpperCase()}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-gray-300 truncate">
-              {user?.username || user?.email || 'Utilisateur'}
-            </p>
-            <p className="text-[10px] text-gray-500 truncate">
-              {user?.email}
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* Logout */}
       <div className="p-3 border-t border-white/5 shrink-0">

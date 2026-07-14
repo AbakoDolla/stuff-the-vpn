@@ -30,7 +30,7 @@ export default function LicensesPage() {
     setLoading(true);
     try {
       const r = await Api.getLicenses();
-      setLicenses(r.data);
+      setLicenses((r.data as License[]) ?? []);
     } catch { setLicenses([]); }
     finally { setLoading(false); }
   }, []);

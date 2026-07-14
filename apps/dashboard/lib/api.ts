@@ -20,11 +20,7 @@ const TOKEN_KEY = "sxb_token";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
+  return localStorage.getItem(TOKEN_KEY);
 }
 
 type AxiosLike = {
@@ -60,13 +56,9 @@ async function _request(
 
   if (res.status === 401) {
     if (typeof window !== "undefined") {
-      try {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem("sxb_user");
-        document.cookie = "stv_token=; path=/; max-age=0";
-      } catch {
-        // Silently fail if localStorage is not available
-      }
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem("sxb_user");
+      document.cookie = "stv_token=; path=/; max-age=0";
       window.location.href = "/login";
     }
     throw new Error("Unauthorized");
@@ -143,13 +135,9 @@ export async function apiFetch<T = unknown>(path: string, init: RequestInit = {}
 
   if (res.status === 401) {
     if (typeof window !== "undefined") {
-      try {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem("sxb_user");
-        document.cookie = "stv_token=; path=/; max-age=0";
-      } catch {
-        // Silently fail if localStorage is not available
-      }
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem("sxb_user");
+      document.cookie = "stv_token=; path=/; max-age=0";
       window.location.href = "/login";
     }
     throw new Error("Unauthorized");
@@ -177,13 +165,9 @@ export async function apiFetchPaginated<T = unknown>(path: string, init: Request
 
   if (res.status === 401) {
     if (typeof window !== "undefined") {
-      try {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem("sxb_user");
-        document.cookie = "stv_token=; path=/; max-age=0";
-      } catch {
-        // Silently fail if localStorage is not available
-      }
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem("sxb_user");
+      document.cookie = "stv_token=; path=/; max-age=0";
       window.location.href = "/login";
     }
     throw new Error("Unauthorized");
@@ -193,35 +177,11 @@ export async function apiFetchPaginated<T = unknown>(path: string, init: Request
   if (!res.ok || json.success === false) {
     throw new Error(json.message ?? "API error");
   }
-  
-  // Handle nested pagination format from backend
-  let data: T[] = [];
-  let total = 0;
-  let limit = 50;
-  let offset = 0;
-  let totalPages = 1;
-  
-  if (Array.isArray(json.data)) {
-    data = json.data as T[];
-    total = json.total ?? data.length;
-    limit = json.limit ?? 50;
-    offset = json.offset ?? 0;
-  } else if (json.data && typeof json.data === 'object' && 'data' in json.data) {
-    // Backend returns { data: [...], total: 0, page: 1, limit: 20, totalPages: 0 }
-    const paginatedData = json.data as { data: T[]; total?: number; page?: number; limit?: number; totalPages?: number };
-    data = paginatedData.data || [];
-    total = paginatedData.total ?? data.length;
-    limit = paginatedData.limit ?? 20;
-    offset = (paginatedData.page ?? 1 - 1) * limit;
-    totalPages = paginatedData.totalPages ?? 1;
-  }
-  
   return {
-    data,
-    total,
-    limit,
-    offset,
-    totalPages,
+    data: json.data as T[],
+    total: json.total ?? 0,
+    limit: json.limit ?? 50,
+    offset: json.offset ?? 0,
   };
 }
 
@@ -259,7 +219,6 @@ export const Api = {
   setUserStatus: (id: string, status: string) =>
     apiFetch<UserRecord>(`/users/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   addQuota:    (id: string, gb: number) => apiFetch<UserRecord>(`/users/${id}/quota`, { method: "PATCH", body: JSON.stringify({ addGB: gb }) }),
-  regenerateUserToken: (id: string) => apiFetch<{loginToken: string}>(`/users/${id}/regenerate-token`, { method: "POST" }),
 
   // Servers
   getServers:  ()                       => apiFetchPaginated<ServerRecord>("/servers"),

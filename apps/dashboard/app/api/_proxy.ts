@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Backend URL - uses VPS backend in production
-// In production (Vercel), this should be set to the VPS backend URL
-// For local development, use localhost:4000
+// Backend runs on localhost:4000 on the same machine, or use VPS backend in production
+// For production, we always use the direct backend URL
 const BACKEND_URL = process.env.BACKEND_URL;
-const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL;
-const FALLBACK_URL = 'http://localhost:4000';
-const BACKEND_BASE = (BACKEND_URL || NEXT_PUBLIC_API_URL || FALLBACK_URL).replace(/\/+$/, '');
+const FALLBACK_URL = 'https://vpnsxb.afrihall.com';
+const BACKEND_BASE = (BACKEND_URL || FALLBACK_URL).replace(/\/+$/, '');
 
 export async function proxyToBackend(request: NextRequest): Promise<NextResponse> {
   try {
