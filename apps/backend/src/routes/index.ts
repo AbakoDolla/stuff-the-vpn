@@ -27,6 +27,7 @@ import quotasRouter from "./quotas.routes.js";
 import deviceActivationRouter from "./device-activation.routes.js";
 import deviceVpnConfigRouter from "./device-vpn-config.routes.js";
 import sxbRouter from "./sxb.routes.js";
+import xpanelRouter from "../modules/xpanel/index.js";
 
 const router: IRouter = Router();
 
@@ -58,5 +59,6 @@ router.use("/quotas",         quotasRouter);
 router.use("/mobile-device",  deviceActivationRouter);
 router.use("/mobile-device",  deviceVpnConfigRouter);
 router.use("/sxb",            sxbRouter);
+router.use("/xpanel",         xpanelRouter);
 
 export default router;
