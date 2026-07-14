@@ -5,8 +5,11 @@
 
 import { prisma } from "../../prisma/client.js";
 import { getXPanelClient, type XPanelClient } from "./xpanel.client.js";
-import type { CreateUserParams, UpdateUserParams, XPanelUser } from "./xpanel.types.js";
 import { env } from "../../config/env.js";
+
+// XPanel admin credentials (from /opt/xnet/.env)
+const XPANEL_ADMIN_USER = env.XPANEL_ADMIN_USER ?? "admin";
+const XPANEL_ADMIN_PASS = env.XPANEL_ADMIN_PASS ?? "snwTlftZtc5BF1VBrvvC";
 
 /**
  * Generate unique token in format SXB-XXXX-XXXX-XXXX
@@ -25,6 +28,19 @@ function generateSXBToken(): string {
 }
 
 /**
+ * Ensure XPanel client is authenticated
+ */
+async function ensureAuthenticated(client: XPanelClient): Promise<boolean> {
+  try {
+    const loginResult = await client.login(XPANEL_ADMIN_USER, XPANEL_ADMIN_PASS);
+    return loginResult.success;
+  } catch (error) {
+    console.error("[XPanel Service] Authentication failed:", error);
+    return false;
+  }
+}
+
+/**
  * Create VPN user in XPanel and sync with SXB database
  */
 export async function createVPNUser(params: {
@@ -37,7 +53,7 @@ export async function createVPNUser(params: {
 }): Promise<{
   success: boolean;
   token?: string;
-  xpanelUserId?: number;
+  xpanelUsername?: string;
   error?: string;
 }> {
   const client = getXPanelClient();
@@ -48,45 +64,42 @@ export async function createVPNUser(params: {
     return { success: false, error: "XPanel is not reachable" };
   }
 
-  // Generate SXB token
+  // Authenticate with XPanel
+  const authOk = await ensureAuthenticated(client);
+  if (!authOk) {
+    return { success: false, error: "XPanel authentication failed" };
+  }
+
+  // Generate SXB token and XPanel username
   const sxbToken = generateSXBToken();
+  const xpanelUsername = `sxb_${params.username.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now() % 100000}`;
 
   try {
-    // Create user in XPanel
-    const xpanelParams: CreateUserParams = {
-      username: `sxb_${params.username}_${Date.now()}`,
-      email: params.email,
+    // Create subscriber in XPanel
+    const createResult = await client.createSubscriber({
+      username: xpanelUsername,
+      password: xpanelUsername, // Use username as initial password
       packageType: params.packageType,
-      totalGB: params.quotaGB,
+      dataLimit: params.quotaGB ? params.quotaGB * 1024 * 1024 * 1024 : undefined, // Convert GB to bytes
       expireDays: params.expireDays,
-    };
+    });
 
-    const createResult = await client.createUser(xpanelParams);
-
-    if (!createResult.success || !createResult.data) {
-      return { success: false, error: createResult.error || "Failed to create user in XPanel" };
+    if (!createResult.success) {
+      return { success: false, error: createResult.error || "Failed to create subscriber in XPanel" };
     }
-
-    const xpanelUser = createResult.data as XPanelUser;
-
-    // Get subscription link from XPanel
-    const linkResult = await client.getSubscriptionLink(xpanelUser.username);
-    const subscriptionLink = linkResult.success ? linkResult.data?.link : null;
 
     // Create VPN profile in SXB database
     await prisma.vpnProfile.create({
       data: {
         userId: params.userId,
         token: sxbToken,
-        xpanelUserId: xpanelUser.id.toString(),
-        username: xpanelUser.username,
+        xpanelUsername: xpanelUsername,
         protocol: params.packageType as any,
         quotaGB: params.quotaGB ?? 0,
         quotaUsedGB: 0,
         expiresAt: params.expireDays
           ? new Date(Date.now() + params.expireDays * 24 * 60 * 60 * 1000)
           : null,
-        subscriptionLink: subscriptionLink,
         status: "ACTIVE",
       },
     });
@@ -94,7 +107,7 @@ export async function createVPNUser(params: {
     return {
       success: true,
       token: sxbToken,
-      xpanelUserId: xpanelUser.id,
+      xpanelUsername,
     };
   } catch (error) {
     console.error("[XPanel Service] createVPNUser error:", error);
@@ -110,7 +123,7 @@ export async function createVPNUser(params: {
  */
 export async function deleteVPNUser(params: {
   userId?: string;
-  xpanelUserId?: string;
+  xpanelUsername?: string;
 }): Promise<{ success: boolean; error?: string }> {
   const client = getXPanelClient();
 
@@ -118,7 +131,7 @@ export async function deleteVPNUser(params: {
     // Find VPN profile
     const whereClause = params.userId
       ? { userId: params.userId }
-      : { xpanelUserId: params.xpanelUserId };
+      : { xpanelUsername: params.xpanelUsername };
 
     const profile = await prisma.vpnProfile.findFirst({
       where: whereClause,
@@ -128,11 +141,14 @@ export async function deleteVPNUser(params: {
       return { success: false, error: "VPN profile not found" };
     }
 
+    // Authenticate with XPanel
+    await ensureAuthenticated(client);
+
     // Delete from XPanel
-    if (profile.xpanelUserId) {
-      const deleteResult = await client.deleteUser(parseInt(profile.xpanelUserId, 10));
+    if (profile.xpanelUsername) {
+      const deleteResult = await client.deleteSubscriber(profile.xpanelUsername);
       if (!deleteResult.success) {
-        console.warn("[XPanel Service] Failed to delete user from XPanel:", deleteResult.error);
+        console.warn("[XPanel Service] Failed to delete subscriber from XPanel:", deleteResult.error);
       }
     }
 
@@ -156,7 +172,7 @@ export async function deleteVPNUser(params: {
  */
 export async function updateVPNUser(params: {
   userId?: string;
-  xpanelUserId?: string;
+  xpanelUsername?: string;
   quotaGB?: number;
   expireDays?: number;
   enable?: boolean;
@@ -167,7 +183,7 @@ export async function updateVPNUser(params: {
     // Find VPN profile
     const whereClause = params.userId
       ? { userId: params.userId }
-      : { xpanelUserId: params.xpanelUserId };
+      : { xpanelUsername: params.xpanelUsername };
 
     const profile = await prisma.vpnProfile.findFirst({
       where: whereClause,
@@ -177,29 +193,33 @@ export async function updateVPNUser(params: {
       return { success: false, error: "VPN profile not found" };
     }
 
-    if (!profile.xpanelUserId) {
-      return { success: false, error: "XPanel user ID not found" };
+    if (!profile.xpanelUsername) {
+      return { success: false, error: "XPanel username not found" };
     }
 
-    // Update in XPanel
-    const updateParams: UpdateUserParams = {
-      id: parseInt(profile.xpanelUserId, 10),
-      totalGB: params.quotaGB,
-      expireDays: params.expireDays,
-    };
+    // Authenticate with XPanel
+    await ensureAuthenticated(client);
 
+    // Update in XPanel
     if (params.enable !== undefined) {
-      const toggleResult = await client.toggleUser(
-        parseInt(profile.xpanelUserId, 10),
-        params.enable
-      );
+      const toggleResult = await client.toggleSubscriber(profile.xpanelUsername, params.enable);
       if (!toggleResult.success) {
         return { success: false, error: toggleResult.error };
       }
     } else {
-      const updateResult = await client.updateUser(updateParams);
-      if (!updateResult.success) {
-        return { success: false, error: updateResult.error };
+      const updateParams: any = {};
+      if (params.quotaGB !== undefined) {
+        updateParams.dataLimit = params.quotaGB * 1024 * 1024 * 1024; // Convert GB to bytes
+      }
+      if (params.expireDays !== undefined) {
+        updateParams.expireDays = params.expireDays;
+      }
+      
+      if (Object.keys(updateParams).length > 0) {
+        const updateResult = await client.updateSubscriber(profile.xpanelUsername, updateParams);
+        if (!updateResult.success) {
+          return { success: false, error: updateResult.error };
+        }
       }
     }
 
@@ -236,7 +256,13 @@ export async function getVPNUsers(): Promise<{
   const client = getXPanelClient();
 
   try {
-    const result = await client.getUsers();
+    // Authenticate with XPanel
+    const authOk = await ensureAuthenticated(client);
+    if (!authOk) {
+      return { success: false, error: "XPanel authentication failed" };
+    }
+
+    const result = await client.getSubscribers();
     if (!result.success) {
       return { success: false, error: result.error };
     }
@@ -266,22 +292,25 @@ export async function getTrafficUsage(userId: string): Promise<{
       where: { userId },
     });
 
-    if (!profile || !profile.xpanelUserId) {
+    if (!profile || !profile.xpanelUsername) {
       return { success: false, error: "VPN profile not found" };
     }
 
-    const userResult = await client.getUser(parseInt(profile.xpanelUserId, 10));
-    if (!userResult.success || !userResult.data) {
-      return { success: false, error: userResult.error };
+    // Authenticate with XPanel
+    await ensureAuthenticated(client);
+
+    const subscriberResult = await client.getSubscriber(profile.xpanelUsername);
+    if (!subscriberResult.success || !subscriberResult.data) {
+      return { success: false, error: subscriberResult.error };
     }
 
-    const xpanelUser = userResult.data as XPanelUser;
+    const subscriber = subscriberResult.data;
     return {
       success: true,
       usage: {
-        download: xpanelUser.download,
-        upload: xpanelUser.upload,
-        total: xpanelUser.download + xpanelUser.upload,
+        download: subscriber.download ?? 0,
+        upload: subscriber.upload ?? 0,
+        total: (subscriber.download ?? 0) + (subscriber.upload ?? 0),
       },
     };
   } catch (error) {
@@ -306,12 +335,21 @@ export async function syncVPNUsers(): Promise<{
   let errors = 0;
 
   try {
-    // Get all XPanel users
-    const xpanelResult = await client.getUsers();
-    if (!xpanelResult.success || !xpanelResult.data) {
-      console.error("[XPanel Service] Failed to get XPanel users:", xpanelResult.error);
+    // Authenticate with XPanel
+    const authOk = await ensureAuthenticated(client);
+    if (!authOk) {
+      console.error("[XPanel Service] XPanel authentication failed");
       return { success: false, synced: 0, errors: 1 };
     }
+
+    // Get all XPanel subscribers
+    const subscribersResult = await client.getSubscribers();
+    if (!subscribersResult.success || !subscribersResult.data) {
+      console.error("[XPanel Service] Failed to get XPanel subscribers:", subscribersResult.error);
+      return { success: false, synced: 0, errors: 1 };
+    }
+
+    const subscribers = subscribersResult.data as any[];
 
     // Get all SXB VPN profiles
     const sxbProfiles = await prisma.vpnProfile.findMany();
@@ -319,17 +357,17 @@ export async function syncVPNUsers(): Promise<{
     // Sync each SXB profile with XPanel
     for (const profile of sxbProfiles) {
       try {
-        if (profile.xpanelUserId) {
-          const xpanelUser = (xpanelResult.data as XPanelUser[]).find(
-            (u) => u.id === parseInt(profile.xpanelUserId, 10)
+        if (profile.xpanelUsername) {
+          const xpanelSubscriber = subscribers.find(
+            (s) => s.username === profile.xpanelUsername
           );
 
-          if (xpanelUser) {
+          if (xpanelSubscriber) {
             // Update quota used
             await prisma.vpnProfile.update({
               where: { id: profile.id },
               data: {
-                quotaUsedGB: Math.round((xpanelUser.download + xpanelUser.upload) / 1e9),
+                quotaUsedGB: Math.round(((xpanelSubscriber.download ?? 0) + (xpanelSubscriber.upload ?? 0)) / 1e9),
               },
             });
             synced++;
@@ -349,23 +387,37 @@ export async function syncVPNUsers(): Promise<{
 }
 
 /**
- * Get XPanel subscription link for a user
+ * Get subscription link for a user
  */
 export async function getSubscriptionLink(userId: string): Promise<{
   success: boolean;
   link?: string;
   error?: string;
 }> {
+  const client = getXPanelClient();
+
   try {
     const profile = await prisma.vpnProfile.findFirst({
       where: { userId },
     });
 
-    if (!profile || !profile.subscriptionLink) {
-      return { success: false, error: "Subscription link not found" };
+    if (!profile || !profile.xpanelUsername) {
+      return { success: false, error: "VPN profile not found" };
     }
 
-    return { success: true, link: profile.subscriptionLink };
+    // Authenticate with XPanel
+    await ensureAuthenticated(client);
+
+    const subscriberResult = await client.getSubscriber(profile.xpanelUsername);
+    if (!subscriberResult.success || !subscriberResult.data) {
+      return { success: false, error: subscriberResult.error };
+    }
+
+    const xpanelBaseUrl = env.XPANEL_URL?.replace(/\/$/, "") ?? "http://localhost:18790";
+    const webBasePath = env.XPANEL_WEB_BASE_PATH ?? "kqUtkMEvgdtx";
+    const subscriptionLink = `${xpanelBaseUrl}/${webBasePath}/sub/${profile.xpanelUsername}`;
+
+    return { success: true, link: subscriptionLink };
   } catch (error) {
     console.error("[XPanel Service] getSubscriptionLink error:", error);
     return {
@@ -389,11 +441,14 @@ export async function resetUserTraffic(userId: string): Promise<{
       where: { userId },
     });
 
-    if (!profile || !profile.xpanelUserId) {
+    if (!profile || !profile.xpanelUsername) {
       return { success: false, error: "VPN profile not found" };
     }
 
-    const resetResult = await client.resetUserTraffic(parseInt(profile.xpanelUserId, 10));
+    // Authenticate with XPanel
+    await ensureAuthenticated(client);
+
+    const resetResult = await client.resetSubscriberTraffic(profile.xpanelUsername);
     if (!resetResult.success) {
       return { success: false, error: resetResult.error };
     }

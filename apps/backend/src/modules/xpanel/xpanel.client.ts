@@ -1,6 +1,9 @@
 /**
  * XPanel (X-NET) HTTP Client
  * Handles communication with X-NET Panel API
+ * 
+ * API Base: http://localhost:18790/api/
+ * Panel URL: http://localhost:18790/kqUtkMEvgdtx
  */
 
 import { env } from "../../config/env.js";
@@ -19,6 +22,7 @@ export class XPanelClient {
   private baseUrl: string;
   private apiKey: string;
   private webBasePath: string;
+  private jwtToken: string | null = null;
 
   constructor(config?: Partial<XPanelConfig>) {
     this.baseUrl = config?.baseUrl ?? env.XPANEL_URL ?? "http://localhost:18790";
@@ -27,14 +31,14 @@ export class XPanelClient {
   }
 
   /**
-   * Get full API URL
+   * Get API URL (without web base path for API calls)
    */
   private getApiUrl(path: string): string {
-    return `${this.baseUrl}/${this.webBasePath}/api${path}`;
+    return `${this.baseUrl}/api${path}`;
   }
 
   /**
-   * Make authenticated API request
+   * Make API request with JWT authentication
    */
   private async request<T>(
     method: string,
@@ -46,8 +50,8 @@ export class XPanelClient {
       "Content-Type": "application/json",
     };
 
-    if (this.apiKey) {
-      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    if (this.jwtToken) {
+      headers["Authorization"] = `Bearer ${this.jwtToken}`;
     }
 
     try {
@@ -57,14 +61,33 @@ export class XPanelClient {
         body: body ? JSON.stringify(body) : undefined,
       });
 
-      if (!response.ok) {
+      const text = await response.text();
+      
+      // Try to parse as JSON
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        // If not JSON, check if it's an error
+        if (!response.ok) {
+          return {
+            success: false,
+            error: `HTTP ${response.status}: ${text.substring(0, 100)}`,
+          };
+        }
         return {
-          success: false,
-          error: `HTTP ${response.status}: ${response.statusText}`,
+          success: true,
+          data: text,
         };
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || data.message || `HTTP ${response.status}`,
+        };
+      }
+
       return {
         success: true,
         data,
@@ -78,65 +101,81 @@ export class XPanelClient {
   }
 
   /**
-   * Login to XPanel and get session token
+   * Health check - verify XPanel is reachable
+   */
+  async healthCheck(): Promise<boolean> {
+    const response = await this.request<{ status: string }>("GET", "/v1/ping");
+    return response.success && response.data?.status === "ok";
+  }
+
+  /**
+   * Login to XPanel and get JWT token
    */
   async login(username: string, password: string): Promise<XPanelAPIResponse<{ token: string }>> {
-    return this.request("POST", "/login", { username, password });
+    const response = await this.request<{ token: string; message?: string }>("POST", "/v1/auth/login", {
+      username,
+      password,
+    });
+    
+    if (response.success && response.data?.token) {
+      this.jwtToken = response.data.token;
+    }
+    
+    return response;
   }
 
   /**
-   * Get all users
+   * Get all subscribers (VPN users)
    */
-  async getUsers(): Promise<XPanelAPIResponse<XPanelUser[]>> {
-    return this.request("GET", "/users");
+  async getSubscribers(): Promise<XPanelAPIResponse<any[]>> {
+    return this.request("GET", "/v1/subscribers");
   }
 
   /**
-   * Get user by ID
+   * Get subscriber by username
    */
-  async getUser(id: number): Promise<XPanelAPIResponse<XPanelUser>> {
-    return this.request("GET", `/users/${id}`);
+  async getSubscriber(username: string): Promise<XPanelAPIResponse<any>> {
+    return this.request("GET", `/v1/subscribers/${username}`);
   }
 
   /**
-   * Create new user
+   * Create new subscriber
    */
-  async createUser(params: CreateUserParams): Promise<XPanelAPIResponse<XPanelUser>> {
-    return this.request("POST", "/users", params);
+  async createSubscriber(params: {
+    username: string;
+    password?: string;
+    packageType?: string;
+    dataLimit?: number;
+    expireDays?: number;
+  }): Promise<XPanelAPIResponse<any>> {
+    return this.request("POST", "/v1/subscribers", params);
   }
 
   /**
-   * Update user
+   * Update subscriber
    */
-  async updateUser(params: UpdateUserParams): Promise<XPanelAPIResponse<XPanelUser>> {
-    return this.request("PUT", `/users/${params.id}`, params);
+  async updateSubscriber(
+    username: string,
+    params: {
+      dataLimit?: number;
+      expireDays?: number;
+      enable?: boolean;
+    }
+  ): Promise<XPanelAPIResponse<any>> {
+    return this.request("PUT", `/v1/subscribers/${username}`, params);
   }
 
   /**
-   * Delete user
+   * Delete subscriber
    */
-  async deleteUser(id: number): Promise<XPanelAPIResponse<void>> {
-    return this.request("DELETE", `/users/${id}`);
-  }
-
-  /**
-   * Get subscription info
-   */
-  async getSubscription(token: string): Promise<XPanelAPIResponse<XPanelSubscription>> {
-    return this.request("GET", `/subscription/${token}`);
-  }
-
-  /**
-   * Get subscription link
-   */
-  async getSubscriptionLink(username: string): Promise<XPanelAPIResponse<{ link: string }>> {
-    return this.request("GET", `/subscription/link/${username}`);
+  async deleteSubscriber(username: string): Promise<XPanelAPIResponse<void>> {
+    return this.request("DELETE", `/v1/subscribers/${username}`);
   }
 
   /**
    * Get all inbounds
    */
-  async getInbounds(): Promise<XPanelAPIResponse<XPanelInbound[]>> {
+  async getInbounds(): Promise<XPanelAPIResponse<any[]>> {
     return this.request("GET", "/inbounds");
   }
 
@@ -144,29 +183,35 @@ export class XPanelClient {
    * Get traffic statistics
    */
   async getTrafficStats(): Promise<XPanelAPIResponse<XPanelTrafficStats>> {
-    return this.request("GET", "/stats/traffic");
+    return this.request("GET", "/traffic/singbox/summary");
   }
 
   /**
-   * Reset user traffic
+   * Reset subscriber traffic
    */
-  async resetUserTraffic(id: number): Promise<XPanelAPIResponse<void>> {
-    return this.request("POST", `/users/${id}/reset-traffic`);
+  async resetSubscriberTraffic(username: string): Promise<XPanelAPIResponse<void>> {
+    return this.request("POST", `/v1/subscribers/${username}/reset-traffic`);
   }
 
   /**
-   * Enable/Disable user
+   * Enable/Disable subscriber
    */
-  async toggleUser(id: number, enable: boolean): Promise<XPanelAPIResponse<void>> {
-    return this.request("POST", `/users/${id}/${enable ? "enable" : "disable"}`);
+  async toggleSubscriber(username: string, enable: boolean): Promise<XPanelAPIResponse<void>> {
+    return this.request("POST", `/v1/subscribers/${username}/${enable ? "enable" : "disable"}`);
   }
 
   /**
-   * Health check - verify XPanel is reachable
+   * Get online users
    */
-  async healthCheck(): Promise<boolean> {
-    const response = await this.request("GET", "/health");
-    return response.success;
+  async getOnlineUsers(): Promise<XPanelAPIResponse<any[]>> {
+    return this.request("GET", "/v1/online-users");
+  }
+
+  /**
+   * Get realtime traffic
+   */
+  async getRealtimeTraffic(): Promise<XPanelAPIResponse<any>> {
+    return this.request("GET", "/traffic/singbox/realtime");
   }
 }
 
