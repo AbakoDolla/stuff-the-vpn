@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../core/app_colors.dart';
 
 class PremiumTextField extends StatefulWidget {
@@ -93,13 +92,13 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
                   ? AppColors.disconnected
                   : _isFocused
                       ? AppColors.primary
-                      : AppColors.cardBorder.withOpacity(0.5),
+                      : AppColors.cardBorder.withValues(alpha: 0.5),
               width: _isFocused ? 1.5 : 1,
             ),
             boxShadow: _isFocused
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.15),
+                      color: AppColors.primary.withValues(alpha: 0.15),
                       blurRadius: 12,
                       spreadRadius: 1,
                     ),
@@ -111,7 +110,7 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
               child: Container(
-                color: AppColors.surfaceLight.withOpacity(0.4),
+                color: AppColors.surfaceLight.withValues(alpha: 0.4),
                 child: TextFormField(
                   controller: widget.controller,
                   focusNode: _focusNode,
@@ -134,7 +133,7 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
                   decoration: InputDecoration(
                     hintText: widget.hint,
                     hintStyle: TextStyle(
-                      color: AppColors.textMuted.withOpacity(0.6),
+                      color: AppColors.textMuted.withValues(alpha: 0.6),
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
                     ),

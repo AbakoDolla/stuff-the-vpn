@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -130,7 +129,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppColors.accent.withOpacity(0.08),
+                      AppColors.accent.withValues(alpha: 0.08),
                       Colors.transparent,
                     ],
                   ),
@@ -160,9 +159,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: AppColors.cardBorder.withOpacity(0.3),
+                                    color: AppColors.cardBorder.withValues(alpha: 0.3),
                                   ),
-                                  color: AppColors.surfaceLight.withOpacity(0.3),
+                                  color: AppColors.surfaceLight.withValues(alpha: 0.3),
                                 ),
                                 child: const Icon(
                                   Icons.arrow_back_ios_new_rounded,
@@ -183,7 +182,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.primary.withOpacity(0.12),
+                                    color: AppColors.primary.withValues(alpha: 0.12),
                                     blurRadius: 24,
                                     spreadRadius: 6,
                                   ),
@@ -222,7 +221,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
-                                color: AppColors.cardBorder.withOpacity(0.12),
+                                color: AppColors.cardBorder.withValues(alpha: 0.12),
                               ),
                             ),
                             child: ClipRRect(
@@ -238,8 +237,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                                       end: Alignment.bottomRight,
                                       colors: [
                                         AppColors.surfaceLight
-                                            .withOpacity(0.5),
-                                        AppColors.surface.withOpacity(0.35),
+                                            .withValues(alpha: 0.5),
+                                        AppColors.surface.withValues(alpha: 0.35),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(23),

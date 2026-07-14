@@ -66,5 +66,5 @@ class AppColors {
     Color(0xFF2563EB),
   ];
 
-  static Color withOpacity(Color c, double opacity) => c.withOpacity(opacity);
+  static Color withValues(alpha: Color c, double opacity) => c.withValues(alpha: opacity);
 }

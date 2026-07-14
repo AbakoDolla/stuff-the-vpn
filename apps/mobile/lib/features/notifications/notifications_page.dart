@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
@@ -75,7 +74,7 @@ class NotificationsPage extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.2),
+              color: AppColors.primary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text('$unread',
@@ -112,7 +111,7 @@ class NotificationsPage extends ConsumerWidget {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.primary.withOpacity(0.06),
+            color: AppColors.primary.withValues(alpha: 0.06),
           ),
           child: const Icon(Icons.notifications_none_rounded,
               size: 52, color: AppColors.textMuted),
@@ -181,12 +180,12 @@ class _NotifTile extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: !notif.isRead
-              ? AppColors.primary.withOpacity(0.05)
+              ? AppColors.primary.withValues(alpha: 0.05)
               : AppColors.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: !notif.isRead
-                ? AppColors.primary.withOpacity(0.2)
+                ? AppColors.primary.withValues(alpha: 0.2)
                 : AppColors.cardBorder,
           ),
         ),
@@ -196,7 +195,7 @@ class _NotifTile extends StatelessWidget {
             height: 38,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: iconColor.withOpacity(0.12),
+              color: iconColor.withValues(alpha: 0.12),
             ),
             child: Icon(icon, color: iconColor, size: 18),
           ),

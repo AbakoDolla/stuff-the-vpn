@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -144,7 +143,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        AppColors.primary.withOpacity(0.1),
+                        AppColors.primary.withValues(alpha: 0.1),
                         Colors.transparent,
                       ],
                     ),
@@ -161,7 +160,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        AppColors.accent.withOpacity(0.07),
+                        AppColors.accent.withValues(alpha: 0.07),
                         Colors.transparent,
                       ],
                     ),
@@ -187,7 +186,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.primary.withOpacity(0.15),
+                                    color: AppColors.primary.withValues(alpha: 0.15),
                                     blurRadius: 30,
                                     spreadRadius: 8,
                                   ),
@@ -212,16 +211,16 @@ class _LoginPageState extends ConsumerState<LoginPage>
                           // Tab bar for login options
                           Container(
                             decoration: BoxDecoration(
-                              color: AppColors.surface.withOpacity(0.3),
+                              color: AppColors.surface.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: AppColors.cardBorder.withOpacity(0.2),
+                                color: AppColors.cardBorder.withValues(alpha: 0.2),
                               ),
                             ),
                             child: TabBar(
                               controller: _tabController,
                               indicator: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.3),
+                                color: AppColors.primary.withValues(alpha: 0.3),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               indicatorSize: TabBarIndicatorSize.tab,
@@ -307,11 +306,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppColors.cardBorder.withOpacity(0.12),
+            color: AppColors.cardBorder.withValues(alpha: 0.12),
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.04),
+              color: AppColors.primary.withValues(alpha: 0.04),
               blurRadius: 40,
               spreadRadius: 10,
             ),
@@ -328,8 +327,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.surfaceLight.withOpacity(0.5),
-                    AppColors.surface.withOpacity(0.35),
+                    AppColors.surfaceLight.withValues(alpha: 0.5),
+                    AppColors.surface.withValues(alpha: 0.35),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(23),
@@ -405,11 +404,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppColors.cardBorder.withOpacity(0.12),
+            color: AppColors.cardBorder.withValues(alpha: 0.12),
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.04),
+              color: AppColors.primary.withValues(alpha: 0.04),
               blurRadius: 40,
               spreadRadius: 10,
             ),
@@ -426,8 +425,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.surfaceLight.withOpacity(0.5),
-                    AppColors.surface.withOpacity(0.35),
+                    AppColors.surfaceLight.withValues(alpha: 0.5),
+                    AppColors.surface.withValues(alpha: 0.35),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(23),

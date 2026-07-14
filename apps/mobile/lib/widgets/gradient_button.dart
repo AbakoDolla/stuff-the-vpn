@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../core/app_colors.dart';
 
 class GradientButton extends StatefulWidget {
@@ -75,13 +74,13 @@ class _GradientButtonState extends State<GradientButton>
         gradient: AppColors.gradientButton,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.4),
+            color: AppColors.primary.withValues(alpha: 0.4),
             blurRadius: 20,
             spreadRadius: _isPressed ? 2 : 5,
             offset: const Offset(0, 4),
           ),
           BoxShadow(
-            color: AppColors.accent.withOpacity(0.2),
+            color: AppColors.accent.withValues(alpha: 0.2),
             blurRadius: 40,
             spreadRadius: 2,
           ),
@@ -104,8 +103,8 @@ class _GradientButtonState extends State<GradientButton>
                 }
               : null,
           borderRadius: BorderRadius.circular(widget.borderRadius),
-          splashColor: Colors.white.withOpacity(0.15),
-          highlightColor: Colors.white.withOpacity(0.05),
+          splashColor: Colors.white.withValues(alpha: 0.15),
+          highlightColor: Colors.white.withValues(alpha: 0.05),
           child: Center(
             child: widget.isLoading
                 ? const SizedBox(
@@ -204,17 +203,17 @@ class _GlassSocialButtonState extends State<GlassSocialButton>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppColors.surfaceLight.withOpacity(0.6),
-                AppColors.surface.withOpacity(0.3),
+                AppColors.surfaceLight.withValues(alpha: 0.6),
+                AppColors.surface.withValues(alpha: 0.3),
               ],
             ),
             border: Border.all(
-              color: AppColors.cardBorder.withOpacity(0.3),
+              color: AppColors.cardBorder.withValues(alpha: 0.3),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.white.withOpacity(0.03),
+                color: Colors.white.withValues(alpha: 0.03),
                 blurRadius: 10,
                 spreadRadius: 1,
               ),
@@ -235,7 +234,7 @@ class _GlassSocialButtonState extends State<GlassSocialButton>
                   : null,
               onTapCancel: () => _ctrl.forward(),
               borderRadius: BorderRadius.circular(16),
-              splashColor: Colors.white.withOpacity(0.05),
+              splashColor: Colors.white.withValues(alpha: 0.05),
               highlightColor: Colors.transparent,
               child: Center(
                 child: widget.isLoading

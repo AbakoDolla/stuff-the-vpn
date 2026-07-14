@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -405,12 +404,12 @@ class _LangOption extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: selected
-              ? AppColors.primary.withOpacity(0.12)
+              ? AppColors.primary.withValues(alpha: 0.12)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
               color: selected
-                  ? AppColors.primary.withOpacity(0.3)
+                  ? AppColors.primary.withValues(alpha: 0.3)
                   : AppColors.cardBorder),
         ),
         child: Row(children: [

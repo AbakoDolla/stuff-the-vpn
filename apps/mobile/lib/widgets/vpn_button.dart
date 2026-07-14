@@ -30,7 +30,7 @@ class VpnButton extends StatelessWidget {
           border: Border.all(color: ringColor, width: 3),
           boxShadow: [
             BoxShadow(
-              color: ringColor.withOpacity(0.35),
+              color: ringColor.withValues(alpha: 0.35),
               blurRadius: 30,
               spreadRadius: 4,
             ),

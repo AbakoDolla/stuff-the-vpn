@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
@@ -98,7 +97,7 @@ class _VpnConnectPageState extends ConsumerState<VpnConnectPage>
           Container(
             width: 8, height: 8,
             decoration: BoxDecoration(shape: BoxShape.circle, color: color,
-              boxShadow: [BoxShadow(color: color.withOpacity(0.6), blurRadius: 6)]),
+              boxShadow: [BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 6)]),
           ),
           const SizedBox(width: 8),
           Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 14)),
@@ -150,7 +149,7 @@ class _VpnConnectPageState extends ConsumerState<VpnConnectPage>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: color.withOpacity(isOn ? 0.15 : 0.08),
+                        color: color.withValues(alpha: isOn ? 0.15 : 0.08),
                         width: 1.5,
                       ),
                     ),
@@ -165,7 +164,7 @@ class _VpnConnectPageState extends ConsumerState<VpnConnectPage>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: color.withOpacity(isOn ? 0.2 : 0.1),
+                        color: color.withValues(alpha: isOn ? 0.2 : 0.1),
                         width: 1,
                       ),
                     ),
@@ -190,7 +189,7 @@ class _VpnConnectPageState extends ConsumerState<VpnConnectPage>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: color.withOpacity(isOn ? 0.25 : 0.1),
+                          color: color.withValues(alpha: isOn ? 0.25 : 0.1),
                           blurRadius: 40,
                           spreadRadius: 10,
                         ),
@@ -215,7 +214,7 @@ class _VpnConnectPageState extends ConsumerState<VpnConnectPage>
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: color.withOpacity(0.4),
+                        color: color.withValues(alpha: 0.4),
                         blurRadius: 20,
                         spreadRadius: 2,
                         offset: const Offset(0, 4),
@@ -238,7 +237,7 @@ class _VpnConnectPageState extends ConsumerState<VpnConnectPage>
                             size: 52,
                             shadows: [
                               Shadow(
-                                color: Colors.white.withOpacity(0.3),
+                                color: Colors.white.withValues(alpha: 0.3),
                                 blurRadius: 8,
                               ),
                             ],
@@ -269,7 +268,7 @@ class _VpnConnectPageState extends ConsumerState<VpnConnectPage>
     if (!state.isConnected && !state.isConnecting) {
       return Text(
         'Appuyez pour connecter',
-        style: TextStyle(color: AppColors.textMuted.withOpacity(0.6), fontSize: 13),
+        style: TextStyle(color: AppColors.textMuted.withValues(alpha: 0.6), fontSize: 13),
       );
     }
     final d  = state.connectedDuration;
@@ -341,7 +340,7 @@ class _VpnConnectPageState extends ConsumerState<VpnConnectPage>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: AppColors.gradientBrand,
-                  boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 12, spreadRadius: 2)],
+                  boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 12, spreadRadius: 2)],
                 ),
                 child: const Icon(Icons.shield_rounded, color: Colors.white, size: 22),
               ),
@@ -383,9 +382,9 @@ class _VpnConnectPageState extends ConsumerState<VpnConnectPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, color: AppColors.accent, size: 12),
@@ -401,9 +400,9 @@ class _VpnConnectPageState extends ConsumerState<VpnConnectPage>
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.disconnected.withOpacity(0.08),
+          color: AppColors.disconnected.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.disconnected.withOpacity(0.25)),
+          border: Border.all(color: AppColors.disconnected.withValues(alpha: 0.25)),
         ),
         child: Row(children: [
           const Icon(Icons.warning_amber_rounded, color: AppColors.disconnected, size: 18),
@@ -443,7 +442,7 @@ class _Orb extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-            colors: [color.withOpacity(opacity), Colors.transparent],
+            colors: [color.withValues(alpha: opacity), Colors.transparent],
           ),
         ),
       ),
@@ -465,7 +464,7 @@ class _ArcPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round
-      ..color = color.withOpacity(opacity);
+      ..color = color.withValues(alpha: opacity);
     canvas.drawArc(rect, -pi / 2, pi * 1.4, false, paint);
   }
 

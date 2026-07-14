@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
@@ -232,7 +231,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.primary.withOpacity(0.12),
+                    AppColors.primary.withValues(alpha: 0.12),
                     Colors.transparent,
                   ],
                 ),
@@ -249,7 +248,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.accent.withOpacity(0.08),
+                    AppColors.accent.withValues(alpha: 0.08),
                     Colors.transparent,
                   ],
                 ),
@@ -276,13 +275,13 @@ class _SplashPageState extends ConsumerState<SplashPage>
                             boxShadow: [
                               BoxShadow(
                                 color: AppColors.primary
-                                    .withOpacity(0.15 * _pulseAnim.value),
+                                    .withValues(alpha: 0.15 * _pulseAnim.value),
                                 blurRadius: 60 * _pulseAnim.value,
                                 spreadRadius: 20 * _pulseAnim.value,
                               ),
                               BoxShadow(
                                 color: AppColors.accent
-                                    .withOpacity(0.08 * _pulseAnim.value),
+                                    .withValues(alpha: 0.08 * _pulseAnim.value),
                                 blurRadius: 100 * _pulseAnim.value,
                                 spreadRadius: 30 * _pulseAnim.value,
                               ),
@@ -320,7 +319,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                     .then()
                     .shimmer(
                       duration: 1500.ms,
-                      color: AppColors.accent.withOpacity(0.3),
+                      color: AppColors.accent.withValues(alpha: 0.3),
                     ),
                 const SizedBox(height: 10),
                 const Text(
@@ -338,7 +337,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation(
-                      AppColors.accent.withOpacity(0.6),
+                      AppColors.accent.withValues(alpha: 0.6),
                     ),
                   ),
                 ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
@@ -382,7 +381,7 @@ class _ParticlePainter extends CustomPainter {
         Offset(x * size.width, y * size.height),
         p.size,
         Paint()
-          ..color = AppColors.accent.withOpacity(opacity * 0.3)
+          ..color = AppColors.accent.withValues(alpha: opacity * 0.3)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
       );
     }

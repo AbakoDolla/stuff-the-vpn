@@ -1,6 +1,5 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../providers/activation_provider.dart';
@@ -326,7 +325,7 @@ class UsagePage extends ConsumerWidget {
                   show: true,
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primary.withOpacity(0.3),
+                      AppColors.primary.withValues(alpha: 0.3),
                       Colors.transparent,
                     ],
                     begin: Alignment.topCenter,

@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -203,7 +202,7 @@ class _HomePageState extends ConsumerState<HomePage>
                       shape: BoxShape.circle,
                       border: Border.all(
                           color:
-                              color.withOpacity(isOn ? 0.15 : 0.07),
+                              color.withValues(alpha: isOn ? 0.15 : 0.07),
                           width: 1.5),
                     ),
                   ),
@@ -218,7 +217,7 @@ class _HomePageState extends ConsumerState<HomePage>
                       shape: BoxShape.circle,
                       border: Border.all(
                           color: color
-                              .withOpacity(isOn ? 0.2 : 0.1),
+                              .withValues(alpha: isOn ? 0.2 : 0.1),
                           width: 1),
                     ),
                   ),
@@ -245,7 +244,7 @@ class _HomePageState extends ConsumerState<HomePage>
                       boxShadow: [
                         BoxShadow(
                           color: color
-                              .withOpacity(isOn ? 0.28 : 0.1),
+                              .withValues(alpha: isOn ? 0.28 : 0.1),
                           blurRadius: 40,
                           spreadRadius: 10,
                         ),
@@ -270,7 +269,7 @@ class _HomePageState extends ConsumerState<HomePage>
                     ),
                     boxShadow: [
                       BoxShadow(
-                          color: color.withOpacity(0.4),
+                          color: color.withValues(alpha: 0.4),
                           blurRadius: 24,
                           spreadRadius: 2,
                           offset: const Offset(0, 4)),
@@ -357,7 +356,7 @@ class _HomePageState extends ConsumerState<HomePage>
                 color: statusColor,
                 boxShadow: [
                   BoxShadow(
-                      color: statusColor.withOpacity(0.6), blurRadius: 6)
+                      color: statusColor.withValues(alpha: 0.6), blurRadius: 6)
                 ],
               ),
             ),
@@ -642,9 +641,9 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, color: color, size: 13),
@@ -726,7 +725,7 @@ class _GlowOrb extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-              colors: [color.withOpacity(opacity), Colors.transparent]),
+              colors: [color.withValues(alpha: opacity), Colors.transparent]),
         ),
       ),
     );
@@ -750,7 +749,7 @@ class _ArcPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
         ..strokeCap = StrokeCap.round
-        ..color = color.withOpacity(opacity),
+        ..color = color.withValues(alpha: opacity),
     );
   }
 

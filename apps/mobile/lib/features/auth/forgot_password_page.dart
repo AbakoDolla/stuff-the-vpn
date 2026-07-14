@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -80,7 +79,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppColors.primary.withOpacity(0.08),
+                      AppColors.primary.withValues(alpha: 0.08),
                       Colors.transparent,
                     ],
                   ),
@@ -109,10 +108,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color:
-                                      AppColors.cardBorder.withOpacity(0.3),
+                                      AppColors.cardBorder.withValues(alpha: 0.3),
                                 ),
                                 color:
-                                    AppColors.surfaceLight.withOpacity(0.3),
+                                    AppColors.surfaceLight.withValues(alpha: 0.3),
                               ),
                               child: const Icon(
                                 Icons.arrow_back_ios_new_rounded,
@@ -135,7 +134,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
                                 boxShadow: [
                                   BoxShadow(
                                     color:
-                                        AppColors.primary.withOpacity(0.12),
+                                        AppColors.primary.withValues(alpha: 0.12),
                                     blurRadius: 24,
                                     spreadRadius: 6,
                                   ),
@@ -153,12 +152,12 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
                                 colors: [
-                                  AppColors.primary.withOpacity(0.15),
-                                  AppColors.accent.withOpacity(0.1),
+                                  AppColors.primary.withValues(alpha: 0.15),
+                                  AppColors.accent.withValues(alpha: 0.1),
                                 ],
                               ),
                               border: Border.all(
-                                color: AppColors.primary.withOpacity(0.2),
+                                color: AppColors.primary.withValues(alpha: 0.2),
                                 width: 1.5,
                               ),
                             ),
@@ -200,7 +199,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
                                 color:
-                                    AppColors.cardBorder.withOpacity(0.12),
+                                    AppColors.cardBorder.withValues(alpha: 0.12),
                               ),
                             ),
                             child: ClipRRect(
@@ -216,8 +215,8 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
                                       end: Alignment.bottomRight,
                                       colors: [
                                         AppColors.surfaceLight
-                                            .withOpacity(0.5),
-                                        AppColors.surface.withOpacity(0.35),
+                                            .withValues(alpha: 0.5),
+                                        AppColors.surface.withValues(alpha: 0.35),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(23),
@@ -259,12 +258,12 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
                                 colors: [
-                                  AppColors.connected.withOpacity(0.2),
-                                  AppColors.connected.withOpacity(0.05),
+                                  AppColors.connected.withValues(alpha: 0.2),
+                                  AppColors.connected.withValues(alpha: 0.05),
                                 ],
                               ),
                               border: Border.all(
-                                color: AppColors.connected.withOpacity(0.3),
+                                color: AppColors.connected.withValues(alpha: 0.3),
                                 width: 2,
                               ),
                             ),

@@ -155,7 +155,7 @@ class AppTheme {
   ) {
     return InputDecorationTheme(
       filled:   true,
-      fillColor: fill.withOpacity(0.5),
+      fillColor: fill.withValues(alpha: 0.5),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: border),

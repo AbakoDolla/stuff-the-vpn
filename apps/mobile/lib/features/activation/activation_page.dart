@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
@@ -135,13 +134,13 @@ class _ActivationPageState extends ConsumerState<ActivationPage>
                             boxShadow: [
                               BoxShadow(
                                 color: AppColors.primary
-                                    .withOpacity(0.18 * _pulse.value),
+                                    .withValues(alpha: 0.18 * _pulse.value),
                                 blurRadius: 60 * _pulse.value,
                                 spreadRadius: 20 * _pulse.value,
                               ),
                               BoxShadow(
                                 color: AppColors.accent
-                                    .withOpacity(0.08 * _pulse.value),
+                                    .withValues(alpha: 0.08 * _pulse.value),
                                 blurRadius: 100 * _pulse.value,
                                 spreadRadius: 30 * _pulse.value,
                               ),
@@ -313,10 +312,10 @@ class _DeviceIdCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: AppColors.primary.withOpacity(0.2)),
+                          color: AppColors.primary.withValues(alpha: 0.2)),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
@@ -407,9 +406,9 @@ class _ErrorBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.08),
+        color: AppColors.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -446,7 +445,7 @@ class _GlowOrb extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
-          colors: [color.withOpacity(opacity), Colors.transparent],
+          colors: [color.withValues(alpha: opacity), Colors.transparent],
         ),
       ),
     );

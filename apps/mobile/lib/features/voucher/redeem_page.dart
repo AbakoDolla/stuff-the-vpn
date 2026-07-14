@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
@@ -149,11 +148,11 @@ class _RedeemPageState extends ConsumerState<RedeemPage> {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color:
-                                AppColors.disconnected.withOpacity(0.12),
+                                AppColors.disconnected.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                                 color: AppColors.disconnected
-                                    .withOpacity(0.3)),
+                                    .withValues(alpha: 0.3)),
                           ),
                           child: Row(children: [
                             const Icon(Icons.error_outline_rounded,
@@ -172,11 +171,11 @@ class _RedeemPageState extends ConsumerState<RedeemPage> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.connected.withOpacity(0.12),
+                            color: AppColors.connected.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                                 color:
-                                    AppColors.connected.withOpacity(0.3)),
+                                    AppColors.connected.withValues(alpha: 0.3)),
                           ),
                           child: Row(children: [
                             const Icon(
@@ -233,14 +232,14 @@ class _RedeemPageState extends ConsumerState<RedeemPage> {
           shape: BoxShape.circle,
           gradient: LinearGradient(
             colors: [
-              AppColors.primary.withOpacity(0.3),
-              AppColors.accent.withOpacity(0.3)
+              AppColors.primary.withValues(alpha: 0.3),
+              AppColors.accent.withValues(alpha: 0.3)
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           border: Border.all(
-              color: AppColors.primary.withOpacity(0.5), width: 2),
+              color: AppColors.primary.withValues(alpha: 0.5), width: 2),
         ),
         child: const Icon(Icons.confirmation_number_rounded,
             color: AppColors.accent, size: 42),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_colors.dart';
@@ -36,12 +35,12 @@ class AboutPage extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.2),
+                        color: AppColors.primary.withValues(alpha: 0.2),
                         blurRadius: 60,
                         spreadRadius: 20,
                       ),
                       BoxShadow(
-                        color: AppColors.accent.withOpacity(0.1),
+                        color: AppColors.accent.withValues(alpha: 0.1),
                         blurRadius: 100,
                         spreadRadius: 30,
                       ),
@@ -84,9 +83,9 @@ class AboutPage extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                   ),
                   child: const Text(
                     'Version 1.0.0',

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/app_colors.dart';
@@ -82,7 +81,7 @@ class _BottomNav extends ConsumerWidget {
         border: Border.all(color: AppColors.cardBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -129,7 +128,7 @@ class _NavBtn extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(0.12)
+              ? AppColors.primary.withValues(alpha: 0.12)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),

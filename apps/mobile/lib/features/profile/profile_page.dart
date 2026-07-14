@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -84,7 +83,7 @@ class ProfilePage extends ConsumerWidget {
           gradient: AppColors.gradientBrand,
           boxShadow: [
             BoxShadow(
-                color: AppColors.primary.withOpacity(0.4),
+                color: AppColors.primary.withValues(alpha: 0.4),
                 blurRadius: 20,
                 spreadRadius: 5)
           ],
@@ -276,9 +275,9 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(label,
           style: TextStyle(
@@ -310,7 +309,7 @@ class _DeviceInfoCard extends ConsumerWidget {
               height: 40,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primary.withOpacity(0.12),
+                color: AppColors.primary.withValues(alpha: 0.12),
               ),
               child: const Icon(Icons.phone_android_rounded,
                   color: AppColors.primary, size: 20),
@@ -378,7 +377,7 @@ class _AppInfoCard extends StatelessWidget {
           height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.accent.withOpacity(0.12),
+            color: AppColors.accent.withValues(alpha: 0.12),
           ),
           child: const Icon(Icons.info_outline_rounded,
               color: AppColors.accent, size: 20),
