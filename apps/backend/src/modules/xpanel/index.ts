@@ -5,7 +5,7 @@
 
 import { Router } from "express";
 import * as xpanelController from "./xpanel.controller.js";
-import { authMiddleware, requirePermission } from "../../middleware/auth.middleware.js";
+import { authMiddleware, requireAdmin, requireSuperAdmin, requireReseller } from "../../middleware/auth.middleware.js";
 
 const router = Router();
 
@@ -19,7 +19,7 @@ router.use(authMiddleware);
  */
 router.post(
   "/users",
-  requirePermission("vpn_profiles.create"),
+  requireReseller,
   xpanelController.createVPNUser
 );
 
@@ -30,7 +30,7 @@ router.post(
  */
 router.get(
   "/users",
-  requirePermission("vpn_profiles.view"),
+  requireAdmin,
   xpanelController.getVPNUsers
 );
 
@@ -41,7 +41,7 @@ router.get(
  */
 router.get(
   "/users/:userId/traffic",
-  requirePermission("vpn_profiles.view"),
+  requireReseller,
   xpanelController.getTrafficUsage
 );
 
@@ -52,7 +52,7 @@ router.get(
  */
 router.get(
   "/users/:userId/subscription",
-  requirePermission("vpn_profiles.view"),
+  requireReseller,
   xpanelController.getSubscriptionLink
 );
 
@@ -63,7 +63,7 @@ router.get(
  */
 router.patch(
   "/users/:userId",
-  requirePermission("vpn_profiles.update"),
+  requireAdmin,
   xpanelController.updateVPNUser
 );
 
@@ -74,7 +74,7 @@ router.patch(
  */
 router.delete(
   "/users/:userId",
-  requirePermission("vpn_profiles.delete"),
+  requireReseller,
   xpanelController.deleteVPNUser
 );
 
@@ -85,7 +85,7 @@ router.delete(
  */
 router.post(
   "/users/:userId/reset-traffic",
-  requirePermission("vpn_profiles.update"),
+  requireAdmin,
   xpanelController.resetUserTraffic
 );
 
@@ -96,7 +96,7 @@ router.post(
  */
 router.post(
   "/sync",
-  requirePermission("vpn_profiles.view"),
+  requireAdmin,
   xpanelController.syncVPNUsers
 );
 
