@@ -403,7 +403,7 @@ class ApiService {
   }) async {
     return _withRetry(() async {
       final response = await http.post(
-        Uri.parse('$_mobileBase/../sxb/import'),
+        Uri.parse('$_baseUrl/sxb/import'),
         headers: _headers,
         body: jsonEncode({
           'token': token,
