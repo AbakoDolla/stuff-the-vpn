@@ -49,6 +49,13 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
 
+      - name: Fix JAVA_HOME
+        run: |
+          # Fix JAVA_HOME path if needed
+          if [ ! -d "$JAVA_HOME" ]; then
+            export JAVA_HOME="/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64"
+          fi
+
       - name: Accept licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
@@ -87,6 +94,8 @@ jobs:
           fi
 
       - name: Build APK (release)
+        env:
+          JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
         run: |
           cd ${{ steps.build_dir.outputs.dir }}
           flutter build apk --release \
@@ -100,6 +109,8 @@ jobs:
           retention-days: 30
 
       - name: Build debug APK for testing
+        env:
+          JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
         run: |
           cd ${{ steps.build_dir.outputs.dir }}
           flutter build apk --debug \
