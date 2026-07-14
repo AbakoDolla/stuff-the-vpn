@@ -145,7 +145,7 @@ class _HomePageState extends ConsumerState<HomePage>
 
   Widget _buildAppBar(BuildContext context, ActivationState? activation) {
     final name = activation?.user?.name ?? '';
-    final deviceId = activation?.device?.deviceId ?? '';
+    final deviceId = activation?.activationResult?.deviceId ?? '';
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(
