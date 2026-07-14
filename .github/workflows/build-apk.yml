@@ -5,11 +5,13 @@ on:
     branches: [ main, sxb-vpn-redesign ]
     paths:
       - 'mobile/**'
+      - 'apps/mobile/**'
       - '.github/workflows/build-apk.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'mobile/**'
+      - 'apps/mobile/**'
       - '.github/workflows/build-apk.yml'
   workflow_dispatch:
     inputs:
@@ -50,18 +52,29 @@ jobs:
       - name: Accept licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
+      - name: Determine build directory
+        id: build_dir
+        run: |
+          if [ -d "mobile" ]; then
+            echo "dir=mobile" >> $GITHUB_OUTPUT
+          elif [ -d "apps/mobile" ]; then
+            echo "dir=apps/mobile" >> $GITHUB_OUTPUT
+          else
+            echo "dir=mobile" >> $GITHUB_OUTPUT
+          fi
+
       - name: Install dependencies
         run: |
-          cd mobile
+          cd ${{ steps.build_dir.outputs.dir }}
           flutter pub get
 
       - name: Ensure logo asset exists
         run: |
-          mkdir -p mobile/assets/images
+          mkdir -p ${{ steps.build_dir.outputs.dir }}/assets/images
           if [ -f logo.png ]; then
-            cp logo.png mobile/assets/images/logo.png
+            cp logo.png ${{ steps.build_dir.outputs.dir }}/assets/images/logo.png
           elif [ -f apps/dashboard/public/logo.png ]; then
-            cp apps/dashboard/public/logo.png mobile/assets/images/logo.png
+            cp apps/dashboard/public/logo.png ${{ steps.build_dir.outputs.dir }}/assets/images/logo.png
           fi
 
       - name: Determine Backend URL
@@ -75,7 +88,7 @@ jobs:
 
       - name: Build APK (release)
         run: |
-          cd mobile
+          cd ${{ steps.build_dir.outputs.dir }}
           flutter build apk --release \
             --dart-define=BACKEND_URL=${{ steps.backend.outputs.url }}
 
@@ -83,12 +96,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sxbvpn-release-apk-${{ github.run_number }}
-          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          path: ${{ steps.build_dir.outputs.dir }}/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
       - name: Build debug APK for testing
         run: |
-          cd mobile
+          cd ${{ steps.build_dir.outputs.dir }}
           flutter build apk --debug \
             --dart-define=BACKEND_URL=${{ steps.backend.outputs.url }}
 
@@ -96,5 +109,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sxbvpn-debug-apk-${{ github.run_number }}
-          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
+          path: ${{ steps.build_dir.outputs.dir }}/build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7

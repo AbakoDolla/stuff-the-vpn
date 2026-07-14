@@ -24,35 +24,43 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   int _currentIndex = 0;
-  
-  // VPN State
-  VpnStatus _vpnStatus = VpnStatus.disconnected;
+
+  // VPN State - Use real VPN service
+  VpnConnectionStatus _vpnStatus = VpnConnectionStatus.disconnected;
   DateTime? _connectedAt;
   String _publicIp = '--';
   final V2RayEngine _vpnEngine = V2RayEngine.instance;
   StreamSubscription<RealVpnStatus>? _vpnEngineSub;
   String? _vpnError;
   
+  String _serverIp = '';
+  String _protocol = 'VLESS';
+
   // Data
   User? _user;
   Quota? _quota;
   bool _isSyncing = false;
   DateTime? _lastSync;
-  
+  bool _hasConfig = false;
+
   // Animation
   late AnimationController _connectionAnimationController;
 
   final List<Widget> _screens = [];
+  StreamSubscription<VpnConnectionStatus>? _vpnStatusSubscription;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _connectionAnimationController = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
+
     _screens.addAll([
       const _HomeContent(),
       const HistoryScreen(),
@@ -96,6 +104,41 @@ class _HomeScreenState extends State<HomeScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_vpnError!), backgroundColor: Colors.redAccent),
       );
+
+    // Listen to VPN status changes
+    _vpnStatusSubscription = VpnService.instance.statusStream.listen(_onVpnStatusChanged);
+
+    _loadData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _vpnStatusSubscription?.cancel();
+    _connectionAnimationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadData();
+    }
+  }
+
+  void _onVpnStatusChanged(VpnConnectionStatus status) {
+    if (mounted) {
+      setState(() {
+        _vpnStatus = status;
+        if (status == VpnConnectionStatus.connected) {
+          _connectedAt = VpnService.instance.connectedAt;
+          _serverIp = VpnService.instance.serverIp;
+          _protocol = VpnService.instance.protocol;
+        } else if (status == VpnConnectionStatus.disconnected) {
+          _connectedAt = null;
+          _serverIp = '';
+        }
+      });
     }
   }
 
@@ -105,15 +148,17 @@ class _HomeScreenState extends State<HomeScreen>
       final cachedUser = await StorageService.instance.getUser();
       final cachedQuota = await StorageService.instance.getQuota();
       final lastSync = await StorageService.instance.getLastSync();
-      
+      final hasConfig = await StorageService.instance.hasImportedConfig();
+
       if (mounted) {
         setState(() {
           _user = cachedUser;
           _quota = cachedQuota;
           _lastSync = lastSync;
+          _hasConfig = hasConfig;
         });
       }
-      
+
       // Then sync with server
       await _syncData();
     } catch (e) {
@@ -123,36 +168,71 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _syncData() async {
     if (_isSyncing) return;
-    
+
     setState(() {
       _isSyncing = true;
     });
 
     try {
-      final deviceId = await StorageService.instance.getDeviceId();
-      if (deviceId == null) return;
-
-      // Sync device
-      await ApiService.instance.syncDevice(deviceId);
-      
-      // Get fresh data
-      final user = await ApiService.instance.getUserProfile();
-      final quota = await ApiService.instance.getQuota();
-      final ip = await ApiService.instance.getPublicIp();
-      final lastSync = DateTime.now();
-
-      // Save to storage
-      await StorageService.instance.saveUser(user);
-      await StorageService.instance.saveQuota(quota);
-      await StorageService.instance.saveLastSync(lastSync);
+      // Check if we have imported config
+      final hasConfig = await StorageService.instance.hasImportedConfig();
 
       if (mounted) {
         setState(() {
-          _user = user;
-          _quota = quota;
-          _publicIp = ip;
-          _lastSync = lastSync;
+          _hasConfig = hasConfig;
+        });
+      }
+
+      // If we have a token, sync with SXB API
+      final token = await StorageService.instance.getImportedToken();
+      if (token != null && hasConfig) {
+        // Get fresh data from SXB token status
+        try {
+          final status = await ApiService.instance.checkSxbTokenStatus(token);
+          if (status['success'] == true && status['data'] != null) {
+            final data = status['data'];
+            final quotaRemaining = (data['quotaRemainingMB'] ?? 0) / 1024;
+            final quotaUsed = ((data['quotaMB'] ?? 0) - (data['quotaRemainingMB'] ?? 0)) / 1024;
+            final quotaTotal = (data['quotaMB'] ?? 0) / 1024;
+
+            final quota = Quota(
+              id: 'sxb-quota',
+              totalGB: quotaTotal,
+              usedGB: quotaUsed,
+              remainingGB: quotaRemaining,
+              status: data['status'] ?? 'ACTIVE',
+            );
+
+            await StorageService.instance.saveQuota(quota);
+
+            if (mounted) {
+              setState(() {
+                _quota = quota;
+                _lastSync = DateTime.now();
+              });
+            }
+          }
+        } catch (e) {
+          debugPrint('SXB sync error: $e');
+        }
+      }
+
+      // Get public IP
+      try {
+        final ip = await ApiService.instance.getPublicIp();
+        if (mounted) {
+          setState(() {
+            _publicIp = ip;
+          });
+        }
+      } catch (e) {
+        // Ignore IP fetch errors
+      }
+
+      if (mounted) {
+        setState(() {
           _isSyncing = false;
+          _lastSync ??= DateTime.now();
         });
       }
     } catch (e) {
@@ -166,17 +246,37 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _toggleVpnConnection() {
-    setState(() {
-      if (_vpnStatus == VpnStatus.disconnected || 
-          _vpnStatus == VpnStatus.error) {
-        _connect();
-      } else {
-        _disconnect();
-      }
-    });
+    if (_vpnStatus == VpnConnectionStatus.connecting ||
+        _vpnStatus == VpnConnectionStatus.disconnecting) {
+      return;
+    }
+
+    if (_vpnStatus == VpnConnectionStatus.disconnected ||
+        _vpnStatus == VpnConnectionStatus.error) {
+      _connect();
+    } else {
+      _disconnect();
+    }
   }
 
   Future<void> _connect() async {
+    if (!_hasConfig) {
+      // Navigate to import screen
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const ImportConfigScreen(),
+        ),
+      );
+      if (result == true) {
+        setState(() {
+          _hasConfig = true;
+        });
+        // Retry connection
+        await _connect();
+      }
+      return;
+    }
+
     setState(() {
       _vpnStatus = VpnStatus.connecting;
       _vpnError = null;
@@ -226,6 +326,31 @@ class _HomeScreenState extends State<HomeScreen>
         setState(() {
           _vpnStatus = VpnStatus.error;
           _vpnError = 'Erreur de connexion: $e';
+      _vpnStatus = VpnConnectionStatus.connecting;
+    });
+
+    try {
+      // Get saved config
+      final config = await StorageService.instance.getVpnConfigMap();
+      final token = await StorageService.instance.getImportedToken();
+
+      if (config == null || token == null) {
+        throw Exception('No configuration found');
+      }
+
+      // Connect using VPN service
+      final success = await VpnService.instance.connect(config, token);
+
+      if (!success && mounted) {
+        setState(() {
+          _vpnStatus = VpnConnectionStatus.error;
+        });
+      }
+    } catch (e) {
+      debugPrint('Connection error: $e');
+      if (mounted) {
+        setState(() {
+          _vpnStatus = VpnConnectionStatus.error;
         });
       }
     }
@@ -233,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _disconnect() async {
     setState(() {
-      _vpnStatus = VpnStatus.disconnecting;
+      _vpnStatus = VpnConnectionStatus.disconnecting;
     });
     await _vpnEngine.disconnect();
     // L'état final (disconnected) arrive via _onVpnEngineStatus
@@ -244,6 +369,27 @@ class _HomeScreenState extends State<HomeScreen>
     _vpnEngineSub?.cancel();
     _connectionAnimationController.dispose();
     super.dispose();
+
+    try {
+      await VpnService.instance.disconnect();
+
+      // Report usage to server
+      final token = await StorageService.instance.getImportedToken();
+      if (token != null) {
+        await ApiService.instance.updateSxbUsage(
+          token: token,
+          uploadMB: 0,
+          downloadMB: 0,
+        );
+      }
+    } catch (e) {
+      debugPrint('Disconnect error: $e');
+      if (mounted) {
+        setState(() {
+          _vpnStatus = VpnConnectionStatus.disconnected;
+        });
+      }
+    }
   }
 
   @override
@@ -341,6 +487,8 @@ class _HomeContentState extends State<_HomeContent>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  Timer? _durationTimer;
+  Duration _connectedDuration = Duration.zero;
 
   @override
   void initState() {
@@ -357,22 +505,55 @@ class _HomeContentState extends State<_HomeContent>
   @override
   void dispose() {
     _pulseController.dispose();
+    _durationTimer?.cancel();
     super.dispose();
+  }
+
+  void _startDurationTimer(DateTime? connectedAt) {
+    _durationTimer?.cancel();
+    if (connectedAt != null) {
+      _connectedDuration = DateTime.now().difference(connectedAt);
+      _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) {
+          setState(() {
+            _connectedDuration = DateTime.now().difference(connectedAt);
+          });
+        }
+      });
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours.toString().padLeft(2, '0');
+    final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
   }
 
   @override
   Widget build(BuildContext context) {
     // Access parent state through context
     final parentState = context.findAncestorStateOfType<_HomeScreenState>();
-    final vpnStatus = parentState?._vpnStatus ?? VpnStatus.disconnected;
-    final connectedAt = parentState?._connectedAt;
-    final quota = parentState?._quota;
-    final publicIp = parentState?._publicIp ?? '--';
-    final isSyncing = parentState?._isSyncing ?? false;
-    final lastSync = parentState?._lastSync;
+    if (parentState == null) return const SizedBox.shrink();
 
-    // Update pulse animation based on VPN status
-    if (vpnStatus == VpnStatus.connected) {
+    final vpnStatus = parentState._vpnStatus;
+    final connectedAt = parentState._connectedAt;
+    final publicIp = parentState._publicIp;
+    final quota = parentState._quota;
+    final isSyncing = parentState._isSyncing;
+    final lastSync = parentState._lastSync;
+    final hasConfig = parentState._hasConfig;
+
+    // Update duration timer when connected
+    if (vpnStatus == VpnConnectionStatus.connected && connectedAt != null) {
+      _startDurationTimer(connectedAt);
+    } else {
+      _durationTimer?.cancel();
+      _connectedDuration = Duration.zero;
+    }
+
+    // Animate based on connection status
+    if (vpnStatus == VpnConnectionStatus.connected) {
       _pulseController.repeat(reverse: true);
     } else {
       _pulseController.stop();
@@ -381,153 +562,118 @@ class _HomeContentState extends State<_HomeContent>
 
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.screenPaddingHorizontal,
-        ),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: AppSpacing.lg),
-            
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'SXB VPN',
-                      style: AppTypography.headlineMedium.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      'Protection active',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
+            const SizedBox(height: AppSpacing.xl),
+
+            // Logo
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.primary, AppColors.secondary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const NotificationsScreen(),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      border: Border.all(
-                        color: AppColors.border.withOpacity(0.5),
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.notifications_outlined,
-                      color: AppColors.textSecondary,
-                    ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
                   ),
-                ),
-              ],
+                ],
+              ),
+              child: const Icon(
+                Icons.shield_outlined,
+                size: 40,
+                color: Colors.white,
+              ),
             ),
-            
+
+            const SizedBox(height: AppSpacing.xl),
+
+            // Status text
+            Text(
+              vpnStatus.displayName,
+              style: AppTypography.headlineMedium.copyWith(
+                color: _getStatusColor(vpnStatus),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            // Connected duration
+            if (vpnStatus == VpnConnectionStatus.connected) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                _formatDuration(_connectedDuration),
+                style: AppTypography.bodyLarge.copyWith(
+                  color: AppColors.textSecondary,
+                  fontFeatures: [const FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+
             const SizedBox(height: AppSpacing.giant),
-            
-            // VPN Status Indicator
-            GestureDetector(
-              onTap: parentState?._toggleVpnConnection,
-              child: AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: vpnStatus == VpnStatus.connected
-                        ? _pulseAnimation.value
-                        : 1.0,
-                    child: child,
-                  );
-                },
+
+            // Connection Button
+            ScaleTransition(
+              scale: _pulseAnimation,
+              child: GestureDetector(
+                onTap: parentState._toggleVpnConnection,
                 child: Container(
-                  width: 220,
-                  height: 220,
+                  width: 160,
+                  height: 160,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        _getStatusColor(vpnStatus).withOpacity(0.2),
-                        _getStatusColor(vpnStatus).withOpacity(0.05),
-                        Colors.transparent,
-                      ],
-                      stops: const [0.0, 0.5, 1.0],
+                    gradient: LinearGradient(
+                      colors: vpnStatus == VpnConnectionStatus.connected
+                          ? [AppColors.success, AppColors.success.withOpacity(0.8)]
+                          : [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (vpnStatus == VpnConnectionStatus.connected
+                                ? AppColors.success
+                                : AppColors.primary)
+                            .withOpacity(0.4),
+                        blurRadius: 30,
+                        spreadRadius: 5,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
                   child: Center(
-                    child: Container(
-                      width: 180,
-                      height: 180,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.surface,
-                        border: Border.all(
-                          color: _getStatusColor(vpnStatus).withOpacity(0.4),
-                          width: 3,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _getStatusColor(vpnStatus).withOpacity(0.2),
-                            blurRadius: 30,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.shield_outlined,
-                            size: 60,
-                            color: _getStatusColor(vpnStatus),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            _getStatusLabel(vpnStatus),
-                            style: AppTypography.titleMedium.copyWith(
-                              color: _getStatusColor(vpnStatus),
-                              fontWeight: FontWeight.w600,
+                    child: vpnStatus == VpnConnectionStatus.connecting ||
+                            vpnStatus == VpnConnectionStatus.disconnecting
+                        ? const SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 4,
                             ),
+                          )
+                        : Icon(
+                            vpnStatus == VpnConnectionStatus.connected
+                                ? Icons.lock_outlined
+                                : Icons.lock_open_outlined,
+                            size: 60,
+                            color: Colors.white,
                           ),
-                        ],
-                      ),
-                    ),
                   ),
                 ),
               ),
             ),
-            
-            const SizedBox(height: AppSpacing.lg),
-            
-            // Connection Duration
-            ConnectionDuration(
-              connectedAt: connectedAt,
-              isConnected: vpnStatus == VpnStatus.connected,
-            ),
-            
-            const SizedBox(height: AppSpacing.sm),
-            
-            Text(
-              'Durée de connexion',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textTertiary,
-              ),
-            ),
-            
-            const SizedBox(height: AppSpacing.xxl),
-            
-            // Quick Actions
+
+            const SizedBox(height: AppSpacing.giant),
+
+            // Quick Stats
             Row(
               children: [
                 Expanded(
@@ -549,9 +695,9 @@ class _HomeContentState extends State<_HomeContent>
                 ),
               ],
             ),
-            
+
             const SizedBox(height: AppSpacing.lg),
-            
+
             // Quota Card
             if (quota != null)
               QuotaUsageCard(
@@ -559,98 +705,88 @@ class _HomeContentState extends State<_HomeContent>
                 totalGB: quota.totalGB,
                 compact: false,
               ),
-            
+
             const SizedBox(height: AppSpacing.lg),
-            
+
             // Import Config Button (if no config imported)
-            FutureBuilder<bool>(
-              future: StorageService.instance.hasImportedConfig(),
-              builder: (context, snapshot) {
-                final hasConfig = snapshot.data ?? false;
-                if (hasConfig) return const SizedBox.shrink();
-                
-                return Column(
+            if (!hasConfig)
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(
+                    color: AppColors.warning.withOpacity(0.3),
+                  ),
+                ),
+                child: Column(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        color: AppColors.warning.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                        border: Border.all(
-                          color: AppColors.warning.withOpacity(0.3),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: AppColors.warning,
+                          size: 24,
                         ),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.warning_amber_rounded,
-                                color: AppColors.warning,
-                                size: 24,
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                child: Text(
-                                  'Aucune configuration importée',
-                                  style: AppTypography.bodyMedium.copyWith(
-                                    color: AppColors.warning,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            'Importez un token SXB pour vous connecter au VPN',
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            'Aucune configuration importée',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.warning,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: AppSpacing.md),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                final result = await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const ImportConfigScreen(),
-                                  ),
-                                );
-                                if (result == true) {
-                                  parentState?._syncData();
-                                }
-                              },
-                              icon: const Icon(Icons.download),
-                              label: const Text('Importer une configuration'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: AppSpacing.sm,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Importez un token SXB pour vous connecter au VPN',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.md),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final result = await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const ImportConfigScreen(),
+                            ),
+                          );
+                          if (result == true) {
+                            parentState._syncData();
+                          }
+                        },
+                        icon: const Icon(Icons.download),
+                        label: const Text('Importer une configuration'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.sm,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
-                );
-              },
-            ),
-            
+                ),
+              ),
+
+            const SizedBox(height: AppSpacing.lg),
+
             // Sync Button
             SxbButton(
               text: isSyncing ? 'Synchronisation...' : 'Synchroniser',
-              onPressed: isSyncing ? null : parentState?._syncData,
+              onPressed: isSyncing ? null : parentState._syncData,
               isLoading: isSyncing,
               isOutlined: true,
               icon: Icons.sync,
             ),
-            
+
             if (lastSync != null) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -660,7 +796,7 @@ class _HomeContentState extends State<_HomeContent>
                 ),
               ),
             ],
-            
+
             const SizedBox(height: AppSpacing.giant),
           ],
         ),
@@ -668,32 +804,17 @@ class _HomeContentState extends State<_HomeContent>
     );
   }
 
-  Color _getStatusColor(VpnStatus status) {
+  Color _getStatusColor(VpnConnectionStatus status) {
     switch (status) {
-      case VpnStatus.connected:
+      case VpnConnectionStatus.connected:
         return AppColors.success;
-      case VpnStatus.connecting:
-      case VpnStatus.disconnecting:
+      case VpnConnectionStatus.connecting:
+      case VpnConnectionStatus.disconnecting:
         return AppColors.warning;
-      case VpnStatus.disconnected:
+      case VpnConnectionStatus.disconnected:
         return AppColors.textTertiary;
-      case VpnStatus.error:
+      case VpnConnectionStatus.error:
         return AppColors.error;
-    }
-  }
-
-  String _getStatusLabel(VpnStatus status) {
-    switch (status) {
-      case VpnStatus.connected:
-        return 'Connecté';
-      case VpnStatus.connecting:
-        return 'Connexion...';
-      case VpnStatus.disconnecting:
-        return 'Déconnexion...';
-      case VpnStatus.disconnected:
-        return 'Déconnecté';
-      case VpnStatus.error:
-        return 'Erreur';
     }
   }
 

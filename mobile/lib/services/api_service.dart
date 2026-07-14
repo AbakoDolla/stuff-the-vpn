@@ -107,7 +107,6 @@ class ApiService {
     }
   }
 
-  // ============ AUTHENTICATION ============
 
   /// Activate a device with a token (new cryptographic system)
   Future<Device> activateDevice({
@@ -201,7 +200,6 @@ class ApiService {
     }
   }
 
-  // ============ SYNC & DATA ============
 
   /// Sync device data with backend
   Future<Map<String, dynamic>> syncDevice(String deviceId) async {
@@ -290,7 +288,6 @@ class ApiService {
     );
   }
 
-  // ============ VPN CONFIGURATION ============
 
   /// Get VPN configuration for the device
   Future<VpnConfig?> getVpnConfig() async {
@@ -341,7 +338,6 @@ class ApiService {
     return 'Unknown';
   }
 	
-  // ============ CONNECTION HISTORY ============
 
   /// Get connection history
   Future<List<ConnectionHistory>> getConnectionHistory({int limit = 50}) async {
@@ -357,7 +353,6 @@ class ApiService {
         .toList() ?? [];
   }
 
-  // ============ USAGE REPORTING ============
 
   /// Report device usage
   Future<void> reportUsage({
@@ -378,7 +373,6 @@ class ApiService {
     );
   }
 
-  // ============ APP INFO ============
 
   /// Get app version info
   Future<Map<String, dynamic>> getAppVersion() async {
@@ -390,7 +384,6 @@ class ApiService {
     };
   }
 
-  // ============ SXB TOKEN IMPORT ============
 
   /// Import SXB token and get VPN configuration
   Future<Map<String, dynamic>> importSxbToken({
@@ -404,6 +397,7 @@ class ApiService {
     return _withRetry(() async {
       final response = await http.post(
         Uri.parse('$_baseUrl/sxb/import'),
+        Uri.parse('$_baseUrl/api/sxb/token/import'),
         headers: _headers,
         body: jsonEncode({
           'token': token,
