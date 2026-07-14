@@ -1,13 +1,18 @@
 /// vpn_link_builder.dart
 ///
-/// Convertit un [VpnConfig] (reçu du backend via /sxb/import ou
-/// /mobile/config) en lien de partage V2Ray/Xray standard (vless://,
-/// vmess://, trojan://, ss://) que flutter_v2ray_client sait parser
-/// nativement.
+/// Convertit la configuration VPN stockée localement (telle que retournée
+/// par StorageService.getVpnConfigMap(), après un import de token SXB) en
+/// lien de partage V2Ray/Xray standard (vless://, vmess://, trojan://,
+/// ss://) que flutter_v2ray_client sait parser nativement.
+///
+/// Forme attendue de [stored] (exactement ce que import_config_screen.dart
+/// écrit via StorageService.saveVpnConfig) :
+///   { token, protocol, remark, quotaMB, quotaUsedMB, expiresAt,
+///     config: { host, port, uuid, network, tls, sni, path, pbk, sid, fp,
+///               password, method, ... } }
 library;
 
 import 'dart:convert';
-import '../../models/quota.dart';
 
 const Set<String> supportedRealVpnProtocols = {
   'VLESS', 'VLESS_REALITY', 'VMESS', 'TROJAN', 'TROJAN_GO',
@@ -17,15 +22,19 @@ const Set<String> supportedRealVpnProtocols = {
 bool isProtocolSupported(String? protocol) =>
     protocol != null && supportedRealVpnProtocols.contains(protocol.toUpperCase());
 
-/// Construit le lien de partage adapté au protocole, ou `null` si le
-/// protocole n'est pas encore supporté pour une connexion VPN réelle
-/// (WireGuard / SSH / OpenVPN nécessitent un moteur natif dédié).
-String? buildShareLink(VpnConfig c) {
-  final protocol = (c.protocol ?? '').toUpperCase();
-  final raw = c.config ?? {};
-  final host = c.serverAddress ?? raw['host']?.toString() ?? '';
-  final port = c.serverPort ?? int.tryParse(raw['port']?.toString() ?? '') ?? 443;
-  final remark = c.remark ?? raw['remark']?.toString() ?? 'SxBVPN';
+String? _s(Map<String, dynamic> m, String key) => m[key]?.toString();
+
+/// Construit le lien de partage à partir de la config stockée localement,
+/// ou `null` si le protocole n'est pas encore supporté pour une connexion
+/// VPN réelle (WireGuard / SSH / OpenVPN nécessitent un moteur dédié).
+String? buildShareLink(Map<String, dynamic> stored) {
+  final protocol = (stored['protocol']?.toString() ?? '').toUpperCase();
+  final raw = (stored['config'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+  final host = _s(raw, 'host') ?? '';
+  final port = int.tryParse(raw['port']?.toString() ?? '') ?? 443;
+  final remark = stored['remark']?.toString() ?? _s(raw, 'remark') ?? 'SxBVPN';
+
+  if (host.isEmpty) return null;
 
   switch (protocol) {
     case 'VLESS':
@@ -43,8 +52,6 @@ String? buildShareLink(VpnConfig c) {
       return null;
   }
 }
-
-String? _s(Map<String, dynamic> m, String key) => m[key]?.toString();
 
 String _buildVless(Map<String, dynamic> raw, String host, int port, String remark, {required bool isReality}) {
   final uuid = _s(raw, 'uuid') ?? '';
