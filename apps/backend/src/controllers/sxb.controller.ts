@@ -6,7 +6,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { prisma } from "../prisma/client.js";
 import { sendSuccess, sendError } from "../utils/response.js";
 import { HTTP_STATUS } from "../constants/index.js";
