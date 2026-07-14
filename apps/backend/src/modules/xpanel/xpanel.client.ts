@@ -112,7 +112,7 @@ export class XPanelClient {
    * Login to XPanel and get JWT token
    */
   async login(username: string, password: string): Promise<XPanelAPIResponse<{ token: string }>> {
-    const response = await this.request<{ token: string; message?: string }>("POST", "/v1/auth/login", {
+    const response = await this.request<{ token: string; message?: string }>("POST", "/auth/login", {
       username,
       password,
     });
