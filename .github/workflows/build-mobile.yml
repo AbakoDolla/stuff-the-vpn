@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/mobile/**'
+      - 'mobile/**'
       - '.github/workflows/build-mobile.yml'
   workflow_dispatch:
 
@@ -37,21 +37,21 @@ jobs:
 
       - name: Get dependencies
         run: |
-          cd apps/mobile
+          cd mobile
           flutter pub get
 
       - name: Ensure logo asset exists
         run: |
-          mkdir -p apps/mobile/assets/images
+          mkdir -p mobile/assets/images
           if [ -f logo.png ]; then
-            cp logo.png apps/mobile/assets/images/logo.png
+            cp logo.png mobile/assets/images/logo.png
           elif [ -f apps/dashboard/public/logo.png ]; then
-            cp apps/dashboard/public/logo.png apps/mobile/assets/images/logo.png
+            cp apps/dashboard/public/logo.png mobile/assets/images/logo.png
           fi
 
       - name: Build APK
         run: |
-          cd apps/mobile
+          cd mobile
           flutter build apk --release \
             --dart-define=BACKEND_URL=https://vpnsxb.afrihall.com/api
 
@@ -59,7 +59,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sxb-vpn-apk
-          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
   deploy-apk:
